@@ -1,4 +1,4 @@
-package com.EdgeHire.ai_module;
+package com.se.ai_module;
 
 import org.junit.jupiter.api.Test;
 import org.springframework.boot.test.context.SpringBootTest;
