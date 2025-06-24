@@ -1,0 +1,15 @@
+spring:
+  application:
+    name: EdgeHire
+  datasource:
+    driver-class-name: com.mysql.cj.jdbc.Driver
+    username: root
+    password: <在此输入你的数据库密码，并复制该文件，重命名为application.yml>
+    url: jdbc:mysql://localhost:3306/EdgeHire?serverTimezone=Asia/Shanghai&useUnicode=true&characterEncoding=utf8
+  mybatis-plus:
+    global-config:
+      db-config:
+        id-type: auto
+    configuration:
+      map-underscore-to-camel-case: true
+      log-impl: org.apache.ibatis.logging.stdout.StdOutImpl
