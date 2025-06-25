@@ -79,7 +79,7 @@ const onLogin = async () => {
             } else if (res.data.role === 2) {
                 router.push('/hr')
             } else if (res.data.role === 0) {
-                router.push('/admin')
+                router.push('/adminlayout')
             } else {
                 ElMessage.error('用户角色非法')
             }
