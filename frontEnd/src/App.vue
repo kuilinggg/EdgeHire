@@ -19,4 +19,19 @@ import router from './router';
 .logo.vue:hover {
   filter: drop-shadow(0 0 2em #42b883aa);
 }
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+body {
+  font-family: Arial, sans-serif;
+  line-height: 1.6;
+  color: #333;
+}
+
+#app {
+  min-height: 100vh;
+}
 </style>
