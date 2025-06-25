@@ -25,17 +25,45 @@ const routes = [
 
   },
   {
-    path: '/admin',
-    name: 'Admin',
-    component: () => import('../views/Admin/Admin.vue'),
-    meta: { requiresAuth: true }
-
-  },
+    path: '/adminlayout',
+    component: () => import('@/views/Admin/AdminLayout.vue'),
+    children: [
+      {
+        path:'/',
+        redirect:'/users'
+      },
+      {
+        path: '/users',
+        name: 'UserManagement',
+        component: () => import('@/views/Admin/UserManagement.vue')
+      },
+      {
+        path: '/jobs',
+        name: 'JobReview',
+        component: () => import('@/views/Admin/JobReview.vue')
+      },
+      {
+        path: '/stats',
+        name: 'Statistics',
+        component: () => import('@/views/Admin/Statistics.vue')
+      },
+      {
+        path:'/algo',
+        name:"Algorithm",
+        component: () => import('@/views/Admin/Algorithm.vue')
+      }
+    ]  
+  }
 ]
 
 const router = createRouter({
   history: createWebHistory(),
-  routes,
+  routes
+})
+
+// 路由守卫
+router.beforeEach((to, from, next) => {
+  next()
 })
 
 export default router
