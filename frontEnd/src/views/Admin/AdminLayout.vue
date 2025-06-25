@@ -58,11 +58,6 @@
             </div>
           </div>
           <transition name="slide-down">
-            <div v-if="showMenu" class="dropdown-menu">
-              <div class="menu-item" @click="goToProfile">
-                <i class="material-icons"></i>
-                <span>个人中心</span>
-              </div>
               <div class="menu-item" @click="logout">
                 <i class="material-icons"></i>
                 <span>退出登录</span>
@@ -80,27 +75,16 @@
   </div>
 </template>
 
-<script>
+<script setup>
 import { useRouter } from 'vue-router'
 import { ref } from 'vue'
+
 const router=useRouter()
-export default {
-  data() {
-    return {
-      avatar: null,
-      showMenu: false
-    }
-  },
-  methods: {
-    goToProfile() {
-      console.log("person centre")
-    },
-    logout() {
-      // 实际项目中调用退出API
-      router.push('/login')
-    }
+const avatar = ref(null)
+const showMenu = ref(false)
+ const logout = () => {
+    router.push('/login')
   }
-}
 </script>
 
 <style scoped>
