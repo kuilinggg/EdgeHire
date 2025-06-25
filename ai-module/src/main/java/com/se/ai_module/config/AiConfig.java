@@ -3,11 +3,16 @@ package com.se.ai_module.config;
 import org.springframework.ai.chat.client.ChatClient;
 import org.springframework.ai.chat.client.advisor.MessageChatMemoryAdvisor;
 import org.springframework.ai.chat.memory.ChatMemory;
-import org.springframework.ai.chat.memory.InMemoryChatMemoryRepository;
 import org.springframework.ai.chat.memory.MessageWindowChatMemory;
 import org.springframework.ai.openai.OpenAiChatModel;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.core.io.Resource;
+
+import java.io.IOException;
+import java.nio.file.Files;
+import java.nio.file.Paths;
 
 @Configuration
 public class AiConfig {
@@ -19,9 +24,15 @@ public class AiConfig {
     }
 
     @Bean
-    public ChatClient chatClient(OpenAiChatModel model, ChatMemory memory) {
+    public String initialPrompt(@Value("classpath:prompts/initial.txt") Resource resource) throws IOException {
+        return Files.readString(Paths.get(resource.getURI()));
+    }
+
+    @Bean
+    public ChatClient chatClient(OpenAiChatModel model, ChatMemory chatMemory, String initialPrompt) {
         return ChatClient.builder(model)
-                .defaultAdvisors(MessageChatMemoryAdvisor.builder(memory).build())
+                .defaultSystem(initialPrompt)
+                .defaultAdvisors(MessageChatMemoryAdvisor.builder(chatMemory).build())
                 .build();
     }
 }
