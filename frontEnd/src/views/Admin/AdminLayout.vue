@@ -62,7 +62,6 @@
                 <i class="material-icons"></i>
                 <span>退出登录</span>
               </div>
-            </div>
           </transition>
         </div>
       </header>

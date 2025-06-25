@@ -26,7 +26,7 @@ const routes = [
   },
   {
     path: '/adminlayout',
-    component: () => import('@/views/Admin/AdminLayout.vue'),
+    component: () => import('../views/Admin/AdminLayout.vue'),
     children: [
       {
         path:'/',
@@ -35,22 +35,22 @@ const routes = [
       {
         path: '/users',
         name: 'UserManagement',
-        component: () => import('@/views/Admin/UserManagement.vue')
+        component: () => import('../views/Admin/UserManagement.vue')
       },
       {
         path: '/jobs',
         name: 'JobReview',
-        component: () => import('@/views/Admin/JobReview.vue')
+        component: () => import('../views/Admin/JobReview.vue')
       },
       {
         path: '/stats',
         name: 'Statistics',
-        component: () => import('@/views/Admin/Statistics.vue')
+        component: () => import('../views/Admin/Statistics.vue')
       },
       {
         path:'/algo',
         name:"Algorithm",
-        component: () => import('@/views/Admin/Algorithm.vue')
+        component: () => import('../views/Admin/Algorithm.vue')
       }
     ]  
   }
