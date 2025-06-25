@@ -27,7 +27,7 @@ public class AuthService {
         if (userRepository.existsByUsername(user.getUsername())) {
             throw new RuntimeException("用户名已存在");
         }
-        if (user.getRole() == null || (user.getRole() != 0 && user.getRole() != 1 && user.getRole() != 2)) {
+        if ((user.getRole() != 0 && user.getRole() != 1 && user.getRole() != 2)) {
             throw new RuntimeException("角色非法");
         }
         return userRepository.save(user);
