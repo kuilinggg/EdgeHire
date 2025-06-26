@@ -21,7 +21,7 @@ const routes = [
     children: [
       {
         path: '',
-        redirect: '/jobseeker/resume-edit'
+        redirect: '/jobseeker/profile'
       },
       {
         path: 'resume-edit',
@@ -42,6 +42,11 @@ const routes = [
         path: 'match',
         name: 'Match',
         component: () => import('../views/JobSeeker/Match.vue')
+      },
+      {
+        path: 'profile',
+        name: 'Profile',
+        component: () => import('../views/JobSeeker/Profile.vue')
       }
     ],
     meta: { requiresAuth: true }
