@@ -39,6 +39,7 @@
         <el-dropdown trigger="hover">
           <span class="user-info">
             <el-avatar :src="avatar" size="40" icon="el-icon-user" />
+             <img class="avatar" :src="avatarUrl" alt="avatar" />
           </span>
           <template #dropdown>
             <el-dropdown-menu>

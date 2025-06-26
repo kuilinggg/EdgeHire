@@ -1,11 +1,12 @@
 <template>
   <div class="user-management">
-    <h2>用户/HR信息管理</h2>
+    <h2>用户信息管理</h2>
     <div class="card">
       <div class="search-bar">
         <el-input v-model="searchKeyword" placeholder="搜索用户..." style="width: 300px" />
         <el-button type="primary" @click="loadUsers">搜索</el-button>
       </div>
+
       <el-table :data="paginatedUsers" style="width: 100%">
         <el-table-column prop="id" label="ID" width="180" />
         <el-table-column prop="username" label="用户名" />
@@ -23,6 +24,7 @@
           </template>
         </el-table-column>
       </el-table>
+
       <el-pagination
       style="margin-top: 20px; text-align: center"
       background
@@ -33,19 +35,50 @@
       @current-change="handlePageChange"
       />
 
+        <el-dialog title="查看用户详细信息" v-model="checkDialogVisible">
+        <el-table :data="infoList" style="width: 100%" >
+        <el-table-column prop="id" label="ID" width="80"/>
+        <el-table-column prop="realname" label="真实姓名"/>
+        <el-table-column prop="age" label="年龄" /> 
+        <el-table-column prop="gender" label="性别">
+        <template #default="scope">
+             <span>{{ scope.row.gender === undefined || scope.row.gender === null
+      ? '  '
+      : scope.row.gender == '0'
+        ? '未知'
+        : scope.row.gender == '1'
+          ? '男性'
+          : '女性'}}</span>
+          </template>
+        </el-table-column>
+        <el-table-column prop="status" label="状态">
+        <template #default="scope">
+             <span>{{ scope.row.status === undefined ||scope.row.status===null
+        ? '  '
+        : scope.row.status =='0' ? '冻结' : '正常' }}</span>
+          </template>
+        </el-table-column>
+        <el-table-column prop="phone" label="电话号码"/>
+        <el-table-column prop="email" label="邮箱"/>
+      </el-table>
+        <template #footer>
+          <el-button @click="checkDialogVisible = false">退出</el-button>
+        </template>
+      </el-dialog>                          
+
       <el-dialog title="编辑用户" v-model="editDialogVisible">
         <el-form :model="editUser">
-          <el-form-item label="用户名">
+          <el-form-item label="用户名：">
             <el-input v-model="editUser.username" />
           </el-form-item>
-          <el-form-item label="邮箱">
-            <el-input v-model="editUser.email" />
+          <el-form-item label="密码  ：">
+            <el-input v-model="editUser.password" />
           </el-form-item>
-          <el-form-item label="角色">
+          <el-form-item label="角色  ：">
             <el-input v-model="editUser.role" />
           </el-form-item>
-          <el-form-item label="状态">
-            <el-switch v-model="editUser.status" active-text="活跃" inactive-text="禁用" />
+          <el-form-item label="状态  ：">
+            <el-switch v-model="editUser.status" active-text="正常" inactive-text="冻结" />
           </el-form-item>
         </el-form>
         <template #footer>
@@ -58,7 +91,8 @@
 </template>
 
 <script>
-import { getUsers, updateUser,deleteUser } from '../../api/user';
+import { getUsers, updateUser, deleteUser } from '../../api/user';
+//import { getInfos, getInfosByUserId, deleteInfo } from '../../api/info';
 
 export default {
   data() {
@@ -68,7 +102,9 @@ export default {
       pageSize: 10,
       searchKeyword: '',
       editDialogVisible: false,
-      editUser: {}
+      checkDialogVisible:false,
+      editUser: {},
+      infoList: []
     };
   },
   computed: {
@@ -89,10 +125,17 @@ export default {
         this.$message.error('加载用户失败');
       }
     },
-    handleCheck(user){
-
-    },
-    handleEdit(user) {
+   async handleCheck(user){
+      /* try {
+        const res = await getInfosByUserId(user.id);
+        this.infoList = Array.isArray(res.data) ? res.data : [res.data]; // 使用 this 访问，兼容性
+      } catch (error) {
+        this.$message.error('获取用户详情失败');
+        console.error(error);
+      }*/
+      this.checkDialogVisible = true;
+   },
+    async handleEdit(user) {
       this.editUser = { ...user }; // 克隆对象避免直接修改
       this.editDialogVisible = true;
     },
@@ -127,3 +170,5 @@ export default {
   }
 };
 </script>
+
+ 
