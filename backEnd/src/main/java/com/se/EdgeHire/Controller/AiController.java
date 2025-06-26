@@ -26,4 +26,12 @@ public class AiController {
                 .map(data -> "data: " + data + "\n\n")
                 .doOnCancel(() -> logger.info("客户端断开连接"));
     }
+
+    @PostMapping(value = "/resumeOptimize")
+    public String resumeOptimize(@RequestBody Map<String, String> request) {
+        String conversationId = request.get("id");
+        String resumeContent = request.get("resume");
+
+        return aiService.resumeOptimize(conversationId, resumeContent);
+    }
 }

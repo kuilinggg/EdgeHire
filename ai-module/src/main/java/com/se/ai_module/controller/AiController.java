@@ -51,7 +51,7 @@ public class AiController {
     }
 
     @PostMapping(value = "/optimize")
-    public String optimize(Map<String, String> request) {
+    public String optimize(@RequestBody Map<String, String> request) {
         String conversationId = request.get("id");
         String resumeContent = request.get("resume");
         return chatClient
