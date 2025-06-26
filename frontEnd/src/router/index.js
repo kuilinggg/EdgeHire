@@ -87,10 +87,6 @@ const routes = [
     path: '/chat',
     name: 'Chat',
     component: () => import('../views/Chat/Chat.vue')
-  },
-  {
-    path: '/',
-    redirect: '/login'
   }
 ]
 
