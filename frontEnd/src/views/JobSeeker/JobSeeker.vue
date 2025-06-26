@@ -65,7 +65,6 @@
 </template>
 
 <script setup>
-import { authApi } from '../../api/auth'
 import { ref, computed } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
 import { User, Document, EditPen, View, Search, Star } from '@element-plus/icons-vue'
