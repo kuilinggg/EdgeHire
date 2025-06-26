@@ -12,7 +12,7 @@
        <el-table-column prop="password" label="密码" />
         <el-table-column prop="role" label="角色">
         <template #default="scope">
-            <span>{{ scope.row.role=="2" ? 'HR' : '求职者' }}</span> 
+             <span>{{ scope.row.role == '0' ? '管理员' : scope.row.role == '2' ? 'HR' : '求职者' }}</span>
           </template>
         </el-table-column>
         <el-table-column label="操作" width="180">
