@@ -7,10 +7,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.ai.chat.client.ChatClient;
 import org.springframework.ai.chat.memory.ChatMemory;
-import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RequestParam;
-import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.bind.annotation.*;
 import org.springframework.web.reactive.function.client.WebClientResponseException;
 import reactor.core.publisher.Flux;
 
@@ -53,7 +50,7 @@ public class AiController {
                 });
     }
 
-    @GetMapping(value = "/optimize")
+    @PostMapping(value = "/optimize")
     public String optimize(Map<String, String> request) {
         String conversationId = request.get("id");
         String resumeContent = request.get("resume");
@@ -64,8 +61,8 @@ public class AiController {
                 .content();
     }
 
-    @GetMapping(value = "/optimizeStream")
-    public Flux<String> optimizeStream(Map<String, String> request) {
+    @PostMapping(value = "/optimizeStream")
+    public Flux<String> optimizeStream(@RequestBody Map<String, String> request) {
         String conversationId = request.get("id");
         String resumeContent = request.get("resume");
         return chatClient
