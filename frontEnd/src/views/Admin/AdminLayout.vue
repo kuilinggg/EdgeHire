@@ -54,7 +54,7 @@
         <div class="avatar">
          <img v-if="avatar" :src="avatar" alt="User">
           <div v-else class="avatar-placeholder">
-          <i class="material-icons">a</i>
+           <img class="avatar" :src="avatarUrl" alt="avatar" />
           </div>
         </div>
           <transition name="slide-down">
@@ -85,6 +85,7 @@
 import { useRouter } from 'vue-router'
 import { ref } from 'vue'
 
+const avatarUrl = ref('https://api.dicebear.com/7.x/miniavs/svg?seed=jobseeker')
 const router=useRouter()
 const avatar = ref(null)
 const showMenu = ref(false)
