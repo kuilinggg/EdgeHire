@@ -16,11 +16,10 @@
       <el-form-item label="头像">
         <el-upload
           class="avatar-uploader"
-          action="/api/upload/avatar"  
           :show-file-list="false"
+          :http-request="customAvatarUpload"
           :on-success="handleAvatarSuccess"
           :before-upload="beforeAvatarUpload"
-          :headers="uploadHeaders"
         >
           <el-avatar :src="form.avatar" size="large" style="cursor:pointer;" />
           <template #tip>
@@ -48,7 +47,7 @@
         </el-radio-group>
       </el-form-item>
       <el-form-item>
-        <el-button type="success" @click="onSaveClick">保存</el-button>
+        <el-button type="success" @click="onSaveClick" :loading="saveLoading">保存</el-button>
         <el-button @click="cancelEdit" style="margin-left:8px;">取消</el-button>
       </el-form-item>
     </el-form>
@@ -61,12 +60,12 @@
 <script setup>
 import { ref, reactive, onMounted, computed, nextTick } from 'vue'
 import { ElMessage, ElForm } from 'element-plus'
-import { getUser, createUser, updateUser } from '../../api/user'
+import { getInfoByUserId, createInfo, updateInfo, uploadFile } from '../../api/info'
 
-const username = localStorage.getItem('username')
+const user_id = localStorage.getItem('userId')
 const form = reactive({
   id: null,
-  user_id: null,
+  userId: user_id,
   realname: '',
   avatar: '',
   age: null,
@@ -79,6 +78,7 @@ const showFillAlert = ref(false)
 const editing = ref(false)
 const original = ref({})
 const profileForm = ref(null)
+const saveLoading = ref(false)
 
 const genderText = computed(() => {
   if (form.gender === 1) return '男'
@@ -102,7 +102,7 @@ const rules = {
 
 async function fetchProfile() {
   try {
-    const { data } = await getUser(username)
+    const { data } = await getInfoByUserId(user_id)
     if (data && data.id) {
       Object.assign(form, data)
       original.value = { ...data }
@@ -118,12 +118,38 @@ async function fetchProfile() {
   }
 }
 
+let autoSaveTimer = null
+function autoSave() {
+  if (!editing.value) return
+  if (autoSaveTimer) clearTimeout(autoSaveTimer)
+  autoSaveTimer = setTimeout(async () => {
+    try {
+      form.userId = user_id // 确保userId始终有值
+      if (form.id) {
+        await updateInfo(form.id, form)
+      } else {
+        await createInfo(form)
+      }
+      // 自动保存成功不做任何提示，也不退出编辑状态
+      if (form.realname && form.email && form.phone) {
+        showFillAlert.value = false
+      }
+      // 不设置 editing.value = false
+      original.value = { ...form }
+    } catch (e) {
+      ElMessage.error('自动保存失败')
+    }
+  }, 5000)
+}
+
 async function saveProfile() {
   try {
+    saveLoading.value = true
+    form.userId = user_id // 确保userId始终有值
     if (form.id) {
-      await updateUser(form.id, form)
+      await updateInfo(form.id, form)
     } else {
-      await createUser(form)
+      await createInfo(form)
     }
     ElMessage.success('保存成功')
     // 判断信息是否完善，完善后关闭提醒
@@ -134,25 +160,14 @@ async function saveProfile() {
     original.value = { ...form }
   } catch (e) {
     ElMessage.error('保存失败')
+  } finally {
+    saveLoading.value = false
   }
 }
 
 function cancelEdit() {
   Object.assign(form, original.value)
   editing.value = false
-}
-
-let autoSaveTimer = null
-function autoSave() {
-  if (!editing.value) return
-  if (autoSaveTimer) clearTimeout(autoSaveTimer)
-  autoSaveTimer = setTimeout(() => {
-    saveProfile()
-    // 自动保存后也判断是否完善
-    if (form.realname && form.email && form.phone) {
-      showFillAlert.value = false
-    }
-  }, 1000)
 }
 
 async function onSaveClick() {
@@ -170,7 +185,7 @@ function handleAvatarSuccess(res) {
   if (res && res.url) {
     form.avatar = res.url
     ElMessage.success('头像上传成功')
-    autoSave()
+    // 不再自动保存，等待用户点击保存按钮
   } else {
     ElMessage.error('头像上传失败')
   }
@@ -185,6 +200,22 @@ function beforeAvatarUpload(file) {
     ElMessage.error('图片大小不能超过2MB!')
   }
   return isJPG && isLt2M
+}
+
+function customAvatarUpload(option) {
+  // option.file 是上传的文件
+  uploadFile(option.file)
+    .then(res => {
+      if (res.data && res.data.url) {
+        handleAvatarSuccess(res.data)
+        option.onSuccess(res.data)
+      } else {
+        option.onError(new Error('上传失败'))
+      }
+    })
+    .catch(() => {
+      option.onError(new Error('上传失败'))
+    })
 }
 
 onMounted(fetchProfile)
