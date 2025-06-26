@@ -7,10 +7,26 @@
       <nav class="menu">
         <router-link to="/jobseeker/resume-edit" class="menu-item" active-class="active">填写简历</router-link>
         <router-link to="/jobseeker/resume-view" class="menu-item" active-class="active">查看简历</router-link>
+        <router-link to="/jobseeker/match" class="menu-item" active-class="active">求职匹配</router-link>
         <router-link to="/jobseeker/vip" class="menu-item" active-class="active">会员功能</router-link>
       </nav>
     </div>
     <div class="main-content">
+      <header class="header">
+        <div class="user-info">
+          <img class="avatar" :src="avatarUrl" alt="avatar" />
+          <el-dropdown>
+            <span class="el-dropdown-link">
+              <el-button type="text">退出登录</el-button>
+            </span>
+            <template #dropdown>
+              <el-dropdown-menu>
+                <el-dropdown-item @click="logout">退出登录</el-dropdown-item>
+              </el-dropdown-menu>
+            </template>
+          </el-dropdown>
+        </div>
+      </header>
       <main class="content">
         <router-view></router-view>
       </main>
@@ -19,6 +35,13 @@
 </template>
 
 <script setup>
+import { ref } from 'vue'
+import { useRouter } from 'vue-router'
+const router = useRouter()
+const avatarUrl = ref('https://api.dicebear.com/7.x/miniavs/svg?seed=jobseeker') // 可替换为用户真实头像
+function logout() {
+  router.push('/login')
+}
 </script>
 
 <style scoped>
@@ -73,6 +96,27 @@
   width: calc(100vw - 220px);
   min-height: 100vh;
   background: #f5f7fa;
+}
+.header {
+  display: flex;
+  justify-content: flex-end;
+  align-items: center;
+  height: 64px;
+  background: #fff;
+  border-bottom: 1px solid #f0f0f0;
+  padding: 0 32px;
+}
+.user-info {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+}
+.avatar {
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  object-fit: cover;
+  background: #eee;
 }
 .content {
   padding: 32px;

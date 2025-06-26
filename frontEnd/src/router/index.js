@@ -33,6 +33,11 @@ const routes = [
         path: 'vip',
         name: 'Vip',
         component: () => import('../views/JobSeeker/Vip.vue')
+      },
+      {
+        path: 'match',
+        name: 'Match',
+        component: () => import('../views/JobSeeker/Match.vue')
       }
     ],
     meta: { requiresAuth: true }
