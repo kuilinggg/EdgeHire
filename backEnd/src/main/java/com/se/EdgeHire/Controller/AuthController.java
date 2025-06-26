@@ -25,12 +25,12 @@ public class AuthController{
         Optional<User> userOptional = authService.login(username, password);
         if (userOptional.isPresent()) {
             User user = userOptional.get();
-            //String token = authService.generateToken(user.getId());
+            String token = authService.generateToken(user.getId());
 
             Map<String, Object> response = new HashMap<>();
             response.put("id", user.getId());
             response.put("username", user.getUsername());
-            //response.put("token", token); // 返回 JWT
+            response.put("token", token); // 返回 JWT
             response.put("role", user.getRole());
             return ResponseEntity.ok(response);
         } else {

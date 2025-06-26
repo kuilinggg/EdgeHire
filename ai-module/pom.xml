@@ -8,11 +8,11 @@
 		<version>3.5.3</version>
 		<relativePath/> <!-- lookup parent from repository -->
 	</parent>
-	<groupId>com.EdgeHire</groupId>
+	<groupId>com.se</groupId>
 	<artifactId>ai_module</artifactId>
 	<version>0.0.1-SNAPSHOT</version>
 	<name>ai_module</name>
-	<description>ai-module</description>
+	<description>软工实训项目</description>
 	<url/>
 	<licenses>
 		<license/>
@@ -28,42 +28,30 @@
 	</scm>
 	<properties>
 		<java.version>21</java.version>
-		<spring-ai.version>1.0.0-M6</spring-ai.version>
+		<spring-ai.version>1.0.0</spring-ai.version>
 	</properties>
 	<dependencies>
 		<dependency>
-			<groupId>org.springframework.boot</groupId>
-			<artifactId>spring-boot-starter-web</artifactId>
-		</dependency>
-		<!--        spring ai-starter依赖 启动依赖-->
-		<dependency>
 			<groupId>org.springframework.ai</groupId>
-			<artifactId>spring-ai-openai-spring-boot-starter</artifactId>
+			<artifactId>spring-ai-starter-model-openai</artifactId>
 		</dependency>
 
 		<dependency>
 			<groupId>org.springframework.boot</groupId>
-			<artifactId>spring-boot-devtools</artifactId>
-			<scope>runtime</scope>
-			<optional>true</optional>
+			<artifactId>spring-boot-starter-web</artifactId>
 		</dependency>
-		<dependency>
-			<groupId>org.projectlombok</groupId>
-			<artifactId>lombok</artifactId>
-			<optional>true</optional>
-		</dependency>
+
 		<dependency>
 			<groupId>org.springframework.boot</groupId>
 			<artifactId>spring-boot-starter-test</artifactId>
 			<scope>test</scope>
 		</dependency>
 		<dependency>
-			<groupId>org.springframework.boot</groupId>
-			<artifactId>spring-boot-starter-webflux</artifactId>
+			<groupId>org.projectlombok</groupId>
+			<artifactId>lombok</artifactId>
+			<scope>provided</scope>
 		</dependency>
-
 	</dependencies>
-	<!--    继承一个父项目spring-ai-bom-->
 	<dependencyManagement>
 		<dependencies>
 			<dependency>
@@ -81,39 +69,8 @@
 			<plugin>
 				<groupId>org.springframework.boot</groupId>
 				<artifactId>spring-boot-maven-plugin</artifactId>
-				<configuration>
-					<excludes>
-						<exclude>
-							<groupId>org.projectlombok</groupId>
-							<artifactId>lombok</artifactId>
-						</exclude>
-					</excludes>
-				</configuration>
 			</plugin>
 		</plugins>
 	</build>
-	<!--    配置本项目的maven仓库  因为maven中心仓库还没有更新spring ai的jar包-->
-	<!--里程碑版本仓库-->
-	<!--    <repositories>-->
-	<!--        <repository>-->
-	<!--            <id>spring-milestones</id>-->
-	<!--            <name>Spring Milestones</name>-->
-	<!--            <url>https://repo.spring.io/milestone</url>-->
-	<!--            <snapshots>-->
-	<!--                <enabled>false</enabled>-->
-	<!--            </snapshots>-->
-	<!--        </repository>-->
-	<!--    </repositories>-->
 
-	<!--    快照版本-->
-	<repositories>
-		<repository>
-			<id>spring-milestones</id>
-			<name>Spring Milestones</name>
-			<url>https://repo.spring.io/milestone</url>
-			<snapshots>
-				<enabled>false</enabled>
-			</snapshots>
-		</repository>
-	</repositories>
 </project>
