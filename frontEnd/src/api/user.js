@@ -1,6 +1,6 @@
 import axios from 'axios';
 
-const API_BASE = 'http://localhost:8080/api/users';
+const API_BASE = 'http://localhost:8080/api/t_user';
 
 export function getUsers() {
   return axios.get(API_BASE);
