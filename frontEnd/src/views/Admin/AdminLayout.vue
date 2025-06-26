@@ -84,6 +84,7 @@
 <script setup>
 import { useRouter } from 'vue-router'
 import { ref } from 'vue'
+import { authApi } from '../../api/auth'
 
 const router=useRouter()
 const avatar = ref(null)
@@ -92,7 +93,7 @@ const profile=()=>{
 
 }
 const logout = () => {
-    router.push('/login')
+    authApi.logout();
   }
 </script>
 
