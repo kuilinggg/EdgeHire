@@ -14,7 +14,7 @@
           active-class="active"
         >
           <i class="icon material-icons"></i>
-          <span>用户/HR管理</span>
+          <span>用户信息管理</span>
         </router-link>
         
         <router-link 
@@ -51,24 +51,31 @@
       <!-- 顶部导航栏 -->
       <header class="header">
         <div class="user-dropdown" @mouseenter="showMenu = true" @mouseleave="showMenu = false">
-          <div class="avatar">
-            <img v-if="avatar" :src="avatar" alt="User">
-            <div v-else class="avatar-placeholder">
-              <i class="material-icons">account_circle</i>
-            </div>
+        <div class="avatar">
+         <img v-if="avatar" :src="avatar" alt="User">
+          <div v-else class="avatar-placeholder">
+          <i class="material-icons">a</i>
           </div>
+        </div>
           <transition name="slide-down">
+            <div v-if="showMenu" class="dropdown-menu">
+              <div class="menu-item" @click="profile">
+                <i class="material-icons"></i>
+                <span>个人中心</span>
+              </div>
               <div class="menu-item" @click="logout">
                 <i class="material-icons"></i>
                 <span>退出登录</span>
               </div>
+            </div>
           </transition>
         </div>
       </header>
 
       <!-- 内容区域 -->
       <main class="content">
-        <router-view></router-view>
+        <router-view>
+        </router-view>
       </main>
     </div>
   </div>
@@ -81,7 +88,10 @@ import { ref } from 'vue'
 const router=useRouter()
 const avatar = ref(null)
 const showMenu = ref(false)
- const logout = () => {
+const profile=()=>{
+
+}
+const logout = () => {
     router.push('/login')
   }
 </script>
@@ -191,18 +201,23 @@ const showMenu = ref(false)
   width: 40px;
   height: 40px;
   border-radius: 50%;
+  background-color: #f0f2f5;
+  display: flex;
+  align-items: center;
+  justify-content: center;
   overflow: hidden;
   cursor: pointer;
 }
 
-.avatar-placeholder {
+.avatar img {
   width: 100%;
   height: 100%;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  background: #f0f0f0;
-  color: #999;
+  object-fit: cover;
+}
+
+.avatar-placeholder .material-icons {
+  font-size: 24px;
+  color: #1890ff; /* 管理员图标使用主题色 */
 }
 
 .dropdown-menu {
