@@ -3,10 +3,10 @@ import { createRouter, createWebHistory } from 'vue-router'
 const routes = [
   {
     path: '/', 
-    redirect: '/login' 
+    redirect: '/login'
   },
   {
-    path: '/login', 
+    path: '/login',
     name: 'Login',
     component: () => import('../views/Login/Login.vue') 
   },
@@ -82,6 +82,11 @@ const routes = [
         component: () => import('../views/Admin/Algorithm.vue')
       }
     ]  
+  },
+  {
+    path: '/chat',
+    name: 'Chat',
+    component: () => import('../views/Chat/Chat.vue')
   }
 ]
 

@@ -2,6 +2,7 @@ package com.se.EdgeHire.Service;
 
 import com.se.EdgeHire.Entity.User;
 import com.se.EdgeHire.Repository.UserRepository;
+import com.se.EdgeHire.Util.JwtUtil;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
@@ -31,5 +32,9 @@ public class AuthService {
             throw new RuntimeException("角色非法");
         }
         return userRepository.save(user);
+    }
+
+    public String generateToken(int userId){
+        return JwtUtil.generateToken(userId);
     }
 }

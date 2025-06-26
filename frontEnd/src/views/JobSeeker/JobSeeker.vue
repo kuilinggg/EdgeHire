@@ -5,27 +5,40 @@
         <span class="logo-text">求职者中心</span>
       </div>
       <nav class="menu">
-        <router-link to="/jobseeker/resume-edit" class="menu-item" active-class="active">填写简历</router-link>
-        <router-link to="/jobseeker/resume-view" class="menu-item" active-class="active">查看简历</router-link>
-        <router-link to="/jobseeker/match" class="menu-item" active-class="active">求职匹配</router-link>
-        <router-link to="/jobseeker/vip" class="menu-item" active-class="active">会员功能</router-link>
+        <el-menu
+          :default-openeds="['resume']"
+          :default-active="$route.path"
+          class="el-menu-vertical-demo"
+          router
+          background-color="#fff"
+          text-color="#333"
+          active-text-color="#3a36db"
+        >
+          <el-sub-menu index="resume">
+            <template #title>
+              <span>简历功能</span>
+            </template>
+            <el-menu-item index="/jobseeker/resume-edit">填写简历</el-menu-item>
+            <el-menu-item index="/jobseeker/resume-view">查看简历</el-menu-item>
+          </el-sub-menu>
+          <el-menu-item index="/jobseeker/match">求职匹配</el-menu-item>
+          <el-menu-item index="/jobseeker/vip">会员功能</el-menu-item>
+        </el-menu>
       </nav>
     </div>
     <div class="main-content">
       <header class="header">
-        <div class="user-info">
-          <img class="avatar" :src="avatarUrl" alt="avatar" />
-          <el-dropdown>
-            <span class="el-dropdown-link">
-              <el-button type="text">退出登录</el-button>
-            </span>
-            <template #dropdown>
-              <el-dropdown-menu>
-                <el-dropdown-item @click="logout">退出登录</el-dropdown-item>
-              </el-dropdown-menu>
-            </template>
-          </el-dropdown>
-        </div>
+        <el-dropdown trigger="hover">
+          <span class="user-info">
+            <img class="avatar" :src="avatarUrl" alt="avatar" />
+          </span>
+          <template #dropdown>
+            <el-dropdown-menu>
+              <el-dropdown-item @click="goToChat">我的私聊</el-dropdown-item>
+              <el-dropdown-item divided @click="logout">退出登录</el-dropdown-item>
+            </el-dropdown-menu>
+          </template>
+        </el-dropdown>
       </header>
       <main class="content">
         <router-view></router-view>
@@ -41,6 +54,13 @@ const router = useRouter()
 const avatarUrl = ref('https://api.dicebear.com/7.x/miniavs/svg?seed=jobseeker') // 可替换为用户真实头像
 function logout() {
   router.push('/login')
+}
+function goToChat() {
+  router.push('/chat') // 假设私聊页面路由为 /chat
+}
+const resumeMenuOpen = ref(true)
+function toggleResumeMenu() {
+  resumeMenuOpen.value = !resumeMenuOpen.value
 }
 </script>
 
@@ -76,13 +96,36 @@ function logout() {
   flex-direction: column;
   margin-top: 40px;
 }
+.submenu {
+  margin-bottom: 24px;
+}
+.submenu-title {
+  font-size: 15px;
+  font-weight: 600;
+  color: #3a36db;
+  padding: 12px 32px 4px 32px;
+  letter-spacing: 1px;
+  cursor: pointer;
+  user-select: none;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+.arrow {
+  margin-left: 8px;
+  font-size: 12px;
+  transition: transform 0.2s;
+}
+.arrow.open {
+  transform: rotate(180deg);
+}
 .menu-item {
   display: flex;
   align-items: center;
-  padding: 16px 32px;
+  padding: 12px 16px;
   color: #333;
   text-decoration: none;
-  font-size: 16px;
+  font-size: 14px;
   border-left: 4px solid transparent;
   transition: background 0.2s, border-color 0.2s;
 }
@@ -120,5 +163,16 @@ function logout() {
 }
 .content {
   padding: 32px;
+}
+.fade-enter-active, .fade-leave-active {
+  transition: all 0.2s;
+}
+.fade-enter-from, .fade-leave-to {
+  opacity: 0;
+  height: 0;
+}
+.fade-enter-to, .fade-leave-from {
+  opacity: 1;
+  height: auto;
 }
 </style>
