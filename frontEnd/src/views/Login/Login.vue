@@ -12,7 +12,7 @@
                 <el-tab-pane label="管理员" name="admin"></el-tab-pane>
             </el-tabs>
 
-            <el-form :model="form" :rules="rules" ref="loginForm" class="login-form">
+            <el-form :model="form" :rules="rules" ref="loginForm" class="login-form" @keyup.enter.native="onLogin">
                 <el-form-item prop="username">
                     <el-input v-model="form.username" placeholder="请输入账号" prefix-icon="User" size="large" />
                 </el-form-item>
@@ -40,7 +40,7 @@
 </template>
 
 <script setup>
-import { ref, reactive,watch } from 'vue'
+import { ref, reactive, watch } from 'vue'
 import { useRouter } from 'vue-router'
 import { ElMessage } from 'element-plus'
 import { User, Lock } from '@element-plus/icons-vue'
@@ -61,10 +61,12 @@ const rules = {
 }
 
 const onLogin = async () => {
+    if (loading.value) return // 防止重复提交
     if (!form.username || !form.password) {
         ElMessage.error('请输入账号和密码')
         return
     }
+    loading.value = true
     try {
         const res = await authApi.login(form.username, form.password)
         if (res.data && res.data.id) {
@@ -90,6 +92,8 @@ const onLogin = async () => {
         }
     } catch (err) {
         ElMessage.error(err?.response?.data?.message || '登录失败')
+    }finally {
+        loading.value = false
     }
 }
 
@@ -97,7 +101,7 @@ const onLogin = async () => {
 watch(role, () => {
     form.username = ''
     form.password = ''
-    if(loginForm.value) {
+    if (loginForm.value) {
         loginForm.value.clearValidate()
     }
 })
