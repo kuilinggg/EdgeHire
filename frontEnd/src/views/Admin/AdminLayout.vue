@@ -62,7 +62,8 @@ import { ref } from 'vue'
 import { ElMessage } from 'element-plus'
 import { User, Briefcase, DataAnalysis, Monitor } from '@element-plus/icons-vue'
 
-const router = useRouter()
+const avatarUrl = ref('https://api.dicebear.com/7.x/miniavs/svg?seed=jobseeker')
+const router=useRouter()
 const avatar = ref(null)
 const profile = () => {
   ElMessage.info('个人中心功能待实现')
