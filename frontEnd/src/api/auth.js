@@ -1,7 +1,7 @@
-import axios from 'axios';
-import { API_BASE_URL } from '../config';
+//占位使用，以防止报错
+import axios from 'axios'
+import { API_BASE_URL } from '../config'
 
-// 创建 axios 实例
 const apiClient = axios.create({
   baseURL: API_BASE_URL,
   timeout: 5000,
@@ -10,29 +10,18 @@ const apiClient = axios.create({
   },
 })
 
-// 认证相关 API
 export const authApi = {
   // 用户登录
   login(username, password) {
-    return apiClient.post('/auth/login', {
-      username,
-      password,
-    }).then((response) => {
-      return response
-    })
+    return apiClient.post('/auth/login', { username, password })
   },
-
   // 用户登出
   logout() {
-    window.location.href = '/login' // 重定向到登录页面
+    // 可根据后端实际情况调整为POST或GET
+    return apiClient.post('/auth/logout')
   },
-
   // 用户注册
   register(username, password, role) {
-    return apiClient.post('/auth/register', {
-      username,
-      password,
-      role
-    })
+    return apiClient.post('/auth/register', { username, password, role })
   },
 }

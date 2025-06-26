@@ -68,6 +68,8 @@
 import { ref, computed } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
 import { User, Document, EditPen, View, Search, Star } from '@element-plus/icons-vue'
+import { ElMessage } from 'element-plus'
+import { authApi } from '../../api/auth'
 const router = useRouter()
 const route = useRoute()
 const avatarUrl = ref('https://api.dicebear.com/7.x/miniavs/svg?seed=jobseeker') // 可替换为用户真实头像
@@ -80,7 +82,13 @@ const defaultActiveMenu = computed(() => {
   return route.path
 })
 function logout() {
-  router.push('/login')
+  authApi.logout()
+  try {
+    ElMessage.success('退出成功')
+    router.push('/login')
+  } catch (e) {
+    ElMessage.error('退出失败')
+  }
 }
 function goToChat() {
   router.push('/chat') // 假设私聊页面路由为 /chat
