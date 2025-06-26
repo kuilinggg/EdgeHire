@@ -14,19 +14,19 @@
         text-color="#5a5a5a"
         active-text-color="#3a36db"
       >
-        <el-menu-item index="/users">
+        <el-menu-item index="/adminlayout/users">
           <el-icon><User /></el-icon>
           <span>用户信息管理</span>
         </el-menu-item>
-        <el-menu-item index="/jobs">
+        <el-menu-item index="/adminlayout/jobs">
           <el-icon><Briefcase /></el-icon>
           <span>求职信息审核</span>
         </el-menu-item>
-        <el-menu-item index="/stats">
+        <el-menu-item index="/adminlayout/stats">
           <el-icon><DataAnalysis /></el-icon>
           <span>数据统计分析</span>
         </el-menu-item>
-        <el-menu-item index="/algo">
+        <el-menu-item index="/adminlayout/algo">
           <el-icon><Monitor /></el-icon>
           <span>算法监控</span>
         </el-menu-item>
@@ -60,6 +60,7 @@
 <script setup>
 import { useRouter } from 'vue-router'
 import { ref } from 'vue'
+import { authApi } from '../../api/auth'
 import { ElMessage } from 'element-plus'
 import { User, Briefcase, DataAnalysis, Monitor } from '@element-plus/icons-vue'
 
@@ -70,8 +71,8 @@ const profile = () => {
   ElMessage.info('个人中心功能待实现')
 }
 const logout = () => {
-  router.push('/login')
-}
+    authApi.logout();
+  }
 </script>
 
 <style scoped>

@@ -1,21 +1,224 @@
 <template>
   <div class="profile-container">
+    <el-alert v-if="showFillAlert" title="请先完善个人信息" type="warning" show-icon class="top-alert" />
     <h2>个人信息</h2>
-    <!-- 这里可以展示和编辑用户的个人信息 -->
-    <el-card>
-      <p>姓名：张三</p>
-      <p>邮箱：zhangsan@example.com</p>
-      <p>手机号：138****8888</p>
-      <!-- 可根据实际需求添加更多字段和编辑功能 -->
+    <el-card v-if="!editing">
+      <div class="profile-view">
+        <el-avatar :src="form.avatar" size="large" style="margin-bottom:16px;" />
+        <p><strong>姓名：</strong>{{ form.realname || '-' }}</p>
+        <p><strong>邮箱：</strong>{{ form.email || '-' }}</p>
+        <p><strong>手机号：</strong>{{ form.phone || '-' }}</p>
+        <p><strong>年龄：</strong>{{ form.age != null ? form.age : '-' }}</p>
+        <p><strong>性别：</strong>{{ genderText }}</p>
+      </div>
     </el-card>
+    <el-form v-else :model="form" label-width="80px" @change="autoSave" @submit.prevent :rules="rules" ref="profileForm">
+      <el-form-item label="头像">
+        <el-upload
+          class="avatar-uploader"
+          action="/api/upload/avatar"  
+          :show-file-list="false"
+          :on-success="handleAvatarSuccess"
+          :before-upload="beforeAvatarUpload"
+          :headers="uploadHeaders"
+        >
+          <el-avatar :src="form.avatar" size="large" style="cursor:pointer;" />
+          <template #tip>
+            <div class="el-upload__tip">点击头像上传，仅支持jpg/png，最大2MB</div>
+          </template>
+        </el-upload>
+      </el-form-item>
+      <el-form-item label="姓名" prop="realname" :required="true">
+        <el-input v-model="form.realname" placeholder="请输入姓名" />
+      </el-form-item>
+      <el-form-item label="邮箱" prop="email" :required="true">
+        <el-input v-model="form.email" placeholder="请输入邮箱" />
+      </el-form-item>
+      <el-form-item label="手机号" prop="phone" :required="true">
+        <el-input v-model="form.phone" placeholder="请输入手机号" />
+      </el-form-item>
+      <el-form-item label="年龄">
+        <el-input-number v-model="form.age" :min="0" :max="120" />
+      </el-form-item>
+      <el-form-item label="性别">
+        <el-radio-group v-model="form.gender">
+          <el-radio :label="1">男</el-radio>
+          <el-radio :label="2">女</el-radio>
+          <el-radio :label="0">未知</el-radio>
+        </el-radio-group>
+      </el-form-item>
+      <el-form-item>
+        <el-button type="success" @click="onSaveClick">保存</el-button>
+        <el-button @click="cancelEdit" style="margin-left:8px;">取消</el-button>
+      </el-form-item>
+    </el-form>
+    <div v-if="!editing" class="edit-btn-wrapper">
+      <el-button type="primary" class="edit-btn" @click="editing = true">编辑</el-button>
+    </div>
   </div>
 </template>
 
 <script setup>
+import { ref, reactive, onMounted, computed, nextTick } from 'vue'
+import { ElMessage, ElForm } from 'element-plus'
+import { getUser, createUser, updateUser } from '../../api/user'
+
+const username = localStorage.getItem('username')
+const form = reactive({
+  id: null,
+  user_id: null,
+  realname: '',
+  avatar: '',
+  age: null,
+  gender: 0,
+  status: 1,
+  phone: '',
+  email: ''
+})
+const showFillAlert = ref(false)
+const editing = ref(false)
+const original = ref({})
+const profileForm = ref(null)
+
+const genderText = computed(() => {
+  if (form.gender === 1) return '男'
+  if (form.gender === 2) return '女'
+  return '未知'
+})
+
+const rules = {
+  realname: [
+    { required: true, message: '请输入姓名', trigger: 'blur' }
+  ],
+  email: [
+    { required: true, message: '请输入邮箱', trigger: 'blur' },
+    { type: 'email', message: '邮箱格式不正确', trigger: 'blur' }
+  ],
+  phone: [
+    { required: true, message: '请输入手机号', trigger: 'blur' },
+    { pattern: /^1[3-9]\d{9}$/, message: '手机号格式不正确', trigger: 'blur' }
+  ]
+}
+
+async function fetchProfile() {
+  try {
+    const { data } = await getUser(username)
+    if (data && data.id) {
+      Object.assign(form, data)
+      original.value = { ...data }
+      showFillAlert.value = false
+      editing.value = false
+    } else {
+      showFillAlert.value = true
+      editing.value = true
+    }
+  } catch (e) {
+    showFillAlert.value = true
+    editing.value = true
+  }
+}
+
+async function saveProfile() {
+  try {
+    if (form.id) {
+      await updateUser(form.id, form)
+    } else {
+      await createUser(form)
+    }
+    ElMessage.success('保存成功')
+    // 判断信息是否完善，完善后关闭提醒
+    if (form.realname && form.email && form.phone) {
+      showFillAlert.value = false
+    }
+    editing.value = false
+    original.value = { ...form }
+  } catch (e) {
+    ElMessage.error('保存失败')
+  }
+}
+
+function cancelEdit() {
+  Object.assign(form, original.value)
+  editing.value = false
+}
+
+let autoSaveTimer = null
+function autoSave() {
+  if (!editing.value) return
+  if (autoSaveTimer) clearTimeout(autoSaveTimer)
+  autoSaveTimer = setTimeout(() => {
+    saveProfile()
+    // 自动保存后也判断是否完善
+    if (form.realname && form.email && form.phone) {
+      showFillAlert.value = false
+    }
+  }, 1000)
+}
+
+async function onSaveClick() {
+  await nextTick()
+  profileForm.value.validate(async (valid) => {
+    if (valid) {
+      await saveProfile()
+    }
+  })
+}
+
+const uploadHeaders = { }
+function handleAvatarSuccess(res) {
+  // 假设后端返回 { url: 'xxx' }
+  if (res && res.url) {
+    form.avatar = res.url
+    ElMessage.success('头像上传成功')
+    autoSave()
+  } else {
+    ElMessage.error('头像上传失败')
+  }
+}
+function beforeAvatarUpload(file) {
+  const isJPG = file.type === 'image/jpeg' || file.type === 'image/png'
+  const isLt2M = file.size / 1024 / 1024 < 2
+  if (!isJPG) {
+    ElMessage.error('仅支持JPG/PNG格式!')
+  }
+  if (!isLt2M) {
+    ElMessage.error('图片大小不能超过2MB!')
+  }
+  return isJPG && isLt2M
+}
+
+onMounted(fetchProfile)
 </script>
 
 <style scoped>
 .profile-container {
   padding: 32px;
+  max-width: 480px;
+  margin: 0 auto;
+  position: relative;
+}
+.profile-view p {
+  margin: 8px 0;
+  font-size: 15px;
+}
+.edit-btn-wrapper {
+  display: flex;
+  justify-content: center;
+  margin-top: 24px;
+}
+.edit-btn {
+  min-width: 120px;
+  font-size: 16px;
+  box-shadow: 0 2px 8px rgba(58,54,219,0.08);
+}
+.top-alert {
+  margin-bottom: 18px;
+}
+.avatar-uploader .el-avatar {
+  border: 2px dashed #d9d9d9;
+  transition: border-color 0.3s;
+}
+.avatar-uploader:hover .el-avatar {
+  border-color: #409EFF;
 }
 </style>

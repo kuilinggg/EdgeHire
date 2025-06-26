@@ -9,7 +9,8 @@
                 <el-tab-pane label="求职者" name="jobseeker"></el-tab-pane>
                 <el-tab-pane label="HR" name="hr"></el-tab-pane>
             </el-tabs>
-            <el-form :model="form" :rules="rules" ref="registerForm" class="register-form">
+            <el-form :model="form" :rules="rules" ref="registerForm" class="register-form"
+                @keyup.enter.native="onRegister">
                 <el-form-item prop="username">
                     <el-input v-model="form.username" placeholder="请输入账号" prefix-icon="User" size="large" />
                 </el-form-item>
@@ -38,7 +39,7 @@
 </template>
 
 <script setup>
-import { ref, reactive } from 'vue'
+import { ref, reactive, watch} from 'vue'
 import { useRouter } from 'vue-router'
 import { ElMessage } from 'element-plus'
 import { User, Lock, Message, Key } from '@element-plus/icons-vue'
@@ -48,6 +49,7 @@ const router = useRouter()
 const role = ref('jobseeker')
 const roleMap = { jobseeker: 1, hr: 2 }
 const loading = ref(false)
+const registerForm = ref(null)
 const form = reactive({
     username: '',
     password: '',
@@ -78,6 +80,7 @@ const rules = {
 }
 
 const onRegister = async () => {
+    if( loading.value) return // 防止重复提交
     if (!form.username || !form.password || !form.confirmPassword) {
         ElMessage.error('请填写完整信息')
         return
@@ -86,14 +89,26 @@ const onRegister = async () => {
         ElMessage.error('两次输入的密码不一致')
         return
     }
+    loading.value = true
     try {
         await authApi.register(form.username, form.password, roleMap[role.value])
         ElMessage.success('注册成功，请登录')
         router.push('/login')
     } catch (err) {
         ElMessage.error(err?.response?.data?.message || '注册失败')
+    }finally {
+        loading.value = false
     }
 }
+
+watch(role, () => {
+    form.username = ''
+    form.password = ''
+    form.confirmPassword = ''
+    if(registerForm.value) {
+        registerForm.value.clearValidate()
+    }
+})
 
 const goLogin = () => {
     router.push('/login')
