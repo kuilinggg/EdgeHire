@@ -74,6 +74,7 @@ const onLogin = async () => {
             }
 
             ElMessage.success('登录成功')
+            localStorage.setItem('userRole', res.data.role) // 新增：存储用户角色
             if (res.data.role === 1) {
                 router.push('/jobseeker')
             } else if (res.data.role === 2) {

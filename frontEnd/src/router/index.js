@@ -2,7 +2,7 @@ import { createRouter, createWebHistory } from 'vue-router'
 
 const routes = [
   {
-    path: '/',
+    path: '/login',
     name: 'Login',
     component: () => import('../views/Login/Login.vue'),
   },
@@ -83,6 +83,10 @@ const routes = [
     path: '/chat',
     name: 'Chat',
     component: () => import('../views/Chat/Chat.vue')
+  },
+  {
+    path: '/',
+    redirect: '/login'
   }
 ]
 
@@ -93,6 +97,15 @@ const router = createRouter({
 
 // 路由守卫
 router.beforeEach((to, from, next) => {
+  // 判断是否需要登录
+  if (to.meta.requiresAuth) {
+    // 假设登录后 localStorage 里有 token
+    const token = localStorage.getItem('token')
+    if (!token) {
+      next({ path: '/login' })
+      return
+    }
+  }
   next()
 })
 
