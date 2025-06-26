@@ -15,8 +15,9 @@
              <span>{{ scope.row.role == '0' ? '管理员' : scope.row.role == '2' ? 'HR' : '求职者' }}</span>
           </template>
         </el-table-column>
-        <el-table-column label="操作" width="180">
+        <el-table-column label="操作" width="280">
           <template #default="scope">
+            <el-button size="mini" @click="handleCheck(scope.row)">查看</el-button>
             <el-button size="mini" @click="handleEdit(scope.row)">编辑</el-button>
             <el-button size="mini" type="danger" @click="handleDelete(scope.row)">删除</el-button>
           </template>
@@ -87,6 +88,9 @@ export default {
       } catch (e) {
         this.$message.error('加载用户失败');
       }
+    },
+    handleCheck(user){
+
     },
     handleEdit(user) {
       this.editUser = { ...user }; // 克隆对象避免直接修改
