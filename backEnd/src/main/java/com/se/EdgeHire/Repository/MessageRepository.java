@@ -58,4 +58,18 @@ public interface MessageRepository extends JpaRepository<Message, Long> {
             "   GROUP BY m2.senderId" +
             ")")
     List<Message> findLatestUnreadMessages(@Param("userId") int userId);
+
+    /**
+     * 查询所有与当前用户发生过对话的用户
+     * @param userId 用户ID
+     * @return 返回用户的所有聊天伙伴ID列表
+     */
+    @Query("SELECT DISTINCT " +
+            "CASE " +
+            "    WHEN m.senderId = :userId THEN m.receiverId " +
+            "    ELSE m.senderId " +
+            "END " +
+            "FROM Message m " +
+            "WHERE m.senderId = :userId OR m.receiverId = :userId")
+    List<Integer> findAllChatUsers(@Param("userId") int userId);
 }

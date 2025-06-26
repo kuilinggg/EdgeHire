@@ -47,28 +47,60 @@
   </div>
 </template>
 
+
 <script setup>
-import { ref, computed, nextTick } from 'vue'
+import { ca } from 'element-plus/es/locales.mjs'
+import { ref, computed, nextTick, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
+import axios from 'axios'
+
+
 const router = useRouter()
 const search = ref('')
 const inputMsg = ref('')
-const activeUser = ref('1')
+const activeUser = ref('0')
 const users = ref([
-  { id: 1, name: '张三', avatar: 'https://api.dicebear.com/7.x/miniavs/svg?seed=zhangsan' },
-  { id: 2, name: '李四', avatar: 'https://api.dicebear.com/7.x/miniavs/svg?seed=lisi' },
-  { id: 3, name: '王五', avatar: 'https://api.dicebear.com/7.x/miniavs/svg?seed=wangwu' }
+  { id: 0, name: '管理员', avatar: 'https://api.dicebear.com/7.x/miniavs/svg?seed=admin' }
 ])
+
 const myAvatar = ref('https://api.dicebear.com/7.x/miniavs/svg?seed=jobseeker') // 当前用户头像
 const currentUser = computed(() => users.value.find(u => u.id.toString() === activeUser.value) || {})
+
+onMounted(async () => {
+  try {
+    const userId = localStorage.getItem('userId')
+    if (!userId) return
+
+    const res = await axios.get(`/chat/users/${userId}`)
+
+    const chatUsers = res.data.map(u => ({
+      ...u,
+      avatar: u.avatar || `https://api.dicebear.com/7.x/miniavs/svg?seed=${u.username || u.name || u.id}`
+    }))
+
+    users.value = [
+      { id: 0, name: '管理员', avatar: 'https://api.dicebear.com/7.x/miniavs/svg?seed=admin' },
+      ...chatUsers
+    ]
+
+  } catch (error) {
+    console.error('获取聊天列表失败:', error)
+  }
+})
+
 const messages = ref([
   { fromMe: false, avatar: users.value[0].avatar, content: '你好，有什么可以帮您？' }
 ])
+
 const messagesRef = ref(null)
 const filteredUsers = computed(() => {
   if (!search.value) return users.value
   return users.value.filter(u => u.name.includes(search.value))
 })
+
+const socket = localStorage.getItem('socket')
+
+
 function selectUser(user) {
   activeUser.value = user.id.toString()
   // 切换联系人时可加载历史消息

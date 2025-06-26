@@ -78,6 +78,8 @@ const onLogin = async () => {
                 console.log('WebSocket连接已建立')
             }
 
+            localStorage.setItem('socket', socket)
+
             ElMessage.success('登录成功')
             localStorage.setItem('userRole', res.data.role) // 新增：存储用户角色
             if (res.data.role === 1) {

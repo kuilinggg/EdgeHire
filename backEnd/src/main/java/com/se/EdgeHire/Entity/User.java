@@ -9,7 +9,10 @@ import java.io.Serializable;
 @Entity
 @Table(name="t_user")
 @Data
-public class User implements Serializable{
+public class User implements Serializable {
+    @Serial
+    private static final long serialVersionUID = 1L;
+
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private int id;
