@@ -1,6 +1,6 @@
-//占位使用，以防止报错
-import axios from 'axios'
-import { API_BASE_URL } from '../config'
+import axios from 'axios';
+import { API_BASE_URL } from '../config';
+import { useAuthStore } from '../stores/authStore'
 
 const apiClient = axios.create({
   baseURL: API_BASE_URL,
@@ -10,18 +10,77 @@ const apiClient = axios.create({
   },
 })
 
+// 请求拦截器 - 添加 token 到请求头
+apiClient.interceptors.request.use(
+  (config) => {
+    const authStore = useAuthStore()
+    if (authStore.token) {
+      config.headers['Authorization'] = `Bearer ${authStore.token}`
+    }
+    return config
+  },
+  (error) => {
+    return Promise.reject(error)
+  }
+)
+
+// 响应拦截器 - 处理常见错误
+apiClient.interceptors.response.use(
+  (response) => {
+    return response
+  },
+  (error) => {
+    if (error.response) {
+      const authStore = useAuthStore()
+      if (error.response.status === 401) {
+        authStore.clearToken() // 清除 Pinia 中的 token
+        window.location.href = '/login' // 重定向到登录页面
+      } else {
+        console.error('请求失败', error.response.data || error.message)
+      }
+    }
+    return Promise.reject(error)
+  }
+)
+
+
+// 认证相关 API
 export const authApi = {
   // 用户登录
   login(username, password) {
-    return apiClient.post('/auth/login', { username, password })
+    return apiClient.post('/auth/login', {
+      username,
+      password,
+    }).then((response) => {
+      const token = response.data.token
+      const userId = response.data.id
+      const role = response.data.role
+      if (token&&userId) {
+        const authStore = useAuthStore()
+        authStore.setToken(token)
+        authStore.setUserId(userId)
+        authStore.setRole(role)
+      }
+      return response
+    })
   },
   // 用户登出
   logout() {
-    // 可根据后端实际情况调整为POST或GET
-    return apiClient.post('/auth/logout')
+    const authStore = useAuthStore()
+    authStore.clearToken()
+    window.location.href = '/login' // 重定向到登录页面
   },
   // 用户注册
   register(username, password, role) {
-    return apiClient.post('/auth/register', { username, password, role })
+    return apiClient.post('/auth/register', {
+      username,
+      password,
+      role
+    })
+  },
+
+    // 获取用户信息
+  getUserInfo() {
+    return apiClient.get('/auth/user-info')
   },
 }

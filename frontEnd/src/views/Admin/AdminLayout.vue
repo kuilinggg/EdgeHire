@@ -59,6 +59,7 @@
 <script setup>
 import { useRouter } from 'vue-router'
 import { ref } from 'vue'
+import { authApi } from '../../api/auth'
 import { ElMessage } from 'element-plus'
 import { User, Briefcase, DataAnalysis, Monitor } from '@element-plus/icons-vue'
 
@@ -69,8 +70,8 @@ const profile = () => {
   ElMessage.info('个人中心功能待实现')
 }
 const logout = () => {
-  router.push('/login')
-}
+    authApi.logout();
+  }
 </script>
 
 <style scoped>

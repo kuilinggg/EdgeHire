@@ -1,4 +1,7 @@
 import { createRouter, createWebHistory } from 'vue-router'
+import { useAuthStore } from '../stores/authStore'
+import { authApi } from '../api/auth'
+import { ElMessage } from 'element-plus'
 
 const routes = [
   {
@@ -8,7 +11,7 @@ const routes = [
   {
     path: '/login',
     name: 'Login',
-    component: () => import('../views/Login/Login.vue') 
+    component: () => import('../views/Login/Login.vue'),
   },
   {
     path: '/register',
@@ -61,6 +64,7 @@ const routes = [
   {
     path: '/adminlayout',
     component: () => import('../views/Admin/AdminLayout.vue'),
+    meta:{requiresAuth: true},
     children: [
       {
         path:'',
@@ -101,17 +105,46 @@ const router = createRouter({
 })
 
 // 路由守卫
-router.beforeEach((to, from, next) => {
-  // 判断是否需要登录
-  if (to.meta.requiresAuth) {
-    // 假设登录后 localStorage 里有 token
-    const token = localStorage.getItem('token')
-    if (!token) {
-      next({ path: '/login' })
+router.beforeEach(async (to, from, next) => {
+  const authStore = useAuthStore()
+
+  // 如果用户已登录且尝试访问登录或注册页面，重定向到主页
+  if ((to.path === '/login'||to.path === '/register') && authStore.token) {
+    if(authStore.role ==1) {
+      next('/jobseeker/resume-edit')
+    }
+    else if(authStore.role ==2) {
+      next('/hr')
+    }
+    else {
+      next('/adminlayout')
+    }
+    return
+  }
+
+  // 如果路由需要认证且用户未登录，重定向到登录页面
+  if (to.meta.requiresAuth && !authStore.token) {
+    ElMessage('请登录')
+    next('/login')
+    return
+  }
+
+  // 如果有 token，进行验证
+  if (authStore.token) {
+    try {
+      await authApi.getUserInfo(authStore.token) 
+    } catch (error) {
+      // 如果验证失败，清除 token 并重定向到登录页面
+      console.error('Token 验证失败:', error)
+      authStore.clearToken()
+      next({ path: '/login', query: { redirect: to.fullPath } })
       return
     }
   }
+
+
   next()
 })
+
 
 export default router
