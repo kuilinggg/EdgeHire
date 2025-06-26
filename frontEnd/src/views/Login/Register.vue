@@ -38,7 +38,7 @@
 </template>
 
 <script setup>
-import { ref, reactive } from 'vue'
+import { ref, reactive, watch} from 'vue'
 import { useRouter } from 'vue-router'
 import { ElMessage } from 'element-plus'
 import { User, Lock, Message, Key } from '@element-plus/icons-vue'
@@ -48,6 +48,7 @@ const router = useRouter()
 const role = ref('jobseeker')
 const roleMap = { jobseeker: 1, hr: 2 }
 const loading = ref(false)
+const registerForm = ref(null)
 const form = reactive({
     username: '',
     password: '',
@@ -94,6 +95,15 @@ const onRegister = async () => {
         ElMessage.error(err?.response?.data?.message || '注册失败')
     }
 }
+
+watch(role, () => {
+    form.username = ''
+    form.password = ''
+    form.confirmPassword = ''
+    if(registerForm.value) {
+        registerForm.value.clearValidate()
+    }
+})
 
 const goLogin = () => {
     router.push('/login')

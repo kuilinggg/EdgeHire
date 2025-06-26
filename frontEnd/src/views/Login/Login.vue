@@ -40,7 +40,7 @@
 </template>
 
 <script setup>
-import { ref, reactive } from 'vue'
+import { ref, reactive,watch } from 'vue'
 import { useRouter } from 'vue-router'
 import { ElMessage } from 'element-plus'
 import { User, Lock } from '@element-plus/icons-vue'
@@ -50,6 +50,7 @@ const router = useRouter()
 const role = ref('jobseeker')
 const roleMap = { jobseeker: 1, hr: 2, admin: 0 }
 const loading = ref(false)
+const loginForm = ref(null)
 const form = reactive({
     username: '',
     password: '',
@@ -91,6 +92,15 @@ const onLogin = async () => {
         ElMessage.error(err?.response?.data?.message || '登录失败')
     }
 }
+
+// 监听角色变化，清空表单
+watch(role, () => {
+    form.username = ''
+    form.password = ''
+    if(loginForm.value) {
+        loginForm.value.clearValidate()
+    }
+})
 
 const goRegister = () => {
     router.push('/register')
