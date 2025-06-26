@@ -2,7 +2,7 @@ import { createRouter, createWebHistory } from 'vue-router'
 
 const routes = [
   {
-    path: '/login',
+    path: '/',
     name: 'Login',
     component: () => import('../views/Login/Login.vue'),
   },
@@ -54,7 +54,7 @@ const routes = [
     component: () => import('../views/Admin/AdminLayout.vue'),
     children: [
       {
-        path:'/',
+        path:'',
         redirect:'/users'
       },
       {
