@@ -13,8 +13,28 @@ const routes = [
   },
   {
     path: '/jobseeker',
-    name: 'JobSeeker',
     component: () => import('../views/JobSeeker/JobSeeker.vue'),
+    children: [
+      {
+        path: '',
+        redirect: '/jobseeker/resume-edit'
+      },
+      {
+        path: 'resume-edit',
+        name: 'ResumeEdit',
+        component: () => import('../views/JobSeeker/ResumeEdit.vue')
+      },
+      {
+        path: 'resume-view',
+        name: 'ResumeView',
+        component: () => import('../views/JobSeeker/ResumeView.vue')
+      },
+      {
+        path: 'vip',
+        name: 'Vip',
+        component: () => import('../views/JobSeeker/Vip.vue')
+      }
+    ],
     meta: { requiresAuth: true }
   },
   {
