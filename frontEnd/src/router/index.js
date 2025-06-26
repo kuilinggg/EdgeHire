@@ -68,25 +68,25 @@ const routes = [
     children: [
       {
         path:'',
-        redirect:'/users'
+        redirect:'/adminlayout/users'
       },
       {
-        path: '/users',
+        path: 'users',
         name: 'UserManagement',
         component: () => import('../views/Admin/UserManagement.vue')
       },
       {
-        path: '/jobs',
+        path: 'jobs',
         name: 'JobReview',
         component: () => import('../views/Admin/JobReview.vue')
       },
       {
-        path: '/stats',
+        path: 'stats',
         name: 'Statistics',
         component: () => import('../views/Admin/Statistics.vue')
       },
       {
-        path:'/algo',
+        path:'algo',
         name:"Algorithm",
         component: () => import('../views/Admin/Algorithm.vue')
       }
@@ -111,7 +111,7 @@ router.beforeEach(async (to, from, next) => {
   // 如果用户已登录且尝试访问登录或注册页面，重定向到主页
   if ((to.path === '/login'||to.path === '/register') && authStore.token) {
     if(authStore.role ==1) {
-      next('/jobseeker/resume-edit')
+      next('/jobseeker')
     }
     else if(authStore.role ==2) {
       next('/hr')
@@ -142,7 +142,27 @@ router.beforeEach(async (to, from, next) => {
     }
   }
 
-
+  // 定义各角色允许访问的路径前缀
+    const allowedPaths = {
+      0: ['/adminlayout'],    // 管理员
+      1: ['/jobseeker', '/chat'],  // 求职者
+      2: ['/hr', '/chat']      // HR
+    }
+   
+    // 检查当前路径是否允许访问
+    const role = authStore.role
+    const isAllowed = allowedPaths[role]?.some(prefix => to.path.startsWith(prefix))
+    
+    // 如果访问不被允许的路径，重定向到角色首页
+    if (!isAllowed) {
+      if (role == 0) {
+        next('/adminlayout')
+      } else if (role == 1) {
+        next('/jobseeker')
+      } else if (role == 2) {
+        next('/hr')
+      }
+    }
   next()
 })
 
