@@ -108,8 +108,8 @@ const router = createRouter({
 router.beforeEach(async (to, from, next) => {
   const authStore = useAuthStore()
 
-  // 如果用户已登录且尝试访问登录页面，重定向到主页
-  if (to.path === '/login' && authStore.token) {
+  // 如果用户已登录且尝试访问登录或注册页面，重定向到主页
+  if ((to.path === '/login'||to.path === '/register') && authStore.token) {
     if(authStore.role ==1) {
       next('/jobseeker/resume-edit')
     }
