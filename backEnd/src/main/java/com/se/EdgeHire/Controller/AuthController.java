@@ -2,6 +2,7 @@ package com.se.EdgeHire.Controller;
 
 import com.se.EdgeHire.Entity.User;
 import com.se.EdgeHire.Service.AuthService;
+import com.se.EdgeHire.Util.JwtUtil;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
@@ -25,12 +26,12 @@ public class AuthController{
         Optional<User> userOptional = authService.login(username, password);
         if (userOptional.isPresent()) {
             User user = userOptional.get();
-            //String token = authService.generateToken(user.getId());
+            String token = authService.generateToken(user.getId());
 
             Map<String, Object> response = new HashMap<>();
             response.put("id", user.getId());
             response.put("username", user.getUsername());
-            //response.put("token", token); // 返回 JWT
+            response.put("token", token); // 返回 JWT
             response.put("role", user.getRole());
             return ResponseEntity.ok(response);
         } else {
@@ -57,4 +58,17 @@ public class AuthController{
         }
     }
 
+    @GetMapping("/user-info")
+    public ResponseEntity<?> getUserInfo(@RequestHeader("Authorization") String token) {
+        try {
+            int userId = JwtUtil.validateToken(token.replace("Bearer ", ""));
+            Map<String, Object> userInfo = new HashMap<>();
+            userInfo.put("id", userId);
+            return ResponseEntity.ok(userInfo);
+        } catch (Exception e) {
+            Map<String, String> error = new HashMap<>();
+            error.put("message", "Invalid token");
+            return ResponseEntity.badRequest().body(error);
+        }
+    }
 }
