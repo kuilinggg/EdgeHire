@@ -2,9 +2,11 @@ package com.se.EdgeHire.Entity;
 
 
 import jakarta.persistence.*;
+import lombok.Data;
 
 @Entity
 @Table(name = "t_info")
+@Data
 public class Info {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
@@ -23,5 +25,4 @@ public class Info {
 
     private String phone;
     private String email;
-
 }
