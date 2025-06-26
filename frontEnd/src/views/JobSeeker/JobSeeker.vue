@@ -14,16 +14,32 @@
           text-color="#333"
           active-text-color="#3a36db"
         >
-          <el-menu-item index="/jobseeker/profile">个人信息</el-menu-item>
+          <el-menu-item index="/jobseeker/profile">
+            <el-icon><User /></el-icon>
+            <span>个人信息</span>
+          </el-menu-item>
           <el-sub-menu index="resume">
             <template #title>
+              <el-icon><Document /></el-icon>
               <span>简历功能</span>
             </template>
-            <el-menu-item index="/jobseeker/resume-edit">填写简历</el-menu-item>
-            <el-menu-item index="/jobseeker/resume-view">查看简历</el-menu-item>
+            <el-menu-item index="/jobseeker/resume-edit">
+              <el-icon><EditPen /></el-icon>
+              <span>填写简历</span>
+            </el-menu-item>
+            <el-menu-item index="/jobseeker/resume-view">
+              <el-icon><View /></el-icon>
+              <span>查看简历</span>
+            </el-menu-item>
           </el-sub-menu>
-          <el-menu-item index="/jobseeker/match">求职匹配</el-menu-item>
-          <el-menu-item index="/jobseeker/vip">会员功能</el-menu-item>
+          <el-menu-item index="/jobseeker/match">
+            <el-icon><Search /></el-icon>
+            <span>求职匹配</span>
+          </el-menu-item>
+          <el-menu-item index="/jobseeker/vip">
+            <el-icon><Star /></el-icon>
+            <span>会员功能</span>
+          </el-menu-item>
         </el-menu>
       </nav>
     </div>
@@ -51,6 +67,7 @@
 <script setup>
 import { ref, computed } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
+import { User, Document, EditPen, View, Search, Star } from '@element-plus/icons-vue'
 const router = useRouter()
 const route = useRoute()
 const avatarUrl = ref('https://api.dicebear.com/7.x/miniavs/svg?seed=jobseeker') // 可替换为用户真实头像
@@ -226,5 +243,12 @@ function toggleResumeMenu() {
 ::v-deep(.el-menu-vertical-demo .el-menu-item:hover) {
   background: #f5f5ff !important;
   color: #3a36db !important;
+}
+.el-menu-vertical-demo .el-menu-item .el-icon,
+.el-menu-vertical-demo .el-sub-menu__title .el-icon {
+  margin-right: 12px;
+  font-size: 20px;
+  display: flex;
+  align-items: center;
 }
 </style>
