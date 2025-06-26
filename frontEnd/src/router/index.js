@@ -78,6 +78,11 @@ const routes = [
         component: () => import('../views/Admin/Algorithm.vue')
       }
     ]  
+  },
+  {
+    path: '/chat',
+    name: 'Chat',
+    component: () => import('../views/Chat/Chat.vue')
   }
 ]
 
