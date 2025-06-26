@@ -41,6 +41,12 @@ public class MessageController {
             }
         }
 
+        chatUsers.add(new User() {{
+            setId(10);
+            setUsername("牛爷爷");
+            setRole(1);
+        }});
+
         log.info("用户: {} 请求获取聊天用户列表", id);
 
         return ResponseEntity.ok(chatUsers);

@@ -6,14 +6,14 @@
       <el-menu :default-active="activeUser" class="chat-user-list">
         <el-menu-item v-for="user in filteredUsers" :key="user.id" :index="user.id.toString()" @click="selectUser(user)">
           <el-avatar :src="user.avatar" size="small" />
-          <span class="user-name">{{ user.name }}</span>
+          <span class="user-name">{{ user.username }}</span>
         </el-menu-item>
       </el-menu>
     </div>
     <div class="chat-main">
       <div class="chat-header">
         <el-avatar :src="currentUser.avatar" />
-        <span class="chat-user-name">{{ currentUser.name || '请选择联系人' }}</span>
+        <span class="chat-user-name">{{ currentUser.username || '请选择联系人' }}</span>
         <div class="chat-header-avatar-menu">
           <el-dropdown trigger="hover">
             <span>
@@ -60,7 +60,7 @@ const search = ref('')
 const inputMsg = ref('')
 const activeUser = ref('0')
 const users = ref([
-  { id: 0, name: '管理员', avatar: 'https://api.dicebear.com/7.x/miniavs/svg?seed=admin' }
+  { id: 0, username: '管理员', avatar: 'https://api.dicebear.com/7.x/miniavs/svg?seed=admin' }
 ])
 
 const myAvatar = ref('https://api.dicebear.com/7.x/miniavs/svg?seed=jobseeker') // 当前用户头像
@@ -73,13 +73,15 @@ onMounted(async () => {
 
     const res = await axios.get(`/chat/users/${userId}`)
 
+    console.log('获取聊天对象列表:', res.data)
+
     const chatUsers = res.data.map(u => ({
       ...u,
-      avatar: u.avatar || `https://api.dicebear.com/7.x/miniavs/svg?seed=${u.username || u.name || u.id}`
+      avatar: u.avatar || `https://api.dicebear.com/7.x/miniavs/svg?seed=${u.username || u.username || u.id}`
     }))
 
     users.value = [
-      { id: 0, name: '管理员', avatar: 'https://api.dicebear.com/7.x/miniavs/svg?seed=admin' },
+      { id: 0, username: '管理员', avatar: 'https://api.dicebear.com/7.x/miniavs/svg?seed=admin' },
       ...chatUsers
     ]
 
@@ -95,7 +97,7 @@ const messages = ref([
 const messagesRef = ref(null)
 const filteredUsers = computed(() => {
   if (!search.value) return users.value
-  return users.value.filter(u => u.name.includes(search.value))
+  return users.value.filter(u => u.username.includes(search.value))
 })
 
 const socket = localStorage.getItem('socket')
@@ -105,7 +107,7 @@ function selectUser(user) {
   activeUser.value = user.id.toString()
   // 切换联系人时可加载历史消息
   messages.value = [
-    { fromMe: false, avatar: user.avatar, content: `你好，我是${user.name}` }
+    { fromMe: false, avatar: user.avatar, content: `你好，我是${user.username}` }
   ]
   nextTick(() => {
     if (messagesRef.value) messagesRef.value.scrollTop = messagesRef.value.scrollHeight
