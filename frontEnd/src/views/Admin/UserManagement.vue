@@ -16,11 +16,16 @@
              <span>{{ scope.row.role == '0' ? '管理员' : scope.row.role == '2' ? 'HR' : '求职者' }}</span>
           </template>
         </el-table-column>
-        <el-table-column label="操作" width="280">
+        <el-table-column label="操作" width="380">
           <template #default="scope">
-            <el-button size="mini" @click="handleCheck(scope.row)">查看</el-button>
+            <el-button size="mini" @click="handleCheck(scope.row.id,scope.row.role)">查看</el-button>
             <el-button size="mini" @click="handleEdit(scope.row)">编辑</el-button>
-            <el-button size="mini" type="danger" @click="handleDelete(scope.row)">删除</el-button>
+            <el-button 
+            v-if="scope.row.role !== 0"
+            size="mini" 
+            type="danger" 
+            @click="handleDelete(scope.row)"
+            >删除</el-button>
           </template>
         </el-table-column>
       </el-table>
@@ -38,6 +43,9 @@
         <el-dialog title="查看用户详细信息" v-model="checkDialogVisible">
         <el-table :data="infoList" style="width: 100%" >
         <el-table-column prop="id" label="ID" width="80"/>
+        <el-table-column prop="user_id" label="用户ID" >
+           <span>{{ userid }}</span>
+        </el-table-column>
         <el-table-column prop="realname" label="真实姓名"/>
         <el-table-column prop="age" label="年龄" /> 
         <el-table-column prop="gender" label="性别">
@@ -61,8 +69,30 @@
         <el-table-column prop="phone" label="电话号码"/>
         <el-table-column prop="email" label="邮箱"/>
       </el-table>
+      
+      <el-table v-if="userrole === 1" :data="detailInfoList" style="width: 100%" >
+        <el-table-column prop="education" label="学历" width="225" >      
+          <template #default="scope">
+       <span> {{ educationMap[scope.row.education] || '未知学历' }}</span>
+      </template>
+        </el-table-column>
+        <el-table-column prop="school" label="毕业院校" width="225"/> 
+        <el-table-column prop="favor" label="理想岗位" width="225"/>
+        <el-table-column prop="membership" label="会员等级" width="225">
+        <template #default="scope">
+             <span>{{ scope.row.membership === undefined ||scope.row.membership===null
+        ? '  '
+        : scope.row.membership =='0' ? '普通会员' : '高级会员' }}</span>
+          </template>
+        </el-table-column>
+      </el-table>
+        <el-table v-else-if="userrole === 2" :data="tableData" style="width: 100%">
+                <el-table-column prop="company" label="所属公司" width="300" />
+        <el-table-column prop="position" label="招聘岗位" width="300" />
+        <el-table-column prop="experience" label="资历" width="300" />
+      </el-table>
         <template #footer>
-          <el-button @click="checkDialogVisible = false">退出</el-button>
+          <el-button @click="checkDialogVisible = false,infoList=[]">退出</el-button>
         </template>
       </el-dialog>                          
 
@@ -71,15 +101,16 @@
           <el-form-item label="用户名：">
             <el-input v-model="editUser.username" />
           </el-form-item>
-          <el-form-item label="密码  ：">
-            <el-input v-model="editUser.password" />
-          </el-form-item>
-          <el-form-item label="角色  ：">
-            <el-input v-model="editUser.role" />
-          </el-form-item>
-          <el-form-item label="状态  ：">
-            <el-switch v-model="editUser.status" active-text="正常" inactive-text="冻结" />
-          </el-form-item>
+           <el-form-item label="角色 ：">
+          <el-select  v-model="editUser.role" placeholder="请选择角色:">
+            <el-option
+        v-for="item in roleOptions"
+        :key="item.value"
+        :label="item.label"
+        :value="item.value">
+        </el-option>
+      </el-select>
+     </el-form-item>
         </el-form>
         <template #footer>
           <el-button @click="editDialogVisible = false">取消</el-button>
@@ -90,85 +121,111 @@
   </div>
 </template>
 
-<script>
-import { getUsers, updateUser, deleteUser } from '../../api/user';
-//import { getInfos, getInfosByUserId, deleteInfo } from '../../api/info';
+<script setup>
+import { ref, computed, onMounted } from 'vue'
+import { ElMessage, ElMessageBox } from 'element-plus'
+import { getUsers, updateUser, deleteUser } from '../../api/user'
+import { getInfoByUserId } from '../../api/info'
 
-export default {
-  data() {
-    return {
-      users: [],
-      currentPage: 1,
-      pageSize: 10,
-      searchKeyword: '',
-      editDialogVisible: false,
-      checkDialogVisible:false,
-      editUser: {},
-      infoList: []
-    };
-  },
-  computed: {
-    paginatedUsers() {
-      const start = (this.currentPage - 1) * this.pageSize;
-      const end = start + this.pageSize;
-      return this.users.slice(start, end);
-    }
-  },
-  methods: {
-    async loadUsers() {
-      try {
-        const res = await getUsers();
-        this.users = res.data.filter(user =>
-          user.username.includes(this.searchKeyword)
-        );
-      } catch (e) {
-        this.$message.error('加载用户失败');
-      }
-    },
-   async handleCheck(user){
-      /* try {
-        const res = await getInfosByUserId(user.id);
-        this.infoList = Array.isArray(res.data) ? res.data : [res.data]; // 使用 this 访问，兼容性
-      } catch (error) {
-        this.$message.error('获取用户详情失败');
-        console.error(error);
-      }*/
-      this.checkDialogVisible = true;
-   },
-    async handleEdit(user) {
-      this.editUser = { ...user }; // 克隆对象避免直接修改
-      this.editDialogVisible = true;
-    },
-    async saveEdit() {
-      try {
-        await updateUser(this.editUser.id, this.editUser);
-        this.$message.success('用户更新成功');
-        this.editDialogVisible = false;
-        this.loadUsers(); // 刷新数据
-      } catch (e) {
-        this.$message.error('更新失败');
-      }
-    },
-    async handleDelete(user) {
-      try {
-        await this.$confirm(`确定删除用户 ${user.username} 吗？`, '提示', {
-        type: 'warning'
-      });
-      await deleteUser(user.id);
-      this.$message.success('删除成功');
-      this.loadUsers();
-      } catch (e) {
-        if (e !== 'cancel') this.$message.error('删除失败');
-      }
-    },
-    handlePageChange(page) {
-    this.currentPage = page;
-    }
-  },
-  mounted() {
-    this.loadUsers();
+// 响应式数据
+const users = ref([])
+const currentPage = ref(1)
+const pageSize = ref(10)
+const searchKeyword = ref('')
+const editDialogVisible = ref(false)
+const checkDialogVisible = ref(false)
+const editUser = ref({})
+const infoList = ref([])
+const detailInfoList=ref([]) 
+const userid = ref(0)
+const userrole = ref(0)
+
+const roleOptions = [
+  { value: 1, label: '求职者' },
+  { value: 2, label: 'HR' }
+]
+
+const educationMap = {
+  1: '小学',
+  2: '初中',
+  3: '高中',
+  4: '大专',
+  5: '本科',
+  6: '硕士',
+  7: '博士'
+}
+
+// 计算属性
+const paginatedUsers = computed(() => {
+  const start = (currentPage.value - 1) * pageSize.value
+  const end = start + pageSize.value
+  return users.value.slice(start, end)
+})
+
+// 方法
+const loadUsers = async () => {
+  try {
+    const res = await getUsers()
+    users.value = res.data.filter(user => 
+      user.username.includes(searchKeyword.value)
+    )
+  } catch (e) {
+    ElMessage.error('加载用户失败')
   }
-};
-</script>
+}
 
+const handleCheck = async (id,role) => {
+  try {
+    const res = await getInfoByUserId(id)
+    infoList.value = Array.isArray(res.data) ? res.data : [res.data]
+    //detailInfoList处理
+  } catch (error) {
+    ElMessage.error('用户详细信息为空')
+    console.error(error)
+  }
+  userid.value = id
+  userrole.value=role
+  checkDialogVisible.value = true
+}
+
+const handleEdit = (user) => {
+  editUser.value = { ...user }
+  editDialogVisible.value = true
+}
+
+const saveEdit = async () => {
+  try {
+    await updateUser(editUser.value.id, editUser.value)
+    ElMessage.success('用户更新成功')
+    editDialogVisible.value = false
+    loadUsers()
+  } catch (e) {
+    ElMessage.error('更新失败')
+  }
+}
+
+const handleDelete = async (user) => {
+  try {
+    await ElMessageBox.confirm(
+      `确定删除用户 ${user.username} 吗？`,
+      '提示',
+      { type: 'warning' }
+    )
+    await deleteUser(user.id)
+    ElMessage.success('删除成功')
+    loadUsers()
+  } catch (e) {
+    if (e !== 'cancel') ElMessage.error('删除失败')
+  }
+}
+
+const handlePageChange = (page) => {
+  currentPage.value = page
+}
+
+// 生命周期
+onMounted(() => {
+  loadUsers()
+})
+</script>
  
