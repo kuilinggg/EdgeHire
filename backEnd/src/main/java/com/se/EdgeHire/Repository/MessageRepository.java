@@ -72,4 +72,20 @@ public interface MessageRepository extends JpaRepository<Message, Long> {
             "FROM Message m " +
             "WHERE m.senderId = :userId OR m.receiverId = :userId")
     List<Integer> findAllChatUsers(@Param("userId") int userId);
+
+    // 统计指定时间后发送的消息数量
+    @Query("SELECT COUNT(m) FROM Message m WHERE m.senderId = :senderId AND m.time >= :startTime")
+    long countBySenderIdAndTimeAfter(@Param("senderId") int senderId, @Param("startTime") java.time.LocalDateTime startTime);
+
+    // 统计本周联系的不重复用户数
+    @Query("SELECT COUNT(DISTINCT CASE " +
+           "WHEN m.senderId = :userId THEN m.receiverId " +
+           "ELSE m.senderId END) " +
+           "FROM Message m " +
+           "WHERE (m.senderId = :userId OR m.receiverId = :userId) " +
+           "AND m.time >= :startTime")
+    long countDistinctContactsThisWeek(@Param("userId") int userId, @Param("startTime") java.time.LocalDateTime startTime);
+
+    // 统计未读消息数量
+    long countByReceiverIdAndIsRead(int receiverId, int isRead);
 }
