@@ -29,6 +29,10 @@
             <el-icon><ChatDotRound /></el-icon>
             <span>私聊</span>
           </el-menu-item>
+          <el-menu-item index="/hr/api-test">
+            <el-icon><Setting /></el-icon>
+            <span>API测试</span>
+          </el-menu-item>
         </el-menu>
       </nav>
     </div>
@@ -56,7 +60,7 @@
 <script setup>
 import { ref, computed } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
-import { User, Document, EditPen, ChatDotRound } from '@element-plus/icons-vue'
+import { User, Document, EditPen, ChatDotRound, Setting } from '@element-plus/icons-vue'
 import { ElMessage } from 'element-plus'
 import { authApi } from '../../api/auth'
 const router = useRouter()
