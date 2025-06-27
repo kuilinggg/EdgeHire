@@ -2,6 +2,7 @@ package com.se.EdgeHire.Repository;
 
 import com.se.EdgeHire.Entity.Message;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
@@ -10,7 +11,7 @@ import java.util.List;
 import java.util.Optional;
 
 @Repository
-public interface MessageRepository extends JpaRepository<Message, Long> {
+public interface MessageRepository extends JpaRepository<Message, Integer> {
     /**
      * 查询用户之间的对话记录
      * @param user1 对话参与者1
@@ -25,6 +26,22 @@ public interface MessageRepository extends JpaRepository<Message, Long> {
             @Param("user1") int user1,
             @Param("user2") int user2
     );
+
+    @Modifying
+    @Query("UPDATE Message m SET m.isRead = " +
+            "1 WHERE (m.senderId = :user1 AND m.receiverId = :user2) " +
+            "OR (m.senderId = :user2 AND m.receiverId = :user1)")
+    int markConversationAsRead(@Param("user1") int user1, @Param("user2") int user2);
+
+    /**
+     * 查询用户的所有消息
+     * @param userId 用户ID
+     * @return 返回用户的所有消息列表
+     */
+    @Query("SELECT m FROM Message m " +
+            "WHERE m.senderId = :userId OR m.receiverId = :userId " +
+            "ORDER BY m.time ASC")
+    List<Message> findMessagesByUserId(@Param("userId") int userId);
 
     /**
      * 查询用户所有未读消息

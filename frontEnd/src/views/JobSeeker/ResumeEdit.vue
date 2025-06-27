@@ -127,7 +127,7 @@
             </el-form-item>
             <el-form-item>
               <el-button type="primary" @click="onSubmit">提交</el-button>
-              <el-button type="danger" @click="onClearAll">清空</el-button>
+              <el-button type="danger" @click="onClearAll">新建</el-button>
             </el-form-item>
           </el-col>
         </el-row>
@@ -323,6 +323,7 @@ function loadDraft() {
 // 清除草稿
 function clearDraft() {
   localStorage.removeItem(LOCAL_DRAFT_KEY.value)
+  resumeId.value = null
 }
 
 let autoSaveTimer = null
@@ -386,7 +387,7 @@ const onSubmit = async () => {
         res = await createResume(data)
       }
       if (res && res.data) {
-        clearDraft()
+        clearDraft && clearDraft()
         ElMessage.success('简历保存成功')
         // 可选：跳转或刷新
         // router.push({ name: 'ResumeView', query: { id: res.data.id } })
