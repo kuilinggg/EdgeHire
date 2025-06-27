@@ -26,6 +26,9 @@ public class ResumeService {
     }
 
     public Resume saveResume(Resume resume) {
+        if (resume.getCreateTime() == null) {
+            resume.setCreateTime(java.time.LocalDateTime.now());
+        }
         return resumeRepository.save(resume);
     }
 
