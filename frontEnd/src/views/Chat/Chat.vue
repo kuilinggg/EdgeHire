@@ -6,7 +6,10 @@
       <el-menu :default-active="activeUser" class="chat-user-list">
         <el-menu-item v-for="user in filteredUsers" :key="user.id" :index="user.id.toString()" @click="selectUser(user)">
           <el-avatar :src="user.avatar" size="small" />
-          <span class="user-name">{{ user.username }}</span>
+          <div class="user-info">
+            <span class="user-name">{{ user.username }}</span>
+            <span v-if="user.unReadCount && user.unReadCount > 0" class="user-unread-count">{{ user.unReadCount }}</span>
+          </div>
         </el-menu-item>
       </el-menu>
     </div>
@@ -40,11 +43,15 @@
       <div class="chat-input">
         <el-input
           v-model="inputMsg"
-          placeholder="输入消息..."
-          @keyup.enter="sendMsg"
+          type="textarea"
+          :rows="3"
+          placeholder="请输入聊天内容"
+          @keydown.enter.exact.prevent="sendMsg"
+          @keydown.shift.enter="handleShiftEnter"
           clearable
+          resize="none"
         />
-        <el-button type="primary" @click="sendMsg">发送</el-button>
+        <el-button type="primary" @click="sendMsg" class="send-button">发送</el-button>
       </div>
     </div>
   </div>
@@ -62,10 +69,12 @@ import { ElMessage } from 'element-plus'
 const router = useRouter()
 const search = ref('')
 const inputMsg = ref('')
-const activeUser = ref('0')
+const activeUser = ref('0') 
+
 const speaker = localStorage.getItem('userId')
 const users = ref([
-  { id: 0, username: '管理员', avatar: 'https://api.dicebear.com/7.x/miniavs/svg?seed=admin' }
+  { id: 0, username: '管理员', avatar: 'https://api.dicebear.com/7.x/miniavs/svg?seed=admin', unReadCount: 3 },
+  { id: 1, username: '测试用户', avatar: 'https://api.dicebear.com/7.x/miniavs/svg?seed=test', unReadCount: 5 }
 ])
 
 var messageMap = ref(null) // 用于接收服务器推送的消息
@@ -93,7 +102,7 @@ onMounted(async () => {
     ]
 
   } catch (error) {
-    console.error('获取聊天列表失败:', error)
+    console.error('获取聊天列表对象失败:', error)
   }
 })
 
@@ -108,6 +117,15 @@ onMounted(async () => {
 
     messageMap = await axios.get(`/chat/messages/${userId}`)
     console.log('获取历史消息:', messageMap.data)
+
+    const savedActiveUser = localStorage.getItem('activeUser')
+
+    if (savedActiveUser) {
+    activeUser.value = savedActiveUser
+    nextTick(() => {
+      selectUser(users.value.find(u => u.id.toString() === savedActiveUser) || users.value[0])
+    })
+  }
 
   } catch (error) {
     console.error('获取历史消息失败:', error)
@@ -135,8 +153,18 @@ onMounted(() => {
 
 function selectUser(user) {
   activeUser.value = user.id.toString()
-  // 切换联系人时可加载历史消息
+  localStorage.setItem('activeUser', activeUser.value)
+  
+  // 清除选中用户的未读消息数量
+  const selectedUser = users.value.find(u => u.id === user.id)
+  if (selectedUser && selectedUser.unReadCount) {
+    selectedUser.unReadCount = 0
+  }
 
+  var res = axios.post(`/chat/messages/read/${user.id}/${speaker}`)
+  console.log('已标记消息为已读:', res.data)
+
+  // 切换联系人时可加载历史消息
   if (!messageMap.data) {
     messages.value[0].avatar = user.avatar
     return
@@ -185,6 +213,12 @@ function sendMsg() {
     if (messagesRef.value) messagesRef.value.scrollTop = messagesRef.value.scrollHeight
   })
 }
+
+// 处理Shift+Enter换行
+function handleShiftEnter(event) {
+  // Shift+Enter时允许换行，不阻止默认行为
+  // 这样用户可以正常换行
+}
 function goToProfile() {
   // 角色数字：0-管理员 1-求职者 2-HR
   // 假设登录后已将 t_user.role 存入 localStorage 的 userRole
@@ -220,7 +254,10 @@ onMounted(() => {
     socket.value.onmessage = function(event) {
       try {
         const msg = JSON.parse(event.data)
-        // 判断是否为当前聊天对象的消息
+
+        console.log("接收到消息:", msg)
+        
+        // 如果是当前聊天对象的消息，直接显示
         if (msg.senderId == activeUser.value || msg.senderId == parseInt(localStorage.getItem('userId'))) {
           messages.value.push({
             fromMe: msg.senderId === parseInt(localStorage.getItem('userId')),
@@ -234,9 +271,43 @@ onMounted(() => {
           nextTick(() => {
             if (messagesRef.value) messagesRef.value.scrollTop = messagesRef.value.scrollHeight
           })
+        } else {
+          // 如果消息不来自当前聊天对象，增加未读消息数量
+          const senderUser = users.value.find(u => u.id == msg.senderId)
+          if (senderUser) {
+            if (!senderUser.unReadCount) {
+              senderUser.unReadCount = 0
+            }
+            senderUser.unReadCount++
+
+            if (messageMap.data[senderUser.id]) {
+              messageMap.data[senderUser.id].push(msg)
+            } 
+          }
+          else {
+              //TODO: 不存在该用户的消息列表，即边栏不存在该用户，需要请求该用户信息
+
+            const fetchUser = async () => {
+              const res = await axios.get(`/chat/newChatUser/${msg.senderId}`)
+              console.log("获得新的用户信息:", res.data)
+              if (res.data) {
+                users.value.push({
+                  id: msg.senderId,
+                  username: res.data.username,
+                  avatar: res.data.avatar || `https://api.dicebear.com/7.x/miniavs/svg?seed=${res.data.username || res.data.id}`,
+                  unReadCount: res.data.unReadCount || 1
+                })
+                messageMap.data[msg.senderId] = [msg]
+              } else {
+                console.warn('未找到用户信息:', msg.senderId)
+              } 
+            }
+
+            fetchUser()
+            }
         }
       } catch (e) {
-        console.error('解析socket消息失败', e)
+        console.error('出现错误', e)
       }
     }
   }
@@ -272,8 +343,34 @@ onMounted(() => {
   border: none;
   background: transparent;
 }
-.user-name {
+.chat-user-list .el-menu-item {
+  display: flex;
+  align-items: center;
+}
+.user-info {
+  flex: 1;
+  display: flex;
+  align-items: center;
   margin-left: 12px;
+}
+.user-name {
+  flex: 1;
+}
+.user-unread-count {
+  background: #ff4757;
+  color: white;
+  border-radius: 50%;
+  width: 18px;
+  height: 18px;
+  font-size: 11px;
+  line-height: 18px;
+  text-align: center;
+  margin-left: 8px;
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 500;
 }
 .chat-main {
   flex: 1;
@@ -339,14 +436,19 @@ onMounted(() => {
 }
 .chat-input {
   display: flex;
-  align-items: center;
+  align-items: flex-end;
   padding: 16px 32px;
   background: #fff;
   border-top: 1px solid #ebeef5;
+  gap: 12px;
 }
 .chat-input .el-input {
   flex: 1;
-  margin-right: 16px;
+}
+.send-button {
+  height: 40px;
+  padding: 0 20px;
+  flex-shrink: 0;
 }
 .chat-header-avatar-menu {
   position: absolute;

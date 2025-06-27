@@ -2,6 +2,7 @@ package com.se.EdgeHire.Repository;
 
 import com.se.EdgeHire.Entity.Message;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
@@ -25,6 +26,12 @@ public interface MessageRepository extends JpaRepository<Message, Integer> {
             @Param("user1") int user1,
             @Param("user2") int user2
     );
+
+    @Modifying
+    @Query("UPDATE Message m SET m.isRead = " +
+            "1 WHERE (m.senderId = :user1 AND m.receiverId = :user2) " +
+            "OR (m.senderId = :user2 AND m.receiverId = :user1)")
+    int markConversationAsRead(@Param("user1") int user1, @Param("user2") int user2);
 
     /**
      * 查询用户的所有消息
