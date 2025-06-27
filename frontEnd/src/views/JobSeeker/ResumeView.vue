@@ -41,7 +41,10 @@
             </el-descriptions>
             <el-empty v-else description="请选择左侧简历" />
             <!-- 新增：卡片下方删除按钮，仅在有选中简历时显示 -->
-            <div v-if="selectedResume" style="margin-top: 32px; text-align: center;">
+            <div v-if="selectedResume" style="margin-top: 32px; text-align: center; display: flex; justify-content: center; gap: 16px;">
+              <el-button type="primary" size="large" icon="Edit" class="edit-btn-main" @click="onEditSelected">
+                编辑
+              </el-button>
               <el-popconfirm title="确定删除该简历？" @confirm="onDeleteSelected">
                 <template #reference>
                   <el-button type="danger" size="large" icon="Delete" class="delete-btn-main">
@@ -67,7 +70,7 @@ import { ref, onMounted } from 'vue'
 import { getResumesByUserId, deleteResume } from '../../api/resume'
 import { useAuthStore } from '../../stores/authStore'
 import { useRouter } from 'vue-router'
-import { Document, Delete } from '@element-plus/icons-vue'
+import { Document, Delete, Edit } from '@element-plus/icons-vue'
 import { ElMessage } from 'element-plus'
 
 const resumeList = ref([])
@@ -92,6 +95,14 @@ const onDeleteSelected = async () => {
   } catch (e) {
     ElMessage.error('删除失败')
   }
+}
+
+const onEditSelected = () => {
+  if (!selectedResume.value) return
+  router.push({
+    path: '/jobseeker/resume-edit',
+    query: { id: selectedResume.value.id }
+  })
 }
 
 // 拉取简历列表并刷新选中项
@@ -154,7 +165,7 @@ onMounted(refreshResumeList)
   align-items: center;
   justify-content: space-between;
 }
-.delete-btn-main {
+.delete-btn-main, .edit-btn-main {
   margin-top: 16px;
   width: 180px;
   font-size: 16px;
