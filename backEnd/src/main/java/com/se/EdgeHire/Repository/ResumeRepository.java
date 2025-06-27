@@ -1,0 +1,9 @@
+package com.se.EdgeHire.Repository;
+
+import com.se.EdgeHire.Entity.Resume;
+import org.springframework.data.jpa.repository.JpaRepository;
+import java.util.List;
+
+public interface ResumeRepository extends JpaRepository<Resume, Integer> {
+    List<Resume> findByUserId(Integer userId);
+}
