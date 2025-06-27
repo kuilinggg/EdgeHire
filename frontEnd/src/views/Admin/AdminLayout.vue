@@ -4,7 +4,6 @@
     <div class="sidebar">
       <div class="logo-container">
         <span class="logo-text">欢迎你，管理员</span>
-        <div class="logo-badge">v1.0</div>
       </div>
       <el-menu
         :default-active="$route.path"
