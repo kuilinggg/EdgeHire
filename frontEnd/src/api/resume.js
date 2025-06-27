@@ -6,6 +6,10 @@ export function getAllRusumes(){
   return axios.get(API_BASE)
 }
 
+export function getAllRusumes(){
+  return axios.get(API_BASE)
+}
+
 // 获取当前用户的所有简历（数组）
 export function getResumesByUserId(userId) {
   return axios.get(`${API_BASE}/user/${userId}`)
