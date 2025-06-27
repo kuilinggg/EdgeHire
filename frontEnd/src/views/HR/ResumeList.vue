@@ -151,7 +151,7 @@
           v-model:current-page="currentPage"
           v-model:page-size="pageSize"
           :page-sizes="[10, 20, 50]"
-          :total="filteredResumes.length"
+          :total="totalCount"
           layout="total, sizes, prev, pager, next, jumper"
           @size-change="handleSizeChange"
           @current-change="handleCurrentChange"
@@ -167,13 +167,20 @@
       :before-close="handleCloseDetail"
       class="resume-detail-dialog"
     >
-      <ResumeDetail 
-        v-if="selectedResume" 
+      <ResumeDetail
+        v-if="selectedResume"
         :resume="selectedResume"
         @start-chat="handleStartChat"
         @give-suggestion="handleGiveSuggestion"
       />
     </el-dialog>
+
+    <!-- 简历评论对话框 -->
+    <ResumeCommentDialog
+      v-model="showCommentDialog"
+      :resume="commentResume"
+      @success="handleCommentSuccess"
+    />
   </div>
 </template>
 
@@ -183,10 +190,13 @@ import { useRouter, useRoute } from 'vue-router'
 import { Search, Star, StarFilled } from '@element-plus/icons-vue'
 import { ElMessage, ElLoading } from 'element-plus'
 import ResumeDetail from './components/ResumeDetail.vue'
-import { resumeApi } from '../../api/resume.js'
+import ResumeCommentDialog from './components/ResumeCommentDialog.vue'
+import { resumeRecommendationApi, resumeCommentApi } from '../../api/hr.js'
+import { useAuthStore } from '../../stores/authStore.js'
 
 const router = useRouter()
 const route = useRoute()
+const authStore = useAuthStore()
 
 // 响应式数据
 const searchKeyword = ref('')
@@ -203,6 +213,8 @@ const showDetailDialog = ref(false)
 const selectedResume = ref(null)
 const loading = ref(false)
 const dataLoaded = ref(false)
+const showCommentDialog = ref(false)
+const commentResume = ref(null)
 
 // 计算属性
 const isSearchMode = computed(() => {
@@ -213,118 +225,123 @@ const isSearchMode = computed(() => {
          filters.value.city
 })
 
-// 模拟简历数据
-const mockResumes = ref([
-  {
-    id: 1,
-    name: '张三',
-    avatar: 'https://api.dicebear.com/7.x/miniavs/svg?seed=zhang',
-    expectedPosition: '前端开发工程师',
-    experience: '3年经验',
-    education: '本科',
-    expectedCity: '上海',
-    skills: ['Vue.js', 'React', 'JavaScript', 'TypeScript', 'Node.js'],
-    isFavorited: false,
-    matchScore: 95,
-    updateTime: '2024-01-15'
-  },
-  {
-    id: 2,
-    name: '李四',
-    avatar: 'https://api.dicebear.com/7.x/miniavs/svg?seed=li',
-    expectedPosition: 'Java后端开发',
-    experience: '5年经验',
-    education: '硕士',
-    expectedCity: '北京',
-    skills: ['Java', 'Spring Boot', 'MySQL', 'Redis', 'Docker'],
-    isFavorited: true,
-    matchScore: 88,
-    updateTime: '2024-01-14'
-  },
-  {
-    id: 3,
-    name: '王五',
-    avatar: 'https://api.dicebear.com/7.x/miniavs/svg?seed=wang',
-    expectedPosition: '产品经理',
-    experience: '2年经验',
-    education: '本科',
-    expectedCity: '深圳',
-    skills: ['产品设计', '需求分析', 'Axure', 'Figma', '数据分析'],
-    isFavorited: false,
-    matchScore: 82,
-    updateTime: '2024-01-13'
-  }
-])
+// 简历数据
+const allResumes = ref([])
+const totalCount = ref(0)
 
-const allResumes = ref([...mockResumes.value])
-
-// 筛选后的简历列表
+// 筛选后的简历列表（现在直接使用API返回的数据）
 const filteredResumes = computed(() => {
-  let result = [...allResumes.value]
-  
-  // 关键词搜索
-  if (searchKeyword.value) {
-    const keyword = searchKeyword.value.toLowerCase()
-    result = result.filter(resume => 
-      resume.name.toLowerCase().includes(keyword) ||
-      resume.expectedPosition.toLowerCase().includes(keyword) ||
-      resume.skills.some(skill => skill.toLowerCase().includes(keyword))
-    )
-  }
-  
-  // 筛选条件
-  if (filters.value.experience) {
-    result = result.filter(resume => resume.experience.includes(filters.value.experience))
-  }
-  if (filters.value.education) {
-    result = result.filter(resume => resume.education === filters.value.education)
-  }
-  if (filters.value.city) {
-    result = result.filter(resume => resume.expectedCity === filters.value.city)
-  }
-  
-  // 排序
-  if (sortBy.value === 'match') {
-    result.sort((a, b) => b.matchScore - a.matchScore)
-  } else if (sortBy.value === 'update_time') {
-    result.sort((a, b) => new Date(b.updateTime) - new Date(a.updateTime))
-  }
-  
-  return result
+  return allResumes.value
 })
 
-// 当前页显示的简历
+// 当前页显示的简历（API已经处理了分页）
 const displayResumes = computed(() => {
-  const start = (currentPage.value - 1) * pageSize.value
-  const end = start + pageSize.value
-  return filteredResumes.value.slice(start, end)
+  return allResumes.value
 })
 
 // 方法
-const loadResumeData = async () => {
+const loadResumeData = async (isSearch = false) => {
   try {
     loading.value = true
-    // 这里可以根据实际需要调用API
-    // const response = await resumeApi.getResumeList()
-    // allResumes.value = response.data
+    const userId = authStore.userId || '1'
 
-    // 目前使用模拟数据
-    await new Promise(resolve => setTimeout(resolve, 500)) // 模拟加载延迟
+    let response
+    if (isSearch && (searchKeyword.value || hasActiveFilters())) {
+      // 搜索模式
+      const searchParams = {
+        keyword: searchKeyword.value,
+        minEducation: getEducationValue(filters.value.education),
+        position: filters.value.industry,
+        page: currentPage.value - 1, // 后端使用0基索引
+        size: pageSize.value
+      }
+      response = await resumeRecommendationApi.searchResumes(userId, searchParams)
+    } else {
+      // 推荐模式
+      response = await resumeRecommendationApi.getRecommendations(
+        userId,
+        currentPage.value - 1,
+        pageSize.value
+      )
+    }
+
+    if (response.data && response.data.data) {
+      // 转换后端数据格式为前端格式
+      allResumes.value = response.data.data.map(item => ({
+        id: item.resumeId,
+        userId: item.userId,
+        name: item.name,
+        avatar: item.avatar || `https://api.dicebear.com/7.x/miniavs/svg?seed=${item.name}`,
+        expectedPosition: item.expectedPosition,
+        experience: getExperienceText(item.age), // 根据年龄推算经验
+        education: getEducationText(item.education),
+        expectedCity: item.expectedCity || '未填写',
+        skills: item.skills || ['技能待完善'],
+        isFavorited: false, // 后续可以从收藏API获取
+        matchScore: item.matchScore,
+        updateTime: item.createTime,
+        averageScore: item.averageScore,
+        hasCommented: item.hasCommented
+      }))
+      totalCount.value = response.data.total
+    }
+
     dataLoaded.value = true
   } catch (error) {
     console.error('加载简历数据失败:', error)
     ElMessage.error('加载简历数据失败，请稍后重试')
+    // 使用默认数据作为fallback
+    allResumes.value = []
   } finally {
     loading.value = false
   }
 }
 
-const handleSearch = () => {
-  currentPage.value = 1
-  ElMessage.success(`搜索到 ${filteredResumes.value.length} 份简历`)
+// 辅助方法
+const hasActiveFilters = () => {
+  return filters.value.experience ||
+         filters.value.education ||
+         filters.value.industry ||
+         filters.value.city
 }
 
-const resetFilters = () => {
+const getEducationValue = (education) => {
+  const educationMap = {
+    'high_school': 1,
+    'college': 2,
+    'bachelor': 3,
+    'master': 4,
+    'doctor': 5
+  }
+  return educationMap[education] || null
+}
+
+const getEducationText = (educationValue) => {
+  const educationMap = {
+    1: '高中',
+    2: '大专',
+    3: '本科',
+    4: '硕士',
+    5: '博士'
+  }
+  return educationMap[educationValue] || '未填写'
+}
+
+const getExperienceText = (age) => {
+  if (age <= 22) return '应届毕业生'
+  if (age <= 25) return '1-3年经验'
+  if (age <= 30) return '3-5年经验'
+  if (age <= 35) return '5-10年经验'
+  return '10年以上经验'
+}
+
+const handleSearch = async () => {
+  currentPage.value = 1
+  await loadResumeData(true)
+  ElMessage.success(`搜索到 ${allResumes.value.length} 份简历`)
+}
+
+const resetFilters = async () => {
   searchKeyword.value = ''
   filters.value = {
     experience: '',
@@ -333,11 +350,19 @@ const resetFilters = () => {
     city: ''
   }
   currentPage.value = 1
+  await loadResumeData(false) // 重新加载推荐数据
 }
 
-const toggleFavorite = (resume) => {
-  resume.isFavorited = !resume.isFavorited
-  ElMessage.success(resume.isFavorited ? '已收藏' : '已取消收藏')
+const toggleFavorite = async (resume) => {
+  try {
+    // 这里可以调用收藏API
+    // await favoriteApi.toggle(resume.id)
+    resume.isFavorited = !resume.isFavorited
+    ElMessage.success(resume.isFavorited ? '已收藏' : '已取消收藏')
+  } catch (error) {
+    console.error('收藏操作失败:', error)
+    ElMessage.error('操作失败，请稍后重试')
+  }
 }
 
 const viewResumeDetail = (resume) => {
@@ -356,23 +381,34 @@ const handleStartChat = (resume) => {
 }
 
 const handleGiveSuggestion = (resume) => {
-  router.push(`/hr/guidance?resumeId=${resume.id}`)
+  commentResume.value = resume
+  showCommentDialog.value = true
   handleCloseDetail()
 }
 
-const handleSizeChange = (val) => {
-  pageSize.value = val
-  currentPage.value = 1
+const handleCommentSuccess = (commentData) => {
+  ElMessage.success('评价提交成功')
+  // 可以更新简历的评价状态
+  if (commentResume.value) {
+    commentResume.value.hasCommented = true
+  }
 }
 
-const handleCurrentChange = (val) => {
+const handleSizeChange = async (val) => {
+  pageSize.value = val
+  currentPage.value = 1
+  await loadResumeData(isSearchMode.value)
+}
+
+const handleCurrentChange = async (val) => {
   currentPage.value = val
+  await loadResumeData(isSearchMode.value)
 }
 
 // 监听路由查询参数
-watch(() => route.query, (newQuery) => {
+watch(() => route.query, async (newQuery) => {
   if (newQuery.recommend === 'true') {
-    resetFilters()
+    await resetFilters()
   } else if (newQuery.searchFocus === 'true') {
     // 聚焦搜索框
     setTimeout(() => {
@@ -382,9 +418,9 @@ watch(() => route.query, (newQuery) => {
   }
 }, { immediate: true })
 
-onMounted(() => {
+onMounted(async () => {
   // 初始化数据加载
-  loadResumeData()
+  await loadResumeData()
 })
 </script>
 
