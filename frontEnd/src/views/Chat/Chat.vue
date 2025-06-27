@@ -63,6 +63,7 @@ const router = useRouter()
 const search = ref('')
 const inputMsg = ref('')
 const activeUser = ref('0')
+const speaker = localStorage.getItem('userId')
 const users = ref([
   { id: 0, username: '管理员', avatar: 'https://api.dicebear.com/7.x/miniavs/svg?seed=admin' }
 ])
@@ -162,11 +163,18 @@ function sendMsg() {
     ElMessage.warning('不能向管理员发送消息')
     return
   }
+
+  var userId = parseInt(localStorage.getItem('userId'))
+  if (userId != speaker) {
+    ElMessage.warning("请先登录！")  //防止用户在同一浏览器中登录两个账号
+    return
+  }
+
   messages.value.push({ fromMe: true, avatar: myAvatar.value, content: inputMsg.value, time: Date.now() })
 
   // 发送消息到服务器
   socket.value.send(JSON.stringify({
-    from: parseInt(localStorage.getItem('userId')),
+    from: userId,
     to: activeUser.value,
     content: inputMsg.value,
     type: 0 // 0表示私聊
