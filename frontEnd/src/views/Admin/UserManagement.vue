@@ -19,7 +19,11 @@
         <el-table-column label="操作" width="380">
           <template #default="scope">
             <el-button size="mini" @click="handleCheck(scope.row.id,scope.row.role)">查看</el-button>
-            <el-button size="mini" @click="handleEdit(scope.row)">编辑</el-button>
+            <el-button 
+            v-if="scope.row.role !== 0"
+            size="mini" 
+            @click="handleEdit(scope.row)"
+            >编辑</el-button>
             <el-button 
             v-if="scope.row.role !== 0"
             size="mini" 
@@ -43,9 +47,7 @@
         <el-dialog title="查看用户详细信息" v-model="checkDialogVisible">
         <el-table :data="infoList" style="width: 100%" >
         <el-table-column prop="id" label="ID" width="80"/>
-        <el-table-column prop="user_id" label="用户ID" >
-           <span>{{ userid }}</span>
-        </el-table-column>
+        <el-table-column prop="userId" label="用户ID" />
         <el-table-column prop="realname" label="真实姓名"/>
         <el-table-column prop="age" label="年龄" /> 
         <el-table-column prop="gender" label="性别">
@@ -92,7 +94,7 @@
         <el-table-column prop="experience" label="资历" width="300" />
       </el-table>
         <template #footer>
-          <el-button @click="checkDialogVisible = false,infoList=[]">退出</el-button>
+          <el-button @click="checkDialogVisible = false,infoList=[]">返回</el-button>
         </template>
       </el-dialog>                          
 
@@ -184,7 +186,7 @@ const handleCheck = async (id,role) => {
     console.error(error)
   }
   userid.value = id
-  userrole.value=role
+  userrole.value = role
   checkDialogVisible.value = true
 }
 
@@ -229,3 +231,11 @@ onMounted(() => {
 })
 </script>
  
+<style scoped>
+.card {
+  background: #fff;
+  border-radius: 4px;
+  padding: 20px;
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.1);
+}
+</style>
