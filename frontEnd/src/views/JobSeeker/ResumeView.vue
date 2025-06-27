@@ -17,9 +17,12 @@
                 v-for="(item, idx) in resumeList"
                 :key="item.id"
                 :index="String(idx)"
+                class="resume-menu-item"
               >
-                <el-icon style="margin-right: 4px;"><Document /></el-icon>
-                简历{{ idx + 1 }}
+                <div class="menu-item-flex">
+                  <el-icon style="margin-right: 4px;"><Document /></el-icon>
+                  <span>简历{{ idx + 1 }}</span>
+                </div>
               </el-menu-item>
             </el-menu>
           </el-col>
@@ -37,6 +40,16 @@
               </el-descriptions-item>
             </el-descriptions>
             <el-empty v-else description="请选择左侧简历" />
+            <!-- 新增：卡片下方删除按钮，仅在有选中简历时显示 -->
+            <div v-if="selectedResume" style="margin-top: 32px; text-align: center;">
+              <el-popconfirm title="确定删除该简历？" @confirm="onDeleteSelected">
+                <template #reference>
+                  <el-button type="danger" size="large" icon="Delete" class="delete-btn-main">
+                    删除当前简历
+                  </el-button>
+                </template>
+              </el-popconfirm>
+            </div>
           </el-col>
         </template>
         <template v-else>
@@ -51,10 +64,11 @@
 
 <script setup>
 import { ref, onMounted } from 'vue'
-import { getResumesByUserId } from '../../api/resume'
+import { getResumesByUserId, deleteResume } from '../../api/resume'
 import { useAuthStore } from '../../stores/authStore'
 import { useRouter } from 'vue-router'
-import { Document } from '@element-plus/icons-vue'
+import { Document, Delete } from '@element-plus/icons-vue'
+import { ElMessage } from 'element-plus'
 
 const resumeList = ref([])
 const selectedIndex = ref('0')
@@ -67,24 +81,41 @@ const handleSelect = (idx) => {
   selectedResume.value = resumeList.value[Number(idx)]
 }
 
-onMounted(async () => {
-  const userId = authStore.userId || authStore.user?.id
-  if (!userId) {
-    router.push('/login')
-    return
+const onDeleteSelected = async () => {
+  if (!selectedResume.value) return
+  const id = selectedResume.value.id
+  try {
+    await deleteResume(id)
+    ElMessage.success('删除成功')
+    // 删除成功后刷新简历列表
+    await refreshResumeList()
+  } catch (e) {
+    ElMessage.error('删除失败')
   }
+}
+
+// 拉取简历列表并刷新选中项
+const refreshResumeList = async () => {
+  const userId = authStore.userId || authStore.user?.id
   try {
     const res = await getResumesByUserId(userId)
     if (res.data && res.data.length > 0) {
       resumeList.value = res.data
       selectedResume.value = res.data[0]
       selectedIndex.value = '0'
+    } else {
+      resumeList.value = []
+      selectedResume.value = null
+      selectedIndex.value = '0'
     }
   } catch (e) {
     resumeList.value = []
     selectedResume.value = null
+    selectedIndex.value = '0'
   }
-})
+}
+
+onMounted(refreshResumeList)
 </script>
 
 <style scoped>
@@ -117,5 +148,18 @@ onMounted(async () => {
 .resume-content {
   font-size: 15px;
   color: #222;
+}
+.resume-menu-item .menu-item-flex {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+.delete-btn-main {
+  margin-top: 16px;
+  width: 180px;
+  font-size: 16px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
 }
 </style>
