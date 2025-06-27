@@ -223,33 +223,116 @@ onMounted(fetchProfile)
 
 <style scoped>
 .profile-container {
-  padding: 32px;
-  max-width: 480px;
-  margin: 0 auto;
+  padding: 40px 24px 32px 24px;
+  max-width: 500px;
+  margin: 32px auto 0 auto;
+  background: #fff;
+  border-radius: 18px;
+  box-shadow: 0 4px 24px 0 rgba(64,158,255,0.08), 0 1.5px 6px 0 rgba(0,0,0,0.04);
   position: relative;
 }
+.profile-view {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  padding: 16px 0 8px 0;
+  width: 100%;
+}
 .profile-view p {
-  margin: 8px 0;
-  font-size: 15px;
+  margin: 10px 0 4px 0;
+  font-size: 16px;
+  color: #333;
+  letter-spacing: 0.5px;
+  text-align: left;
+  width: 100%;
 }
 .edit-btn-wrapper {
   display: flex;
   justify-content: center;
-  margin-top: 24px;
+  margin-top: 32px;
 }
-.edit-btn {
-  min-width: 120px;
+.edit-btn, .el-button[type="success"] {
+  min-width: 140px;
+  font-size: 17px;
+  font-weight: 600;
+  letter-spacing: 2px;
+  border-radius: 10px;
+  box-shadow: 0 2px 8px rgba(64,158,255,0.13);
+  background: linear-gradient(90deg, #409EFF 0%, #66b1ff 100%);
+  color: #fff;
+  border: none;
+  transition: background 0.3s, box-shadow 0.3s;
+}
+.edit-btn:hover, .el-button[type="success"]:hover {
+  background: linear-gradient(90deg, #66b1ff 0%, #409EFF 100%);
+  box-shadow: 0 4px 16px rgba(64,158,255,0.18);
+}
+.el-button {
+  border-radius: 10px;
+  font-weight: 600;
+  letter-spacing: 2px;
   font-size: 16px;
-  box-shadow: 0 2px 8px rgba(58,54,219,0.08);
+}
+.el-button + .el-button {
+  margin-left: 14px !important;
 }
 .top-alert {
-  margin-bottom: 18px;
+  margin-bottom: 22px;
+  border-radius: 8px;
+}
+.avatar-uploader {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
 }
 .avatar-uploader .el-avatar {
-  border: 2px dashed #d9d9d9;
-  transition: border-color 0.3s;
+  border: 2.5px dashed #d9d9d9;
+  transition: border-color 0.3s, box-shadow 0.3s;
+  box-shadow: 0 2px 8px rgba(64,158,255,0.10);
+  margin-bottom: 8px;
+  background: #f4f8ff;
 }
 .avatar-uploader:hover .el-avatar {
   border-color: #409EFF;
+  box-shadow: 0 4px 16px rgba(64,158,255,0.18);
+}
+.el-upload__tip {
+  color: #909399;
+  font-size: 13px;
+  margin-top: 2px;
+}
+.el-form {
+  background: #f8fbff;
+  border-radius: 12px;
+  padding: 24px 18px 12px 18px;
+  box-shadow: 0 1.5px 6px 0 rgba(0,0,0,0.03);
+}
+.el-form-item {
+  margin-bottom: 18px;
+}
+.el-form-item__label {
+  font-weight: 500;
+  color: #222;
+  font-size: 15px;
+}
+.el-input, .el-input-number, .el-radio-group {
+  width: 100%;
+}
+.el-button[type="success"] {
+  background: linear-gradient(90deg, #409EFF 0%, #66b1ff 100%);
+  border: none;
+  color: #fff;
+  font-weight: 500;
+  border-radius: 6px;
+  box-shadow: 0 2px 8px rgba(64,158,255,0.10);
+}
+.el-button[type="success"]:hover {
+  background: linear-gradient(90deg, #66b1ff 0%, #409EFF 100%);
+}
+.el-button {
+  border-radius: 10px;
+  font-weight: 600;
+  letter-spacing: 2px;
+  font-size: 16px;
 }
 </style>
