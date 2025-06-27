@@ -1,8 +1,10 @@
 package com.se.EdgeHire.Controller;
 
+import com.se.EdgeHire.Entity.Message;
 import com.se.EdgeHire.Entity.User;
 import com.se.EdgeHire.Repository.MessageRepository;
 import com.se.EdgeHire.Repository.UserRepository;
+import com.se.EdgeHire.Service.MessageService;
 import lombok.AllArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.RequestEntity;
@@ -22,6 +24,8 @@ public class MessageController {
     MessageRepository messageRepository;
 
     UserRepository userRepository;
+
+    MessageService messageService;
 
     /**
      * 获取聊天用户列表
@@ -50,5 +54,12 @@ public class MessageController {
         log.info("用户: {} 请求获取聊天用户列表", id);
 
         return ResponseEntity.ok(chatUsers);
+    }
+
+    @GetMapping("/messages/{id}")
+    public ResponseEntity<?> getMessages(@PathVariable Integer id) {
+        Map<Integer, List<Message>> messages = messageService.getConversationByUserId(id);
+        log.info("用户: {} 请求获取聊天记录", id);
+        return ResponseEntity.ok(messages);
     }
 }

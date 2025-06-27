@@ -10,7 +10,7 @@ import java.util.List;
 import java.util.Optional;
 
 @Repository
-public interface MessageRepository extends JpaRepository<Message, Long> {
+public interface MessageRepository extends JpaRepository<Message, Integer> {
     /**
      * 查询用户之间的对话记录
      * @param user1 对话参与者1
@@ -25,6 +25,16 @@ public interface MessageRepository extends JpaRepository<Message, Long> {
             @Param("user1") int user1,
             @Param("user2") int user2
     );
+
+    /**
+     * 查询用户的所有消息
+     * @param userId 用户ID
+     * @return 返回用户的所有消息列表
+     */
+    @Query("SELECT m FROM Message m " +
+            "WHERE m.senderId = :userId OR m.receiverId = :userId " +
+            "ORDER BY m.time ASC")
+    List<Message> findMessagesByUserId(@Param("userId") int userId);
 
     /**
      * 查询用户所有未读消息

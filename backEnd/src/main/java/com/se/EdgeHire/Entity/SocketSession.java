@@ -28,4 +28,11 @@ public class SocketSession {
      * 头像路径
      */
     private String avatar;
+
+    public SocketSession setSession(Session session, int id) {
+        this.session = session;
+        this.id = id;
+        //TODO: 这里需要添加逻辑来获取用户信息，比如真名之类的
+        return this;
+    }
 }

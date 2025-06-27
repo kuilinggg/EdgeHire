@@ -1,7 +1,14 @@
 package com.se.EdgeHire.WebSocket;
 
+import com.fasterxml.jackson.databind.JsonNode;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.SerializationFeature;
+import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
+import com.fasterxml.jackson.datatype.jsr310.ser.LocalDateTimeSerializer;
+import com.se.EdgeHire.Entity.Message;
 import com.se.EdgeHire.Entity.SocketSession;
 import com.se.EdgeHire.Entity.User;
+import com.se.EdgeHire.Repository.MessageRepository;
 import com.se.EdgeHire.Repository.UserRepository;
 import jakarta.websocket.*;
 import jakarta.websocket.server.ServerEndpoint;
@@ -11,6 +18,8 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
 
+import java.time.LocalDateTime;
+import java.time.format.DateTimeFormatter;
 import java.util.Objects;
 import java.util.Optional;
 import java.util.concurrent.ConcurrentHashMap;
@@ -21,10 +30,23 @@ import java.util.concurrent.ConcurrentHashMap;
 public class WebSocketHandler {
     private static final ConcurrentHashMap<Integer, SocketSession> SESSION_MAP = new ConcurrentHashMap<>();
     private static UserRepository userRepository;
+    private static MessageRepository messageRepository;
+    ObjectMapper objectMapper = new ObjectMapper();
 
     @Autowired
-    public void setInstance(UserRepository userRepository) {
+    public void setInstance(UserRepository userRepository, MessageRepository messageRepository) {
         WebSocketHandler.userRepository = userRepository;
+        WebSocketHandler.messageRepository = messageRepository;
+    }
+
+    public WebSocketHandler() {
+        // 注册JavaTimeModule以支持LocalDateTime序列化和反序列化
+        JavaTimeModule javaTimeModule = new JavaTimeModule();
+        // 设置自定义格式
+        javaTimeModule.addSerializer(LocalDateTime.class,
+                new LocalDateTimeSerializer(DateTimeFormatter.ofPattern("yyyy-MM-dd'T'HH:mm:ss")));
+        objectMapper.registerModule(javaTimeModule);
+        objectMapper.disable(SerializationFeature.WRITE_DATES_AS_TIMESTAMPS);
     }
 
     @OnOpen
@@ -56,14 +78,26 @@ public class WebSocketHandler {
             return;
         }
 
-        //TODO: 这里需要添加逻辑来获取用户信息，比如真名之类的
+        SocketSession socketSession = new SocketSession().setSession(session, userId);
+        SESSION_MAP.put(userId, socketSession);
 
         log.info("WebSocket connection opened, userId: {}", userId);
     }
 
     @OnClose
     public void OnClose(Session session) {
-        //TODO: 处理连接关闭事件
+        Integer userId = getUserIdBySession(session);
+        if(userId == null) {
+            log.warn("User ID not found in session on close: {}", session.getId());
+            return;
+        }
+
+        if(SESSION_MAP.containsKey(userId)) {
+            SESSION_MAP.remove(userId);
+            log.info("WebSocket connection closed, userId: {}", userId);
+        } else {
+            log.warn("WebSocket session not found for userId: {}", userId);
+        }
     }
 
     @OnError
@@ -73,8 +107,50 @@ public class WebSocketHandler {
 
     @OnMessage
     public void OnMessage(String message, Session session) {
-        // 处理接收到的消息
-        // 可以在这里添加逻辑来处理消息，例如广播、存储等
+        // 解析前端发送的JSON消息
+        try {
+            JsonNode jsonNode = objectMapper.readTree(message);
+            int from = jsonNode.get("from").asInt();
+            int to = jsonNode.get("to").asInt();
+            String content = jsonNode.get("content").asText();
+            int type = jsonNode.get("type").asInt();
+            log.info("收到消息: from={}, to={}, content={} , type={}", from, to, content, type);
+
+            if(type == 0) {
+                Message msg = new Message();
+                msg.setSenderId(from);
+                msg.setReceiverId(to);
+                msg.setContent(content);
+                msg.setTime(LocalDateTime.now());
+                msg.setIsRead(0);
+                messageRepository.save(msg);
+
+                sendOneMessage(msg);
+            }
+
+        } catch (Exception e) {
+            log.error("消息解析失败: {}", e.getMessage());
+        }
+    }
+
+    private void sendOneMessage(Message message) {
+        if(SESSION_MAP.containsKey(message.getReceiverId())) {
+            // 如果接收方在线，发送消息
+            SocketSession receiverSession = SESSION_MAP.get(message.getReceiverId());
+            try {
+                synchronized (WebSocketHandler.class) {
+                    // 确保线程安全地发送消息
+                    if (receiverSession.getSession().isOpen()) {
+                        receiverSession.getSession().getBasicRemote().sendText(objectMapper.writeValueAsString(message));
+                        log.info("发送消息给用户: {}, 内容: {}", message.getReceiverId(), message.getContent());
+                    }
+                }
+            } catch (Exception e) {
+                log.error("发送消息失败: {}", e.getMessage());
+            }
+        } else {
+            log.warn("用户 {} 不在线，无法发送消息", message.getReceiverId());
+        }
     }
 
     private Integer getUserIdBySession(Session session) {
