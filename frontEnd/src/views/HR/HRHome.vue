@@ -93,7 +93,7 @@ function goToResumeSearch() {
   padding: 0 24px 16px 16px;
   min-height: calc(100vh - 16px);
   background: #f5f7fa;
-  max-width: 1200px;
+  max-width: 1400px;
 }
 .top-bar {
   display: flex;
