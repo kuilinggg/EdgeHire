@@ -12,7 +12,7 @@ import java.util.Optional;
 
 @RestController
 @RequestMapping("/api/hr")
-@CrossOrigin(origins = "*")
+@CrossOrigin(origins = "*", allowedHeaders = "*", methods = {RequestMethod.GET, RequestMethod.POST, RequestMethod.PUT, RequestMethod.DELETE, RequestMethod.OPTIONS})
 public class HrController {
     
     @Autowired
@@ -20,6 +20,14 @@ public class HrController {
     
     @Autowired
     private HrStatisticsService hrStatisticsService;
+
+    /**
+     * 处理预检请求
+     */
+    @RequestMapping(method = RequestMethod.OPTIONS)
+    public ResponseEntity<?> handleOptions() {
+        return ResponseEntity.ok().build();
+    }
 
     /**
      * 根据用户ID获取HR信息

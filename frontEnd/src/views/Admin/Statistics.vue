@@ -1,81 +1,85 @@
 <template>
   <div class="statistics">
-    <h2>统计分析</h2>
+    <h2>数据统计分析</h2>
     <div class="cards">
       <el-row :gutter="20">
         <el-col :span="6">
-          <div class="stat-card">
+          <el-card class="stat-card">
             <div class="stat-title">用户总数</div>
-            <div class="stat-value">1234</div>
-          </div>
+            <div class="stat-value">{{ usernum }}</div>
+          </el-card>
         </el-col>
         <el-col :span="6">
-          <div class="stat-card">
-            <div class="stat-title">求职者总数</div>
-            <div class="stat-value">1,234</div>
-          </div>
+          <el-card class="stat-card">
+            <div class="stat-title">求职者数量</div>
+            <div class="stat-value">{{ seekernum }}</div>
+          </el-card>
         </el-col>
         <el-col :span="6">
-          <div class="stat-card">
+          <el-card class="stat-card">
             <div class="stat-title">HR数量</div>
-            <div class="stat-value">56</div>
-          </div>
+            <div class="stat-value">{{ HRnum }}</div>
+          </el-card>
         </el-col>
         <el-col :span="6">
-          <div class="stat-card">
-            <div class="stat-title">求职申请</div>
-            <div class="stat-value">789</div>
-          </div>
+          <el-card class="stat-card">
+            <div class="stat-title">求职申请数</div>
+            <div class="stat-value">{{ resumenum }}</div>
+          </el-card>
         </el-col>
       </el-row>
     </div>
     
-    <div class="chart-container">
-      <div class="chart-card">
-        <h3>图表</h3>
-        <div class="chart-placeholder">图表1</div>
-      </div>
-      <div class="chart-card">
-        <h3>饼图</h3>
-        <div class="chart-placeholder">饼图1</div>
-      </div>
-    </div>
+    <el-row :gutter="20" class="chart-container" style="margin-top: 30px">
+      <el-col :span="11">
+        <el-card class="chart-card">
+          <h3>图表</h3>
+          <div class="chart-placeholder">图表1</div>
+        </el-card>
+      </el-col>
+      <el-col :span="11">
+        <el-card class="chart-card">
+          <h3>饼图</h3>
+          <div class="chart-placeholder">饼图1</div>
+        </el-card>
+      </el-col>
+    </el-row>
     
-    <div class="table-card">
-      <h3>活跃用户TOP10</h3>
-      <el-table :data="activeUsers" style="width: 100%">
-        <el-table-column prop="rank" label="排名" width="80"></el-table-column>
-        <el-table-column prop="username" label="用户名"></el-table-column>
-        <el-table-column prop="loginCount" label="登录次数"></el-table-column>
-        <el-table-column prop="lastLogin" label="最后登录时间"></el-table-column>
-      </el-table>
-    </div>
+   
   </div>
 </template>
 
 <script setup>
 import { ref,onMounted } from 'vue';
 import { getUsers } from '../../api/user';
+import { getAllRusumes } from '../../api/resume';
+import { ElMessage } from 'element-plus';
 
 const userList=ref([])
 const HRList=ref([])
 const seekerList=ref([])
+const resumeList=ref([])
+const usernum=ref(0)
+const HRnum=ref(0)
+const seekernum=ref(0)
+const resumenum=ref(0)
 
 const load = async () => {
   try {
-    const res = await getUsers()
-    userList.value = res.data.filter(user => 
-      user.username.includes(searchKeyword.value)
-    
-    )
+    const res1 = await getUsers()
+    userList.value = Array.isArray(res1.data) ? res1.data : [res1.data]
+    usernum.value=userList.value.length
+    const res4 = await getAllRusumes()
+    resumeList.value = Array.isArray(res4.data) ? res4.data : [res4.data]
+    resumenum.value=resumeList.value.length
   } catch (e) {
-    ElMessage.error('加载用户失败')
+    ElMessage.error('加载失败')
   }
 }
 onMounted(() => {
   load()
 })
-</script>
+</script> 
 
 <style scoped>
 .statistics {

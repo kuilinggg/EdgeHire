@@ -2,69 +2,139 @@
   <div class="job-review">
     <h2>求职信息审查</h2>
     <div class="card">
-      <el-tabs v-model="activeTab">
-        <el-tab-pane label="待审核" name="pending">
-          <el-table :data="pendingJobs" style="width: 100%">
-            <el-table-column prop="id" label="ID" width="80"></el-table-column>
-            <el-table-column prop="title" label="职位名称"></el-table-column>
-            <el-table-column prop="company" label="公司"></el-table-column>
-            <el-table-column prop="applicant" label="申请人"></el-table-column>
-            <el-table-column prop="date" label="申请日期"></el-table-column>
-            <el-table-column label="操作" width="180">
-              <template #default="scope">
+      <div class="search-bar">
+        <el-input v-model="searchKeyword" placeholder="搜索特定用户" style="width: 300px" />
+        <el-button type="primary" @click="handleSearch">搜索</el-button>
+      </div>
+
+          <el-table :data="paginatedResumes" style="width: 100%">
+            <el-table-column prop="id" label="ID" width="180"/>
+            <el-table-column prop="userId" label="用户ID" />
+            <el-table-column label="头像">
+           <template #default="scope">
+             <el-image
+            style="width: 50px; height: 50px"
+            :src="scope.row.avatar"
+            :preview-src-list="[scope.row.avatar]"
+          />
+          </template>
+          </el-table-column>
+            <el-table-column prop="createTime" label="创建时间">
+               <template #default="scope">
+             {{ formatDate(scope.row.createTime) }}
+             </template>
+          </el-table-column>
+            <el-table-column label="操作" width="300">
+             <template #default="scope">
+                <el-button type="success" @click="contentCheck(scope.row)">查看简历内容</el-button>
                 <el-button type="success">通过</el-button>
                 <el-button type="danger">拒绝</el-button>
               </template>
             </el-table-column>
           </el-table>
-        </el-tab-pane>
-        <el-tab-pane label="已通过" name="approved">
-          <el-table :data="approvedJobs" style="width: 100%">
-            <el-table-column prop="id" label="ID" width="80"></el-table-column>
-            <el-table-column prop="title" label="职位名称"></el-table-column>
-            <el-table-column prop="company" label="公司"></el-table-column>
-            <el-table-column prop="applicant" label="申请人"></el-table-column>
-            <el-table-column prop="date" label="申请日期"></el-table-column>
-            <el-table-column prop="reviewer" label="审核人"></el-table-column>
-          </el-table>
-        </el-tab-pane>
-        <el-tab-pane label="已拒绝" name="rejected">
-          <el-table :data="rejectedJobs" style="width: 100%">
-            <el-table-column prop="id" label="ID" width="80"></el-table-column>
-            <el-table-column prop="title" label="职位名称"></el-table-column>
-            <el-table-column prop="company" label="公司"></el-table-column>
-            <el-table-column prop="applicant" label="申请人"></el-table-column>
-            <el-table-column prop="date" label="申请日期"></el-table-column>
-            <el-table-column prop="reviewer" label="审核人"></el-table-column>
-            <el-table-column prop="reason" label="拒绝原因"></el-table-column>
-          </el-table>
-        </el-tab-pane>
-      </el-tabs>
-    </div>
+
+    <!-- 弹窗 -->
+    <el-dialog
+      title="简历详情"
+      v-model="dialogVisible"
+      width="50%"
+      center
+    >
+      <el-scrollbar height="300px">
+        <p style="white-space: pre-wrap">{{ selectedResumeContent }}</p>
+      </el-scrollbar>
+
+      <template #footer>
+        <el-button @click="dialogVisible = false">返回</el-button>
+      </template>
+    </el-dialog>
+
+    <el-pagination
+      style="margin-top: 20px; text-align: center"
+      background
+      layout="prev, pager, next"
+      :current-page="currentPage"
+      :page-size="pageSize"
+      :total="resumes.length"
+      @current-change="handlePageChange"
+      />
+   </div>
   </div>
 </template>
 
-<script>
-export default {
-  data() {
-    return {
-      activeTab: 'pending',
-      pendingJobs: [
-        { id: 1, title: '前端开发工程师', company: 'ABC科技', applicant: '张三', date: '2023-05-01' },
-        { id: 2, title: '产品经理', company: 'XYZ公司', applicant: '李四', date: '2023-05-02' },
-        { id: 3, title: 'UI设计师', company: '设计之家', applicant: '王五', date: '2023-05-03' }
-      ],
-      approvedJobs: [
-        { id: 4, title: 'Java开发', company: '软件集团', applicant: '赵六', date: '2023-04-28', reviewer: 'admin' },
-        { id: 5, title: '测试工程师', company: '质量保证', applicant: '钱七', date: '2023-04-29', reviewer: 'admin' }
-      ],
-      rejectedJobs: [
-        { id: 6, title: '销售代表', company: '营销公司', applicant: '孙八', date: '2023-04-25', reviewer: 'admin', reason: '不符合要求' }
-      ]
-    }
+<script setup>
+import{ ref , computed , onMounted }from 'vue'
+import { getAllRusumes } from '../../api/resume';
+import { ElMessage } from 'element-plus';
+import dayjs from 'dayjs'
+
+const dialogVisible=ref(false);
+const resumes = ref([]);
+const filteredResumes = ref([]); 
+const selectedResumeContent = ref('')
+const currentPage = ref(1)
+const pageSize = ref(10)
+const searchKeyword = ref('')
+
+
+// 计算属性
+const paginatedResumes = computed(() => {
+  const start = (currentPage.value - 1) * pageSize.value
+  const end = start + pageSize.value
+  return filteredResumes.value.slice(start, end)
+})
+
+// 搜索函数
+const handleSearch = () => {
+  currentPage.value = 1 // 搜索时重置到第一页
+  filterResumes()
+}
+
+// 过滤函数
+const filterResumes = () => {
+  if (!searchKeyword.value) {
+    filteredResumes.value = [...resumes.value]
+    return
+  }
+  
+  filteredResumes.value = resumes.value.filter(resume => 
+    String(resume.userId).includes(searchKeyword.value)
+  )
+}
+
+const loadResumes = async () => {
+  try {
+    const res = await getAllRusumes()
+    resumes.value = Array.isArray(res.data) ? res.data : [res.data]
+    filterResumes() // 初始加载时也执行过滤
+  } catch (e) {
+    ElMessage.error('加载简历失败')
   }
 }
+
+
+const contentCheck=async(row)=>{
+  try {
+    selectedResumeContent.value = row.content || '暂无简历内容'
+  } catch (e) {
+    ElMessage.error('加载简历内容失败')
+  }
+  dialogVisible.value=true;
+}
+
+const handlePageChange = (page) => {
+  currentPage.value = page
+}
+
+function formatDate(datetime) {
+  return dayjs(datetime).format('YYYY-MM-DD HH:mm:ss')
+}
+
+onMounted(()=>{
+  loadResumes();
+})
 </script>
+
 
 <style scoped>
 .job-review {

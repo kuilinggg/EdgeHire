@@ -61,18 +61,66 @@
 </template>
 
 <script setup>
-import { ref } from 'vue'
+import { ref, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { EditPen, ChatDotRound, Finished, Document, Search } from '@element-plus/icons-vue'
+import { ElMessage } from 'element-plus'
+import { hrApi } from '../../api/hr.js'
+import { useAuthStore } from '../../stores/authStore.js'
+
 const router = useRouter()
-// 假设HR姓名后续从后端获取
-const hrName = ref('王小明')
+const authStore = useAuthStore()
+
+// 响应式数据
+const hrName = ref('HR顾问')
+const loading = ref(false)
 const kpi = ref({
-  newGuidance: 5,
-  newContacts: 8,
-  completedGuidance: 3,
-  unreadMessages: 2
+  newGuidance: 0,
+  newContacts: 0,
+  completedGuidance: 0,
+  unreadMessages: 0
 })
+// 数据加载方法
+const loadKpiData = async () => {
+  try {
+    loading.value = true
+    const userId = authStore.userId || '1'
+    const response = await hrApi.getKpiData(userId)
+
+    if (response.data) {
+      kpi.value = response.data
+    }
+  } catch (error) {
+    console.error('加载KPI数据失败:', error)
+    ElMessage.error('加载数据失败，请稍后重试')
+    // 使用默认数据作为fallback
+    kpi.value = {
+      newGuidance: 5,
+      newContacts: 8,
+      completedGuidance: 3,
+      unreadMessages: 2
+    }
+  } finally {
+    loading.value = false
+  }
+}
+
+const loadHrInfo = async () => {
+  try {
+    const userId = authStore.userId || '1'
+    const response = await hrApi.getHrInfo(userId)
+
+    if (response.data) {
+      // 假设后端返回的HR信息中有姓名字段
+      hrName.value = response.data.name || response.data.company || 'HR顾问'
+    }
+  } catch (error) {
+    console.error('加载HR信息失败:', error)
+    // 保持默认值
+  }
+}
+
+// 页面跳转方法
 function goToGuidance() {
   router.push('/hr/guidance')
 }
@@ -85,6 +133,14 @@ function goToResumeList() {
 function goToResumeSearch() {
   router.push({ path: '/hr/resume-list', query: { searchFocus: 'true' } })
 }
+
+// 页面初始化
+onMounted(async () => {
+  await Promise.all([
+    loadKpiData(),
+    loadHrInfo()
+  ])
+})
 </script>
 
 <style scoped>

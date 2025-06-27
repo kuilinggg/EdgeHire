@@ -75,6 +75,11 @@ const routes = [
         name: 'HRGuidance',
         component: () => import('../views/HR/Guidance.vue')
       },
+      {
+        path: 'api-test',
+        name: 'HRApiTest',
+        component: () => import('../views/HR/ApiTest.vue')
+      },
       // 这里可继续添加其他HR子页面
     ]
   },
