@@ -1,7 +1,7 @@
 package com.se.EdgeHire.Controller;
 
 import com.se.EdgeHire.Entity.Info;
-import com.se.EdgeHire.Repository.InfoRepository;
+import com.se.EdgeHire.Service.InfoService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
@@ -11,11 +11,11 @@ import java.util.List;
 @RequestMapping("/api/t_info")
 public class InfoController {
     @Autowired
-    private InfoRepository infoRepository;
+    private InfoService infoService;
 
     @GetMapping("/user/{userId}")
     public ResponseEntity<Info> getInfoByUserId(@PathVariable Integer userId) {
-        List<Info> infos = infoRepository.findByUserId(userId);
+        List<Info> infos = infoService.findByUserId(userId);
         if (infos != null && !infos.isEmpty()) {
             return ResponseEntity.ok(infos.get(0));
         } else {
@@ -25,23 +25,16 @@ public class InfoController {
 
     @PostMapping
     public ResponseEntity<Info> createInfo(@RequestBody Info info) {
-        // 检查userId唯一性
-        List<Info> existList = infoRepository.findByUserId(info.getUserId());
-        if (existList != null && !existList.isEmpty()) {
-            // 已存在，返回已存在的记录（或可返回400/409错误）
-            return ResponseEntity.ok(existList.get(0));
-        }
-        Info saved = infoRepository.save(info);
+        Info saved = infoService.createInfo(info);
         return ResponseEntity.ok(saved);
     }
 
     @PutMapping("/{id}")
     public ResponseEntity<Info> updateInfo(@PathVariable Integer id, @RequestBody Info info) {
-        if (!infoRepository.existsById(id)) {
+        Info updated = infoService.updateInfo(id, info);
+        if (updated == null) {
             return ResponseEntity.notFound().build();
         }
-        info.setId(id);
-        Info updated = infoRepository.save(info);
         return ResponseEntity.ok(updated);
     }
 }

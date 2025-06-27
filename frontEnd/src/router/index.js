@@ -58,8 +58,25 @@ const routes = [
     path: '/hr',
     name: 'HR',
     component: () => import('../views/HR/HR.vue'),
-    meta: { requiresAuth: true }
-
+    meta: { requiresAuth: true },
+    children: [
+      {
+        path: 'home',
+        name: 'HRHome',
+        component: () => import('../views/HR/HRHome.vue')
+      },
+      {
+        path: 'resume-list',
+        name: 'HRResumeList',
+        component: () => import('../views/HR/ResumeList.vue')
+      },
+      {
+        path: 'guidance',
+        name: 'HRGuidance',
+        component: () => import('../views/HR/Guidance.vue')
+      },
+      // 这里可继续添加其他HR子页面
+    ]
   },
   {
     path: '/adminlayout',
