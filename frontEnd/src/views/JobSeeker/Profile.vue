@@ -1,7 +1,9 @@
 <template>
   <div class="profile-container">
     <el-alert v-if="showFillAlert" title="请先完善个人信息" type="warning" show-icon class="top-alert" />
-    <h2>个人信息</h2>
+    <div class="header-bar">
+      <span class="resume-title">个人信息</span>
+    </div>
     <el-card v-if="!editing">
       <div class="profile-view">
         <el-avatar :src="form.avatar" size="large" style="margin-bottom:16px;" />
@@ -224,11 +226,12 @@ onMounted(fetchProfile)
 
 <style scoped>
 .profile-container {
-  padding: 40px 24px 32px 24px;
-  max-width: 500px;
-  margin: 32px auto 0 auto;
+  padding: 32px;
+  max-width: 900px;
+  min-width: 700px;
+  margin: 0 auto;
   background: #fff;
-  border-radius: 18px;
+  border-radius: 4px;
   box-shadow: 0 4px 24px 0 rgba(64,158,255,0.08), 0 1.5px 6px 0 rgba(0,0,0,0.04);
   position: relative;
 }
@@ -257,7 +260,6 @@ onMounted(fetchProfile)
   font-size: 17px;
   font-weight: 600;
   letter-spacing: 2px;
-  border-radius: 10px;
   box-shadow: 0 2px 8px rgba(64,158,255,0.13);
   background: linear-gradient(90deg, #409EFF 0%, #66b1ff 100%);
   color: #fff;
@@ -269,7 +271,6 @@ onMounted(fetchProfile)
   box-shadow: 0 4px 16px rgba(64,158,255,0.18);
 }
 .el-button {
-  border-radius: 10px;
   font-weight: 600;
   letter-spacing: 2px;
   font-size: 16px;
@@ -304,7 +305,6 @@ onMounted(fetchProfile)
 }
 .el-form {
   background: #f8fbff;
-  border-radius: 12px;
   padding: 24px 18px 12px 18px;
   box-shadow: 0 1.5px 6px 0 rgba(0,0,0,0.03);
 }
@@ -324,16 +324,30 @@ onMounted(fetchProfile)
   border: none;
   color: #fff;
   font-weight: 500;
-  border-radius: 6px;
   box-shadow: 0 2px 8px rgba(64,158,255,0.10);
 }
 .el-button[type="success"]:hover {
   background: linear-gradient(90deg, #66b1ff 0%, #409EFF 100%);
 }
 .el-button {
-  border-radius: 10px;
   font-weight: 600;
   letter-spacing: 2px;
   font-size: 16px;
+}
+
+.header-bar {
+  display: flex;
+  justify-content: flex-start;
+  align-items: center;
+  margin-bottom: 16px;
+  padding-left: 0;
+  min-height: 40px;
+}
+.resume-title {
+  font-size: 24px;
+  font-weight: bold;
+  color: #222;
+  letter-spacing: 1px;
+  line-height: 1.2;
 }
 </style>
