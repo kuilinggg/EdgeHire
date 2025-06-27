@@ -249,7 +249,7 @@ function computeRules() {
   return {
     ...staticRules,
     ...getDynamicRules('任职情况', ['单位', '职位', '时间', '职责'], { 单位: '单位', 职位: '职位', 时间: '时间', 职责: '职责' }),
-    ...getDynamicRules('实习_兼职', ['单位', '职位', '时间', '职责'], { 单位: '单位', 职位: '职位', 时间: '时间', 职责: '职责' }),
+    ...getDynamicRules('实习_兼职', ['单位', '职位', '时间', '职责'], { 单位: '单位', 职位: '职位', 时间: '时间', 聪责: '职责' }),
     ...getCourseRules()
   }
 }
@@ -337,8 +337,34 @@ function autoSave() {
 loadResumeWithDraftOrId()
 
 const onSubmit = async () => {
-  formRef.value.validate(async (valid) => {
-    if (!valid) return
+  formRef.value.validate(async (valid, fields) => {
+    if (!valid) {
+      // 自动滚动到第一个校验失败的栏目（最上面的）
+      if (fields) {
+        // 获取所有有错误的prop，找到最上面的el-form-item
+        const keys = Object.keys(fields)
+        await nextTick()
+        let minTop = Infinity
+        let target = null
+        keys.forEach(key => {
+          const item = document.querySelector(`[prop='${key}'], [data-prop='${key}']`)
+          if (item) {
+            const rect = item.getBoundingClientRect()
+            if (rect.top < minTop) {
+              minTop = rect.top
+              target = item
+            }
+          }
+        })
+        if (target) {
+          target.scrollIntoView({ behavior: 'smooth', block: 'center' })
+          target.classList.add('form-item-error-highlight')
+          setTimeout(() => target.classList.remove('form-item-error-highlight'), 1500)
+        }
+        ElMessage.warning('请完整填写所有必填栏目')
+      }
+      return
+    }
     const userId = authStore.userId || authStore.user?.id
     if (!userId) {
       ElMessage.error('请先登录')
@@ -453,5 +479,10 @@ const onClearAll = () => {
   flex-direction: column;
   align-items: center;
   gap: 16px;
+}
+.form-item-error-highlight {
+  box-shadow: 0 0 0 2px #f56c6c;
+  border-radius: 4px;
+  transition: box-shadow 0.3s;
 }
 </style>
