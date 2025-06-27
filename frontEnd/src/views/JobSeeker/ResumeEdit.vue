@@ -9,16 +9,35 @@
           </el-button>
         </div>
       </template>
-      <el-row :gutter="24">
-        <el-col :span="18">
-          <el-form :model="form.Resume" :rules="rules" ref="formRef" label-width="100px" class="resume-form" @change="autoSave">
-            <el-divider>基本信息</el-divider>
-            <el-form-item label="姓名" prop="姓名">
-              <el-input v-model="form.Resume.姓名" placeholder="请输入姓名" />
-            </el-form-item>
-            <el-form-item label="求职意向" prop="求职意向">
-              <el-input v-model="form.Resume.求职意向" placeholder="如：前端开发实习生" />
-            </el-form-item>
+      <el-form :model="form.Resume" :rules="rules" ref="formRef" label-width="100px" class="resume-form" @change="autoSave">
+        <el-row :gutter="24">
+          <el-col :span="24">
+            <el-row>
+              <el-col :span="18">
+                <el-divider>基本信息</el-divider>
+                <el-form-item label="姓名" prop="姓名">
+                  <el-input v-model="form.Resume.姓名" placeholder="请输入姓名" />
+                </el-form-item>
+                <el-form-item label="求职意向" prop="求职意向">
+                  <el-input v-model="form.Resume.求职意向" placeholder="如：前端开发实习生" />
+                </el-form-item>
+              </el-col>
+              <el-col :span="6" style="display:flex;align-items:center;justify-content:center;">
+                <div class="avatar-box">
+                  <el-upload
+                    class="avatar-uploader"
+                    action=""
+                    :show-file-list="false"
+                    :before-upload="beforeAvatarUpload"
+                    :on-change="handleAvatarChange"
+                  >
+                    <el-avatar v-if="form.avatar" :src="form.avatar" size="large" />
+                    <el-icon v-else><User /></el-icon>
+                    <div v-if="!form.avatar" class="el-upload__text">点击上传头像</div>
+                  </el-upload>
+                </div>
+              </el-col>
+            </el-row>
             <el-divider>个人信息</el-divider>
             <el-row :gutter="12">
               <el-col :span="8"><el-form-item label="年龄" prop="个人信息.年龄"><el-input v-model="form.Resume.个人信息.年龄" placeholder="如：22" /></el-form-item></el-col>
@@ -41,15 +60,7 @@
               <el-input v-model="form.Resume.教育背景.专业" placeholder="如：软件工程" />
             </el-form-item>
             <el-form-item label="时间" prop="教育背景.时间">
-              <el-row style="width:100%" align="middle">
-                <el-col :span="10">
-                  <el-input v-model="form.Resume.教育背景.start" placeholder="起始时间" />
-                </el-col>
-                <el-col :span="4" style="text-align:center;line-height:32px;">-</el-col>
-                <el-col :span="10">
-                  <el-input v-model="form.Resume.教育背景.end" placeholder="结束时间" />
-                </el-col>
-              </el-row>
+              <el-input v-model="form.Resume.教育背景.时间" placeholder="如：2021-09 - 2025-06" />
             </el-form-item>
             <el-form-item label="GPA" prop="教育背景.GPA"><el-input v-model="form.Resume.教育背景.GPA" placeholder="如：3.8/4.0" /></el-form-item>
             <el-form-item label="主修课程" prop="教育背景.主修课程">
@@ -73,15 +84,7 @@
                 </el-form-item></el-col>
                 <el-col :span="8">
                   <el-form-item label="时间" :prop="'任职情况.'+idx+'.时间'">
-                    <el-row align="middle">
-                      <el-col :span="10">
-                        <el-input v-model="job.start" placeholder="起始时间（如：2022-07）" />
-                      </el-col>
-                      <el-col :span="4" style="text-align:center;line-height:32px;">-</el-col>
-                      <el-col :span="10">
-                        <el-input v-model="job.end" placeholder="结束时间（如：2022-09）" />
-                      </el-col>
-                    </el-row>
+                    <el-input v-model="job.时间" placeholder="如：2022-07 - 2022-09" />
                   </el-form-item>
                 </el-col>
               </el-row>
@@ -108,15 +111,7 @@
                 </el-form-item></el-col>
                 <el-col :span="8">
                   <el-form-item label="时间" :prop="'实习_兼职.'+idx+'.时间'">
-                    <el-row align="middle">
-                      <el-col :span="10">
-                        <el-input v-model="exp.start" placeholder="起始时间（如：2023-01）" />
-                      </el-col>
-                      <el-col :span="4" style="text-align:center;line-height:32px;">-</el-col>
-                      <el-col :span="10">
-                        <el-input v-model="exp.end" placeholder="结束时间（如：2023-03）" />
-                      </el-col>
-                    </el-row>
+                    <el-input v-model="exp.时间" placeholder="如：2023-01 - 2023-03" />
                   </el-form-item>
                 </el-col>
               </el-row>
@@ -132,25 +127,11 @@
             </el-form-item>
             <el-form-item>
               <el-button type="primary" @click="onSubmit">提交</el-button>
+              <el-button type="danger" @click="onClearAll">清空</el-button>
             </el-form-item>
-          </el-form>
-        </el-col>
-        <el-col :span="6">
-          <div class="avatar-box">
-            <el-upload
-              class="avatar-uploader"
-              action=""
-              :show-file-list="false"
-              :before-upload="beforeAvatarUpload"
-              :on-change="handleAvatarChange"
-            >
-              <el-avatar v-if="form.avatar" :src="form.avatar" size="large" />
-              <el-icon v-else><User /></el-icon>
-              <div v-if="!form.avatar" class="el-upload__text">点击上传头像</div>
-            </el-upload>
-          </div>
-        </el-col>
-      </el-row>
+          </el-col>
+        </el-row>
+      </el-form>
     </el-card>
   </div>
 </template>
@@ -159,8 +140,8 @@
 import { ref, computed, nextTick } from 'vue'
 import { useRouter } from 'vue-router'
 import { useAuthStore } from '../../stores/authStore'
-import { createResume, updateResume, getResumeByUserId } from '../../api/resume'
-import { ElMessage } from 'element-plus'
+import { createResume, updateResume, getResumeByUserId, getResumeById } from '../../api/resume'
+import { ElMessage, ElMessageBox } from 'element-plus'
 import { User } from '@element-plus/icons-vue'
 
 const defaultForm = {
@@ -171,13 +152,13 @@ const defaultForm = {
       年龄: '', 电话: '', 民族: '', 邮箱: '', 政治面貌: '', 籍贯: ''
     },
     教育背景: {
-      学校: '', 学历: '', 专业: '', start: '', end: '', GPA: '', 主修课程: [''], 个人荣誉: ''
+      学校: '', 学历: '', 专业: '', 时间: '', GPA: '', 主修课程: [''], 个人荣誉: ''
     },
     任职情况: [
-      { 单位: '', 职位: '', start: '', end: '', 职责: '' }
+      { 单位: '', 职位: '', 时间: '', 职责: '' }
     ],
     实习_兼职: [
-      { 单位: '', 职位: '', start: '', end: '', 职责: '' }
+      { 单位: '', 职位: '', 时间: '', 职责: '' }
     ],
     自我评价: ''
   },
@@ -185,6 +166,33 @@ const defaultForm = {
 }
 const form = ref(JSON.parse(JSON.stringify(defaultForm)))
 const resumeId = ref(null)
+const router = useRouter()
+const authStore = useAuthStore()
+
+// 新增：根据id获取简历详情
+async function loadResumeById(id) {
+  try {
+    const res = await getResumeById(id)
+    if (res && res.data) {
+      form.value.Resume = JSON.parse(res.data.content)
+      form.value.avatar = res.data.avatar || ''
+      resumeId.value = res.data.id
+    }
+  } catch (e) {
+    ElMessage.error('获取简历失败')
+  }
+}
+
+// 页面加载时优先加载草稿/后端或根据id加载
+async function loadResumeWithDraftOrId() {
+  const id = router.currentRoute.value.query.id
+  if (id) {
+    await loadResumeById(id)
+    return
+  }
+  if (loadDraft()) return
+  await loadResume()
+}
 
 // 页面加载时获取当前用户简历，优先本地草稿
 async function loadResume() {
@@ -240,8 +248,8 @@ function getCourseRules() {
 function computeRules() {
   return {
     ...staticRules,
-    ...getDynamicRules('任职情况', ['单位', '职位', 'start', 'end', '职责'], { 单位: '单位', 职位: '职位', start: '起始时间', end: '结束时间', 职责: '职责' }),
-    ...getDynamicRules('实习_兼职', ['单位', '职位', 'start', 'end', '职责'], { 单位: '单位', 职位: '职位', start: '起始时间', end: '结束时间', 职责: '职责' }),
+    ...getDynamicRules('任职情况', ['单位', '职位', '时间', '职责'], { 单位: '单位', 职位: '职位', 时间: '时间', 职责: '职责' }),
+    ...getDynamicRules('实习_兼职', ['单位', '职位', '时间', '职责'], { 单位: '单位', 职位: '职位', 时间: '时间', 职责: '职责' }),
     ...getCourseRules()
   }
 }
@@ -261,8 +269,7 @@ const staticRules = {
   '教育背景.学校': [{ required: true, message: '学校未填写', trigger: 'blur' }],
   '教育背景.学历': [{ required: true, message: '学历未填写', trigger: 'blur' }],
   '教育背景.专业': [{ required: true, message: '专业未填写', trigger: 'blur' }],
-  '教育背景.start': [{ required: true, message: '起始时间未填写', trigger: 'blur' }],
-  '教育背景.end': [{ required: true, message: '结束时间未填写', trigger: 'blur' }],
+  '教育背景.时间': [{ required: true, message: '时间未填写', trigger: 'blur' }],
   '教育背景.GPA': [{ required: true, message: 'GPA未填写', trigger: 'blur' }],
   '教育背景.主修课程': [{ required: true, message: '主修课程未填写', trigger: 'blur' }],
   '教育背景.个人荣誉': [{ required: true, message: '个人荣誉未填写', trigger: 'blur' }],
@@ -271,8 +278,6 @@ const staticRules = {
 
 const rules = computed(computeRules)
 const formRef = ref()
-const authStore = useAuthStore()
-const router = useRouter()
 
 const beforeAvatarUpload = (file) => {
   const isImage = file.type.startsWith('image/')
@@ -328,12 +333,8 @@ function autoSave() {
   }, 1000)
 }
 
-// 页面加载时优先加载草稿，无草稿再查后端
-async function loadResumeWithDraft() {
-  if (loadDraft()) return
-  await loadResume()
-}
-loadResumeWithDraft()
+// 页面加载时优先加载草稿/后端或根据id加载
+loadResumeWithDraftOrId()
 
 const onSubmit = async () => {
   formRef.value.validate(async (valid) => {
@@ -341,47 +342,31 @@ const onSubmit = async () => {
     const userId = authStore.userId || authStore.user?.id
     if (!userId) {
       ElMessage.error('请先登录')
-      router.push('/login')
       return
     }
-    // 处理时间字段拼接
-    const data = JSON.parse(JSON.stringify(form.value))
-    data.Resume.教育背景.时间 = (data.Resume.教育背景.start || '') + ' - ' + (data.Resume.教育背景.end || '')
-    delete data.Resume.教育背景.start
-    delete data.Resume.教育背景.end
-    data.Resume.任职情况.forEach(job => {
-      job.时间 = (job.start || '') + ' - ' + (job.end || '')
-      delete job.start
-      delete job.end
-    })
-    data.Resume.实习_兼职.forEach(exp => {
-      exp.时间 = (exp.start || '') + ' - ' + (exp.end || '')
-      delete exp.start
-      delete exp.end
-    })
+    // 处理时间字段拼接（如有需要可在此处理）
+    const data = {
+      userId,
+      content: JSON.stringify(form.value.Resume),
+      avatar: form.value.avatar || ''
+    }
     try {
-      let resp
+      let res
       if (resumeId.value) {
-        resp = await updateResume({
-          id: resumeId.value,
-          userId,
-          content: JSON.stringify(data.Resume),
-          avatar: data.avatar
-        })
+        // 编辑模式，更新简历
+        res = await updateResume(resumeId.value, data)
       } else {
-        resp = await createResume({
-          userId,
-          content: JSON.stringify(data.Resume),
-          avatar: data.avatar
-        })
-        if (resp && resp.data && resp.data.id) resumeId.value = resp.data.id
+        // 新建简历
+        res = await createResume(data)
       }
-      // 提交成功后清除本地草稿
-      clearDraft()
-      ElMessage.success('简历提交成功！')
-      router.push('/jobseeker/resume-view')
+      if (res && res.data) {
+        clearDraft()
+        ElMessage.success('简历保存成功')
+        // 可选：跳转或刷新
+        // router.push({ name: 'ResumeView', query: { id: res.data.id } })
+      }
     } catch (e) {
-      ElMessage.error('提交失败，请重试')
+      ElMessage.error('保存简历失败')
     }
   })
 }
@@ -399,7 +384,7 @@ function removeCourse() {
   }
 }
 function addJob() {
-  form.value.Resume.任职情况.push({ 单位: '', 职位: '', start: '', end: '', 职责: '' })
+  form.value.Resume.任职情况.push({ 单位: '', 职位: '', 时间: '', 职责: '' })
 }
 function removeJob(idx) {
   if (form.value.Resume.任职情况.length > 1) {
@@ -407,7 +392,7 @@ function removeJob(idx) {
   }
 }
 function addIntern() {
-  form.value.Resume.实习_兼职.push({ 单位: '', 职位: '', start: '', end: '', 职责: '' })
+  form.value.Resume.实习_兼职.push({ 单位: '', 职位: '', 时间: '', 职责: '' })
 }
 function removeIntern(idx) {
   if (form.value.Resume.实习_兼职.length > 1) {
@@ -415,9 +400,20 @@ function removeIntern(idx) {
   }
 }
 
+const onClearAll = () => {
+  ElMessageBox.confirm('确定要清空所有填写内容吗？此操作不可撤销。', '警告', {
+    confirmButtonText: '确定',
+    cancelButtonText: '取消',
+    type: 'warning',
+  }).then(() => {
+    form.value = JSON.parse(JSON.stringify(defaultForm))
+    clearDraft && clearDraft()
+    ElMessage.success('内容已清空')
+  })
+}
 
 // 页面加载时仅加载后端简历
-loadResume()
+// loadResume()
 // 已移除草稿相关函数、变量、事件监听、合并逻辑等
 </script>
 
