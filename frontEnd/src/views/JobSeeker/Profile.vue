@@ -15,9 +15,10 @@
     <el-form v-else :model="form" label-width="80px" @change="autoSave" @submit.prevent :rules="rules" ref="profileForm">
       <el-form-item label="头像">
         <el-upload
+          action="http://localhost:8080/api/files/upload"
+          method="post"
           class="avatar-uploader"
           :show-file-list="false"
-          :http-request="customAvatarUpload"
           :on-success="handleAvatarSuccess"
           :before-upload="beforeAvatarUpload"
         >
@@ -180,10 +181,10 @@ async function onSaveClick() {
 }
 
 const uploadHeaders = { }
-function handleAvatarSuccess(res) {
+function handleAvatarSuccess(url) {
   // 假设后端返回 { url: 'xxx' }
-  if (res && res.url) {
-    form.avatar = res.url
+  if (url) {
+    form.avatar = url
     ElMessage.success('头像上传成功')
     // 不再自动保存，等待用户点击保存按钮
   } else {
