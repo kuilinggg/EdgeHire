@@ -7,6 +7,7 @@ import lombok.AllArgsConstructor;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
+import java.util.Comparator;
 import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
@@ -40,5 +41,13 @@ public class MessageService {
 
     public void markConversationAsRead(int user1, int user2) {
         messageRepository.markConversationAsRead(user1, user2);
+    }
+
+    public Map<Integer, Message> getLatestMessagesMap(int userId) {
+        List<Message> messages = messageRepository.findLatestMessagesInConversations(userId);
+        return messages.stream().collect(Collectors.toMap(
+                m -> m.getSenderId() == userId ? m.getReceiverId() : m.getSenderId(),
+                m -> m
+        ));
     }
 }
