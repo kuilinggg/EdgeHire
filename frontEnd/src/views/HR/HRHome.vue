@@ -90,7 +90,7 @@ const router = useRouter()
 const authStore = useAuthStore()
 
 // 响应式数据
-const hrName = ref('HR顾问')
+const hrName = ref('HR')
 const loading = ref(false)
 const kpi = ref({
   newGuidance: 0,
@@ -126,15 +126,34 @@ const loadKpiData = async () => {
 const loadHrInfo = async () => {
   try {
     const userId = authStore.userId || '1'
-    const response = await hrApi.getHrInfo(userId)
-
-    if (response.data) {
-      // 假设后端返回的HR信息中有姓名字段
-      hrName.value = response.data.name || response.data.company || 'HR顾问'
+    
+    // 从 Info 表中获取用户基本信息（包括姓名）
+    try {
+      const userResponse = await getInfoByUserId(userId)
+      if (userResponse.data && userResponse.data.realname) {
+        hrName.value = userResponse.data.realname
+        return
+      }
+    } catch (error) {
+      console.error('获取用户基本信息失败:', error)
     }
+    
+    // 如果无法获取姓名，则尝试从 HR 信息中获取公司名称作为备选
+    try {
+      const hrResponse = await hrApi.getHrInfo(userId)
+      if (hrResponse.data && hrResponse.data.company) {
+        hrName.value = hrResponse.data.company + ' HR'
+        return
+      }
+    } catch (error) {
+      console.error('获取HR信息失败:', error)
+    }
+    
+    // 如果都获取不到，使用默认值
+    hrName.value = 'HR'
   } catch (error) {
     console.error('加载HR信息失败:', error)
-    // 保持默认值
+    hrName.value = 'HR'
   }
 }
 
