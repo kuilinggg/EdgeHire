@@ -9,7 +9,7 @@
         <p><strong>学历：</strong>{{ educationText }}</p>
         <p><strong>学校：</strong>{{ form.school || '-' }}</p>
         <p><strong>理想岗位：</strong>{{ form.favor || '-' }}</p>
-        <p><strong>会员类型：</strong>{{ membershipLabel }}</p>
+        <p><strong>会员类型：</strong>{{ form.membership === 0 ? '普通会员' : '高级会员' }}</p>
       </div>
     </el-card>
     <el-form v-else :model="form" label-width="80px" :rules="rules" ref="matchForm" class="edit-form">
@@ -38,7 +38,7 @@
 <script setup>
 import { ref, reactive, onMounted, computed, nextTick } from 'vue'
 import { ElMessage } from 'element-plus'
-import { seekerApi } from '../../api/hr'
+import { getAllSeekers,getSeekerByUserId, getSeekerById,createSeeker,updateSeeker } from '../../api/seeker'
 
 const user_id = localStorage.getItem('userId')
 const form = reactive({
@@ -64,7 +64,7 @@ const educationOptions = [
   { value: 6, label: '硕士' },
   { value: 7, label: '博士' }
 ]
-const membershipLabel = '普通会员'
+
 const educationText = computed(() => {
   const found = educationOptions.find(e => e.value === form.education)
   return found ? found.label : '-'
@@ -77,7 +77,7 @@ const rules = {
 
 async function fetchSeekerInfo() {
   try {
-    const { data } = await seekerApi.getSeekerInfo(user_id)
+    const { data } = await getSeekerByUserId(user_id)
     if (data && data.id) {
       Object.assign(form, data)
       original.value = { ...data }
@@ -105,9 +105,9 @@ async function onSaveClick() {
       try {
         form.userId = user_id
         if (form.id) {
-          await seekerApi.updateSeekerInfo(form.id, form)
+          await updateSeeker(form.id, form)
         } else {
-          await seekerApi.createSeekerInfo(form)
+          await createSeeker(form)
         }
         ElMessage.success('保存成功')
         showFillAlert.value = false
