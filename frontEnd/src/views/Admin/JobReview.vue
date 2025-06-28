@@ -28,7 +28,7 @@
              <template #default="scope">
                 <el-button type="success" @click="contentCheck(scope.row)">查看简历内容</el-button>
                 <el-button type="success">通过</el-button>
-                <el-button type="danger">拒绝</el-button>
+                <el-button type="danger">驳回</el-button>
               </template>
             </el-table-column>
           </el-table>
@@ -64,7 +64,7 @@
 
 <script setup>
 import{ ref , computed , onMounted }from 'vue'
-import { getAllRusumes } from '../../api/resume';
+import { getAllResumes } from '../../api/resume';
 import { ElMessage } from 'element-plus';
 import dayjs from 'dayjs'
 
@@ -104,7 +104,7 @@ const filterResumes = () => {
 
 const loadResumes = async () => {
   try {
-    const res = await getAllRusumes()
+    const res = await getAllResumes()
     resumes.value = Array.isArray(res.data) ? res.data : [res.data]
     filterResumes() // 初始加载时也执行过滤
   } catch (e) {
