@@ -12,7 +12,7 @@ import java.util.Optional;
 
 @RestController
 @RequestMapping("/api/hr")
-@CrossOrigin(origins = "*", allowedHeaders = "*", methods = {RequestMethod.GET, RequestMethod.POST, RequestMethod.PUT, RequestMethod.DELETE, RequestMethod.OPTIONS})
+@CrossOrigin(origins = {"http://localhost:5173", "http://localhost:3000"}, allowedHeaders = "*", methods = {RequestMethod.GET, RequestMethod.POST, RequestMethod.PUT, RequestMethod.DELETE, RequestMethod.OPTIONS})
 public class HrController {
     
     @Autowired
@@ -71,10 +71,16 @@ public class HrController {
     @PutMapping("/info/user/{userId}")
     public ResponseEntity<?> updateHrInfoByUserId(@PathVariable Integer userId, @RequestBody HrInfo hrInfo) {
         try {
+            System.out.println("更新HR信息 - userId: " + userId + ", hrInfo: " + hrInfo);
             HrInfo updated = hrService.updateHrInfoByUserId(userId, hrInfo);
             return ResponseEntity.ok(updated);
         } catch (IllegalArgumentException e) {
-            return ResponseEntity.badRequest().body(Map.of("error", e.getMessage()));
+            System.err.println("更新HR信息失败 - IllegalArgumentException: " + e.getMessage());
+            return ResponseEntity.status(404).body(Map.of("error", e.getMessage()));
+        } catch (Exception e) {
+            System.err.println("更新HR信息失败 - 未知异常: " + e.getMessage());
+            e.printStackTrace();
+            return ResponseEntity.status(500).body(Map.of("error", "服务器内部错误: " + e.getMessage()));
         }
     }
 

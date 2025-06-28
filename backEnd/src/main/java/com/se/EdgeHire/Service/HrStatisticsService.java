@@ -29,24 +29,41 @@ public class HrStatisticsService {
      */
     public Map<String, Object> getHrKpiData(Integer hrId) {
         Map<String, Object> kpiData = new HashMap<>();
-        
-        // 新的指导请求数量（本周新增的简历数量）
-        LocalDateTime weekStart = LocalDateTime.now().minus(7, ChronoUnit.DAYS);
-        long newResumes = resumeRepository.countByCreateTimeAfter(weekStart);
-        kpiData.put("newGuidance", newResumes);
-        
-        // 本周沟通人数（本周发送或接收消息的不重复用户数）
-        long weeklyContacts = messageRepository.countDistinctContactsThisWeek(hrId, weekStart);
-        kpiData.put("newContacts", weeklyContacts);
-        
-        // 已完成的指导数量（HR的评论数量）
-        Long completedGuidance = resumeCommentRepository.countByHrId(hrId);
-        kpiData.put("completedGuidance", completedGuidance != null ? completedGuidance : 0);
-        
-        // 未读消息数量
-        long unreadMessages = messageRepository.countByReceiverIdAndIsRead(hrId, 0);
-        kpiData.put("unreadMessages", unreadMessages);
-        
+
+        try {
+            // 新的指导请求数量（本周新增的简历数量）
+            LocalDateTime weekStart = LocalDateTime.now().minus(7, ChronoUnit.DAYS);
+            long newResumes = resumeRepository.countByCreateTimeAfter(weekStart);
+            kpiData.put("newGuidance", newResumes);
+        } catch (Exception e) {
+            kpiData.put("newGuidance", 0);
+        }
+
+        try {
+            // 本周沟通人数（本周发送或接收消息的不重复用户数）
+            LocalDateTime weekStart = LocalDateTime.now().minus(7, ChronoUnit.DAYS);
+            long weeklyContacts = messageRepository.countDistinctContactsThisWeek(hrId, weekStart);
+            kpiData.put("newContacts", weeklyContacts);
+        } catch (Exception e) {
+            kpiData.put("newContacts", 0);
+        }
+
+        try {
+            // 已完成的指导数量（HR的评论数量）
+            Long completedGuidance = resumeCommentRepository.countByHrId(hrId);
+            kpiData.put("completedGuidance", completedGuidance != null ? completedGuidance : 0);
+        } catch (Exception e) {
+            kpiData.put("completedGuidance", 0);
+        }
+
+        try {
+            // 未读消息数量
+            long unreadMessages = messageRepository.countByReceiverIdAndIsRead(hrId, 0);
+            kpiData.put("unreadMessages", unreadMessages);
+        } catch (Exception e) {
+            kpiData.put("unreadMessages", 0);
+        }
+
         return kpiData;
     }
 
@@ -55,27 +72,44 @@ public class HrStatisticsService {
      */
     public Map<String, Object> getHrDetailedStats(Integer hrId) {
         Map<String, Object> stats = new HashMap<>();
-        
-        // 基础统计
-        Long totalComments = resumeCommentRepository.countByHrId(hrId);
-        stats.put("totalComments", totalComments != null ? totalComments : 0);
-        
-        // 本月统计
-        LocalDateTime monthStart = LocalDateTime.now().withDayOfMonth(1).withHour(0).withMinute(0).withSecond(0);
-        long monthlyMessages = messageRepository.countBySenderIdAndTimeAfter(hrId, monthStart);
-        stats.put("monthlyMessages", monthlyMessages);
-        
-        // 今日统计
-        LocalDateTime todayStart = LocalDateTime.now().withHour(0).withMinute(0).withSecond(0);
-        long todayMessages = messageRepository.countBySenderIdAndTimeAfter(hrId, todayStart);
-        stats.put("todayMessages", todayMessages);
-        
-        // 平台总体数据
-        long totalResumes = resumeRepository.count();
-        long totalSeekers = seekerInfoRepository.count();
-        stats.put("totalResumes", totalResumes);
-        stats.put("totalSeekers", totalSeekers);
-        
+
+        try {
+            // 基础统计
+            Long totalComments = resumeCommentRepository.countByHrId(hrId);
+            stats.put("totalComments", totalComments != null ? totalComments : 0);
+        } catch (Exception e) {
+            stats.put("totalComments", 0);
+        }
+
+        try {
+            // 本月统计
+            LocalDateTime monthStart = LocalDateTime.now().withDayOfMonth(1).withHour(0).withMinute(0).withSecond(0);
+            long monthlyMessages = messageRepository.countBySenderIdAndTimeAfter(hrId, monthStart);
+            stats.put("monthlyMessages", monthlyMessages);
+        } catch (Exception e) {
+            stats.put("monthlyMessages", 0);
+        }
+
+        try {
+            // 今日统计
+            LocalDateTime todayStart = LocalDateTime.now().withHour(0).withMinute(0).withSecond(0);
+            long todayMessages = messageRepository.countBySenderIdAndTimeAfter(hrId, todayStart);
+            stats.put("todayMessages", todayMessages);
+        } catch (Exception e) {
+            stats.put("todayMessages", 0);
+        }
+
+        try {
+            // 平台总体数据
+            long totalResumes = resumeRepository.count();
+            long totalSeekers = seekerInfoRepository.count();
+            stats.put("totalResumes", totalResumes);
+            stats.put("totalSeekers", totalSeekers);
+        } catch (Exception e) {
+            stats.put("totalResumes", 0);
+            stats.put("totalSeekers", 0);
+        }
+
         return stats;
     }
 

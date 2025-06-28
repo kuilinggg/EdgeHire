@@ -47,6 +47,16 @@ const routes = [
         component: () => import('../views/JobSeeker/Match.vue')
       },
       {
+        path: 'match-new',
+        name: 'MatchNew',
+        component: () => import('../views/JobSeeker/MatchNew.vue')
+      },
+      {
+        path: 'match-history',
+        name: 'MatchHistory',
+        component: () => import('../views/JobSeeker/MatchHistory.vue')
+      },
+      {
         path: 'profile',
         name: 'Profile',
         component: () => import('../views/JobSeeker/Profile.vue')
@@ -64,6 +74,11 @@ const routes = [
         path: 'home',
         name: 'HRHome',
         component: () => import('../views/HR/HRHome.vue')
+      },
+      {
+        path: 'profile',
+        name: 'HRProfile',
+        component: () => import('../views/HR/HRProfile.vue')
       },
       {
         path: 'resume-list',

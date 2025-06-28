@@ -1,0 +1,36 @@
+package com.se.EdgeHire.Controller;
+
+import com.se.EdgeHire.Entity.Post;
+import com.se.EdgeHire.Service.PostService;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.web.bind.annotation.*;
+
+import java.util.List;
+import java.util.Optional;
+
+@RestController
+@RequestMapping("/api/posts")
+public class PostController {
+    @Autowired
+    private PostService postService;
+
+    @GetMapping
+    public List<Post> getAllPosts() {
+        return postService.getAllPosts();
+    }
+
+    @GetMapping("/{id}")
+    public Optional<Post> getPostById(@PathVariable Integer id) {
+        return postService.getPostById(id);
+    }
+
+    @PostMapping
+    public Post createPost(@RequestBody Post post) {
+        return postService.createPost(post);
+    }
+
+    @DeleteMapping("/{id}")
+    public void deletePost(@PathVariable Integer id) {
+        postService.deletePost(id);
+    }
+}

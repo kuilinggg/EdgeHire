@@ -5,6 +5,23 @@
       <div class="page-title">主页</div>
       <div class="welcome">欢迎回来，{{ hrName }}顾问！</div>
     </div>
+
+    <!-- 个人信息完善提醒 -->
+    <div v-if="!authStore.profileComplete" class="profile-reminder">
+      <el-alert
+        title="完善个人信息"
+        type="warning"
+        :closable="false"
+        show-icon
+      >
+        <template #default>
+          <p>为了提升您的专业形象和服务质量，请完善您的个人信息。</p>
+          <el-button type="primary" size="small" @click="goToProfile">
+            立即完善
+          </el-button>
+        </template>
+      </el-alert>
+    </div>
     <!-- KPI卡片区 -->
     <div class="kpi-row">
       <el-card class="kpi-card kpi-blue">
@@ -66,6 +83,7 @@ import { useRouter } from 'vue-router'
 import { EditPen, ChatDotRound, Finished, Document, Search } from '@element-plus/icons-vue'
 import { ElMessage } from 'element-plus'
 import { hrApi } from '../../api/hr.js'
+import { getInfoByUserId } from '../../api/info.js'
 import { useAuthStore } from '../../stores/authStore.js'
 
 const router = useRouter()
@@ -120,7 +138,55 @@ const loadHrInfo = async () => {
   }
 }
 
+// 个人信息完整性检查
+const checkProfileCompleteness = async () => {
+  try {
+    const userId = authStore.userId || '1'
+
+    // 检查用户基本信息
+    let userInfoComplete = false
+    try {
+      const userResponse = await getInfoByUserId(userId)
+      const userInfo = userResponse.data
+      userInfoComplete = userInfo &&
+                        userInfo.realname &&
+                        userInfo.age &&
+                        userInfo.phone &&
+                        userInfo.email
+    } catch (error) {
+      // 用户信息不存在
+      userInfoComplete = false
+    }
+
+    // 检查HR专业信息
+    let hrInfoComplete = false
+    try {
+      const hrResponse = await hrApi.getHrInfo(userId)
+      const hrInfo = hrResponse.data
+      hrInfoComplete = hrInfo &&
+                      hrInfo.company &&
+                      hrInfo.position &&
+                      hrInfo.experience
+    } catch (error) {
+      // HR信息不存在
+      hrInfoComplete = false
+    }
+
+    const isComplete = userInfoComplete && hrInfoComplete
+    authStore.setProfileComplete(isComplete)
+
+    return isComplete
+  } catch (error) {
+    console.error('检查个人信息完整性失败:', error)
+    return false
+  }
+}
+
 // 页面跳转方法
+function goToProfile() {
+  router.push('/hr/profile')
+}
+
 function goToGuidance() {
   router.push('/hr/guidance')
 }
@@ -138,7 +204,8 @@ function goToResumeSearch() {
 onMounted(async () => {
   await Promise.all([
     loadKpiData(),
-    loadHrInfo()
+    loadHrInfo(),
+    checkProfileCompleteness()
   ])
 })
 </script>
@@ -170,6 +237,20 @@ onMounted(async () => {
   font-size: 16px;
   color: #666;
 }
+
+.profile-reminder {
+  margin-bottom: 20px;
+}
+
+.profile-reminder .el-alert {
+  border-radius: 8px;
+}
+
+.profile-reminder .el-alert__content p {
+  margin-bottom: 12px;
+  color: #666;
+}
+
 .kpi-row {
   display: flex;
   gap: 16px;

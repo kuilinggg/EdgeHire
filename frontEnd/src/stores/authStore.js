@@ -5,6 +5,7 @@ export const useAuthStore = defineStore('auth', {
     token: localStorage.getItem('token') || '', // 从 localStorage 初始化 token
     userId: localStorage.getItem('userId') || null, // 从 localStorage 初始化 userId
     role: localStorage.getItem('role') || null, // 从 localStorage 初始化 role
+    profileComplete: localStorage.getItem('profileComplete') === 'true', // 个人信息是否完整
   }),
   actions: {
     setToken(newToken) {
@@ -19,13 +20,19 @@ export const useAuthStore = defineStore('auth', {
       this.role = newRole
       localStorage.setItem('role', newRole)
     },
+    setProfileComplete(isComplete) {
+      this.profileComplete = isComplete
+      localStorage.setItem('profileComplete', isComplete.toString())
+    },
     clearToken() {
       this.token = ''
       this.userId = null
       this.role = null
+      this.profileComplete = false
       localStorage.removeItem('token')
       localStorage.removeItem('userId')
       localStorage.removeItem('role')
+      localStorage.removeItem('profileComplete')
     },
   },
   getters: {

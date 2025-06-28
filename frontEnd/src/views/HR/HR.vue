@@ -17,6 +17,10 @@
             <el-icon><User /></el-icon>
             <span>主页</span>
           </el-menu-item>
+          <el-menu-item index="/hr/profile">
+            <el-icon><Setting /></el-icon>
+            <span>个人信息</span>
+          </el-menu-item>
           <el-menu-item index="/hr/resume-list">
             <el-icon><Document /></el-icon>
             <span>浏览简历</span>
