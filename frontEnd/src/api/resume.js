@@ -2,7 +2,7 @@ import axios from 'axios'
 
 const API_BASE = 'http://localhost:8080/api/resume'
 
-export function getAllRusumes(){
+export function getAllResumes(){
   return axios.get(API_BASE)
 }
 

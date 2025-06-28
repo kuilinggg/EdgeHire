@@ -32,4 +32,12 @@ public class InfoService {
         info.setId(id);
         return infoRepository.save(info);
     }
+
+    public String getAvatarByUserId(Integer userId) {
+        List<Info> infos = infoRepository.findByUserId(userId);
+        if (infos != null && !infos.isEmpty()) {
+            return infos.get(0).getAvatar();
+        }
+        return null;
+    }
 }

@@ -26,3 +26,9 @@ export function uploadFile(file) {
     headers: { 'Content-Type': 'multipart/form-data' }
   })
 }
+
+//获取头像URL
+export async function getAvatarUrl(userId) {
+  const res = await axios.get(`${API_BASE}/avatar/${userId}`)
+  return res.data
+}

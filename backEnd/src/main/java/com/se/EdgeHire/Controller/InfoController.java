@@ -48,4 +48,14 @@ public class InfoController {
         }
         return ResponseEntity.ok(updated);
     }
+
+    @GetMapping("/avatar/{userId}")
+    public ResponseEntity<String> getAvatar(@PathVariable Integer userId){
+        String avatar = infoService.getAvatarByUserId(userId);
+        if (avatar != null && !avatar.isEmpty()) {
+            return ResponseEntity.ok(avatar);
+        } else {
+            return ResponseEntity.notFound().build();
+        }
+    }
 }
