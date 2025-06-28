@@ -1,13 +1,52 @@
 <template>
   <div class="resume-view-container">
-    <el-card class="seekerinfo-card">
-      <div class="profile-view">
-        <p><strong>学历：</strong>{{ educationText }}</p>
-        <p><strong>学校：</strong>{{ seekerInfo.school || '-' }}</p>
-        <p><strong>理想岗位：</strong>{{ seekerInfo.favor || '-' }}</p>
-        <p><strong>会员类型：</strong>{{ membershipLabel }}</p>
-      </div>
+    <!-- 求职者列表及选取功能，搬到最上方 -->
+    <el-card style="margin-bottom: 24px;">
+      <template #header>
+        <div class="header-bar">
+          <span class="resume-title">求职信息</span>
+        </div>
+      </template>
+      <el-row :gutter="32" class="seeker-main-row-short">
+        <template v-if="seekerList.length > 0">
+          <el-col :span="5" class="seeker-list-col-scroll">
+            <el-menu
+              :default-active="selectedSeekerIndex"
+              @select="handleSeekerSelect"
+              class="resume-list-menu"
+              style="height: 100%"
+            >
+              <el-menu-item
+                v-for="(item, idx) in seekerList"
+                :key="item.id"
+                :index="String(idx)"
+                class="resume-menu-item"
+              >
+                <div class="menu-item-flex">
+                  <el-icon style="margin-right: 4px;"><Document /></el-icon>
+                  <span>{{ item.favor || '未填写岗位' }}</span>
+                </div>
+              </el-menu-item>
+            </el-menu>
+          </el-col>
+          <el-col :span="19">
+            <el-card v-if="selectedSeeker" class="seeker-single-card">
+              <div><strong>学历：</strong>{{ educationOptions.find(e => e.value === selectedSeeker.education)?.label || '-' }}</div>
+              <div><strong>学校：</strong>{{ selectedSeeker.school || '-' }}</div>
+              <div><strong>理想岗位：</strong>{{ selectedSeeker.favor || '-' }}</div>
+              <div><strong>会员类型：</strong>{{ selectedSeeker.membership === 0 ? '普通会员' : '高级会员' }}</div>
+            </el-card>
+            <el-empty v-else description="请选择左侧求职者" />
+          </el-col>
+        </template>
+        <template v-else>
+          <el-col :span="24">
+            <el-empty description="暂无求职者数据" />
+          </el-col>
+        </template>
+      </el-row>
     </el-card>
+    <!-- 新建匹配卡片 -->
     <el-card>
       <template #header>
         <div class="header-bar">
@@ -93,7 +132,7 @@
         </template>
       </el-row>
       <div style="margin-top: 32px; text-align: center; display: flex; justify-content: center; gap: 16px;">
-        <el-button type="primary" size="large" @click="onSubmitMatch" :disabled="!selectedResume || !seekerInfo.id">提交匹配</el-button>
+        <el-button type="primary" size="large" @click="onSubmitMatch" :disabled="!selectedResume || !selectedSeeker || !selectedSeeker.id">提交匹配</el-button>
       </div>
     </el-card>
   </div>
@@ -103,10 +142,12 @@
 import { ref, onMounted, computed } from 'vue'
 import { Document } from '@element-plus/icons-vue'
 import { ElMessage } from 'element-plus'
-// import { createMatch } from '../../api/post' // 需实现
+import { createPost } from '../../api/post'
 import { useAuthStore } from '../../stores/authStore'
-// import { seekerApi } from '../../api/hr' // 需实现
-// import { getResumesByUserId } from '../../api/resume' // 需实现
+import { getSeekerByUserId } from '../../api/seeker'
+import { getResumesByUserId } from '../../api/resume'
+import { getAllSeekers } from '../../api/seeker'
+//求职信息仅获取当前userid的，这里要改，不然权限有问题
 
 const resumeList = ref([])
 const selectedIndex = ref('0')
@@ -122,7 +163,11 @@ const educationOptions = [
   { value: 6, label: '硕士' },
   { value: 7, label: '博士' }
 ]
-const membershipLabel = '普通会员'
+
+const seekerList = ref([])
+const selectedSeekerIndex = ref('0')
+const selectedSeeker = ref(null)
+
 const educationText = computed(() => {
   const found = educationOptions.find(e => e.value === seekerInfo.value.education)
   return found ? found.label : '-'
@@ -134,36 +179,56 @@ const handleSelect = (idx) => {
 }
 
 const fetchSeekerInfo = async () => {
-  // const userId = authStore.userId || authStore.user?.id
-  // const { data } = await seekerApi.getSeekerInfo(userId)
-  // seekerInfo.value = data || { id: null, education: '', school: '', favor: '', membership: 0 }
-  // mock
-  seekerInfo.value = { id: 11, education: 5, school: 'XX大学', favor: '前端开发', membership: 0 }
+  const userId = authStore.userId || authStore.user?.id
+  if (!userId) return
+  try {
+    const { data } = await getSeekerByUserId(userId)
+    seekerInfo.value = data || { id: null, education: '', school: '', favor: '', membership: 0 }
+  } catch {
+    seekerInfo.value = { id: null, education: '', school: '', favor: '', membership: 0 }
+  }
 }
 const fetchResumeList = async () => {
-  // const userId = authStore.userId || authStore.user?.id
-  // const res = await getResumesByUserId(userId)
-  // resumeList.value = res.data || []
-  // mock
-  resumeList.value = [
-    {
-      id: 101,
-      avatar: '',
-      content: '{"姓名":"张三","求职意向":"前端开发","个人信息":{"性别":"男","年龄":25},"教育背景":{"学校":"XX大学","学历":"本科"},"自我评价":"认真负责"}',
-    },
-    {
-      id: 102,
-      avatar: '',
-      content: '{"姓名":"李四","求职意向":"后端开发","个人信息":{"性别":"女","年龄":27},"教育背景":{"学校":"YY大学","学历":"硕士"},"自我评价":"学习能力强"}',
+  const userId = authStore.userId || authStore.user?.id
+  if (!userId) return
+  try {
+    const res = await getResumesByUserId(userId)
+    resumeList.value = res.data || []
+    if (resumeList.value.length > 0) {
+      selectedResume.value = resumeList.value[0]
+      selectedIndex.value = '0'
+    } else {
+      selectedResume.value = null
+      selectedIndex.value = '0'
     }
-  ]
-  if (resumeList.value.length > 0) {
-    selectedResume.value = resumeList.value[0]
-    selectedIndex.value = '0'
-  } else {
+  } catch {
+    resumeList.value = []
     selectedResume.value = null
     selectedIndex.value = '0'
   }
+}
+
+const fetchSeekerList = async () => {
+  try {
+    const res = await getAllSeekers()
+    seekerList.value = res.data || []
+    if (seekerList.value.length > 0) {
+      selectedSeeker.value = seekerList.value[0]
+      selectedSeekerIndex.value = '0'
+    } else {
+      selectedSeeker.value = null
+      selectedSeekerIndex.value = '0'
+    }
+  } catch {
+    seekerList.value = []
+    selectedSeeker.value = null
+    selectedSeekerIndex.value = '0'
+  }
+}
+
+const handleSeekerSelect = (idx) => {
+  selectedSeekerIndex.value = idx
+  selectedSeeker.value = seekerList.value[Number(idx)]
 }
 
 const parsedResumeContent = computed(() => {
@@ -178,21 +243,25 @@ const parsedResumeContent = computed(() => {
 
 const onSubmitMatch = async () => {
   const userId = authStore.userId || authStore.user?.id
-  if (!userId || !seekerInfo.value.id || !selectedResume.value?.id) {
+  if (!userId || !selectedSeeker.value?.id || !selectedResume.value?.id) {
     ElMessage.error('信息不完整，无法提交')
     return
   }
   const postData = {
-    userId,
-    seekerInfoId: seekerInfo.value.id,
+    userId: userId,
+    seekerInfoId: selectedSeeker.value.id,
     resumeId: selectedResume.value.id
   }
-  // await createMatch(postData)
-  ElMessage.success('匹配提交成功（mock）')
+  try {
+    await createPost(postData)
+    ElMessage.success('匹配提交成功')
+  } catch {
+    ElMessage.error('提交失败')
+  }
 }
 
 onMounted(() => {
-  fetchSeekerInfo()
+  fetchSeekerList()
   fetchResumeList()
 })
 </script>
@@ -318,5 +387,38 @@ onMounted(() => {
   display: flex;
   flex-wrap: wrap;
   gap: 12px 24px;
+}
+.header-bar {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 0 16px;
+  height: 64px;
+  background: #f5f7fa;
+  border-bottom: 1px solid #e4e7ec;
+}
+.resume-title {
+  font-size: 18px;
+  font-weight: 500;
+  color: #333;
+}
+.seeker-main-row-short {
+  min-height: unset;
+  height: 220px;
+  align-items: flex-start;
+}
+.seeker-list-col-scroll {
+  min-width: 180px;
+  max-width: 260px;
+  height: 200px;
+  overflow-y: auto;
+}
+.seeker-single-card {
+  min-height: 180px;
+  max-width: 400px;
+  margin: 0 auto;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
 }
 </style>
