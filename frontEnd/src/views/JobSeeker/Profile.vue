@@ -63,7 +63,7 @@
 import { ref, reactive, onMounted, computed, nextTick } from 'vue'
 import { ElMessage, ElForm } from 'element-plus'
 import { getInfoByUserId, createInfo, updateInfo } from '../../api/info'
-import axios from 'axios'
+import { uploadFile } from '../../util/upload'
 
 const user_id = localStorage.getItem('userId')
 const form = reactive({
@@ -156,7 +156,7 @@ async function saveProfile() {
     if(avatarFile.value) {
       const formData = new FormData()
       formData.append('file', avatarFile.value)
-      const url = await axios.post('http://localhost:8080/api/files/upload', formData)
+      const url = await uploadFile(formData)
       if(url){
         form.avatar = url.data
       } else {
