@@ -47,6 +47,16 @@ const routes = [
         component: () => import('../views/JobSeeker/Match.vue')
       },
       {
+        path: 'match-new',
+        name: 'MatchNew',
+        component: () => import('../views/JobSeeker/MatchNew.vue')
+      },
+      {
+        path: 'match-history',
+        name: 'MatchHistory',
+        component: () => import('../views/JobSeeker/MatchHistory.vue')
+      },
+      {
         path: 'profile',
         name: 'Profile',
         component: () => import('../views/JobSeeker/Profile.vue')

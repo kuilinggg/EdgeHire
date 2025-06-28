@@ -32,10 +32,24 @@
               <span>查看简历</span>
             </el-menu-item>
           </el-sub-menu>
-          <el-menu-item index="/jobseeker/match">
-            <el-icon><Search /></el-icon>
-            <span>求职匹配</span>
-          </el-menu-item>
+          <el-sub-menu index="match">
+            <template #title>
+              <el-icon><Search /></el-icon>
+              <span>求职匹配</span>
+            </template>
+            <el-menu-item index="/jobseeker/match">
+              <el-icon><User /></el-icon>
+              <span>求职信息</span>
+            </el-menu-item>
+            <el-menu-item index="/jobseeker/match-new">
+              <el-icon><EditPen /></el-icon>
+              <span>新建匹配</span>
+            </el-menu-item>
+            <el-menu-item index="/jobseeker/match-history">
+              <el-icon><View /></el-icon>
+              <span>历史匹配</span>
+            </el-menu-item>
+          </el-sub-menu>
           <el-menu-item index="/jobseeker/vip">
             <el-icon><Star /></el-icon>
             <span>会员功能</span>
