@@ -71,4 +71,17 @@ public class AuthController{
             return ResponseEntity.badRequest().body(error);
         }
     }
+
+    @PostMapping("/change-password")
+    public ResponseEntity<?> changePassword(@RequestBody Map<String, String> req) {
+        try {
+            int userId = Integer.parseInt(req.get("userId"));
+            String oldPassword = req.get("oldPassword");
+            String newPassword = req.get("newPassword");
+            authService.changePassword(userId, oldPassword, newPassword);
+            return ResponseEntity.ok(Map.of("message", "密码修改成功"));
+        } catch (Exception e) {
+            return ResponseEntity.badRequest().body(Map.of("message", e.getMessage()));
+        }
+    }
 }

@@ -17,14 +17,13 @@
     <el-form v-else :model="form" label-width="80px" @change="autoSave" @submit.prevent :rules="rules" ref="profileForm">
       <el-form-item label="头像">
         <el-upload
-          action="http://localhost:8080/api/files/upload"
-          method="post"
           class="avatar-uploader"
+          :auto-upload="false"
           :show-file-list="false"
-          :on-success="handleAvatarSuccess"
+          :on-change="handleAvatarChange"
           :before-upload="beforeAvatarUpload"
         >
-          <el-avatar :src="form.avatar" size="large" style="cursor:pointer;" />
+          <el-avatar :src="avatarPreview||form.avatar" size="large" style="cursor:pointer;" />
           <template #tip>
             <div class="el-upload__tip">点击头像上传，仅支持jpg/png，最大2MB</div>
           </template>
@@ -64,6 +63,7 @@
 import { ref, reactive, onMounted, computed, nextTick } from 'vue'
 import { ElMessage, ElForm } from 'element-plus'
 import { getInfoByUserId, createInfo, updateInfo, uploadFile } from '../../api/info'
+import axios from 'axios'
 
 const user_id = localStorage.getItem('userId')
 const form = reactive({
@@ -102,6 +102,9 @@ const rules = {
     { pattern: /^1[3-9]\d{9}$/, message: '手机号格式不正确', trigger: 'blur' }
   ]
 }
+
+const avatarFile = ref(null)
+const avatarPreview = ref('')
 
 async function fetchProfile() {
   try {
@@ -148,6 +151,21 @@ function autoSave() {
 async function saveProfile() {
   try {
     saveLoading.value = true
+
+    // 如果头像文件存在，先上传头像
+    if(avatarFile.value) {
+      const formData = new FormData()
+      formData.append('file', avatarFile.value)
+      const url = await axios.post('http://localhost:8080/api/files/upload', formData)
+      if(url){
+        form.avatar = url.data
+      } else {
+        ElMessage.error('头像上传失败')
+        return
+      }
+    }
+
+    //保存个人信息
     form.userId = user_id // 确保userId始终有值
     if (form.id) {
       await updateInfo(form.id, form)
@@ -162,6 +180,7 @@ async function saveProfile() {
     editing.value = false
     original.value = { ...form }
   } catch (e) {
+    console.log(e)
     ElMessage.error('保存失败')
   } finally {
     saveLoading.value = false
@@ -182,17 +201,15 @@ async function onSaveClick() {
   })
 }
 
-const uploadHeaders = { }
-function handleAvatarSuccess(url) {
-  // 假设后端返回 { url: 'xxx' }
-  if (url) {
-    form.avatar = url
-    ElMessage.success('头像上传成功')
-    // 不再自动保存，等待用户点击保存按钮
-  } else {
-    ElMessage.error('头像上传失败')
+function handleAvatarChange(file) {
+  avatarFile.value = file.raw
+  const reader = new FileReader()
+  reader.onload = (e) => {
+    avatarPreview.value = e.target.result
   }
+  reader.readAsDataURL(file.raw)
 }
+
 function beforeAvatarUpload(file) {
   const isJPG = file.type === 'image/jpeg' || file.type === 'image/png'
   const isLt2M = file.size / 1024 / 1024 < 2
@@ -203,22 +220,6 @@ function beforeAvatarUpload(file) {
     ElMessage.error('图片大小不能超过2MB!')
   }
   return isJPG && isLt2M
-}
-
-function customAvatarUpload(option) {
-  // option.file 是上传的文件
-  uploadFile(option.file)
-    .then(res => {
-      if (res.data && res.data.url) {
-        handleAvatarSuccess(res.data)
-        option.onSuccess(res.data)
-      } else {
-        option.onError(new Error('上传失败'))
-      }
-    })
-    .catch(() => {
-      option.onError(new Error('上传失败'))
-    })
 }
 
 onMounted(fetchProfile)

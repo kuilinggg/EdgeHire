@@ -27,6 +27,18 @@ public interface MessageRepository extends JpaRepository<Message, Integer> {
             @Param("user2") int user2
     );
 
+    /**
+     * 根据用户id查询他参与的对话的最后一条消息
+     * @param userId 用户ID
+     * @return 返回用户的最新消息列表
+     */
+    @Query("SELECT m FROM Message m WHERE m.id IN (" +
+            "SELECT MAX(m2.id) FROM Message m2 " +
+            "WHERE m2.senderId = :userId OR m2.receiverId = :userId " +
+            "GROUP BY CASE WHEN m2.senderId = :userId THEN m2.receiverId ELSE m2.senderId END" +
+            ")")
+    List<Message> findLatestMessagesInConversations(@Param("userId") int userId);
+
     @Modifying
     @Query("UPDATE Message m SET m.isRead = " +
             "1 WHERE (m.senderId = :user1 AND m.receiverId = :user2) " +

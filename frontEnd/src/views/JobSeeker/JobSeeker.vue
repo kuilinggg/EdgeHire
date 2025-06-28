@@ -79,14 +79,20 @@
 </template>
 
 <script setup>
-import { ref, computed } from 'vue'
+import { ref, computed, onMounted } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
 import { User, Document, EditPen, View, Search, Star } from '@element-plus/icons-vue'
 import { ElMessage } from 'element-plus'
 import { authApi } from '../../api/auth'
+import { useAuthStore } from '../../stores/authStore'
+import { getAvatarUrl } from '../../api/info'
 const router = useRouter()
 const route = useRoute()
+
+const authStore = useAuthStore()
+const userId = authStore.userId
 const avatarUrl = ref('https://api.dicebear.com/7.x/miniavs/svg?seed=jobseeker') // 可替换为用户真实头像
+
 const defaultActiveMenu = computed(() => {
   // 如果当前路由是 /jobseeker 或 /jobseeker/，默认激活个人信息
   if (route.path === '/jobseeker' || route.path === '/jobseeker/') {
@@ -111,6 +117,18 @@ const resumeMenuOpen = ref(true)
 function toggleResumeMenu() {
   resumeMenuOpen.value = !resumeMenuOpen.value
 }
+
+onMounted(async () => {
+  if (userId) {
+    try {
+      const url = await getAvatarUrl(userId)
+      if (url) avatarUrl.value = url
+    } catch (e) {
+      console.log('获取头像失败:', e)
+      // 保持默认头像
+    }
+  }
+})
 </script>
 
 <style scoped>

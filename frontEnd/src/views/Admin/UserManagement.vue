@@ -5,12 +5,20 @@
       <div class="search-bar">
         <el-input v-model="searchKeyword" placeholder="搜索用户..." style="width: 300px" />
         <el-button type="primary" @click="loadUsers">搜索</el-button>
+        <el-select v-model="filterRole" placeholder="筛选角色" style="width: 150px; margin-left: 10px;" @change="loadUsers">
+        <el-option
+         v-for="item in roleOptions"
+         :key="item.value"
+         :label="item.label"
+         :value="item.value"
+         />
+       </el-select>
+       <el-button @click="resetFilters" type="warning" plain>重置筛选</el-button>
       </div>
 
       <el-table :data="paginatedUsers" style="width: 100%">
         <el-table-column prop="id" label="ID" width="180" />
         <el-table-column prop="username" label="用户名" />
-       <el-table-column prop="password" label="密码" />
         <el-table-column prop="role" label="角色">
         <template #default="scope">
              <span>{{ scope.row.role == '0' ? '管理员' : scope.row.role == '2' ? 'HR' : '求职者' }}</span>
@@ -134,6 +142,7 @@ const users = ref([])
 const currentPage = ref(1)
 const pageSize = ref(10)
 const searchKeyword = ref('')
+const filterRole=ref('')
 const editDialogVisible = ref(false)
 const checkDialogVisible = ref(false)
 const editUser = ref({})
@@ -168,13 +177,23 @@ const paginatedUsers = computed(() => {
 const loadUsers = async () => {
   try {
     const res = await getUsers()
-    users.value = res.data.filter(user => 
-      user.username.includes(searchKeyword.value)
-    )
+    //搜索和筛选
+    users.value = res.data.filter(user => {
+    const matchKeyword = user.username.includes(searchKeyword.value);
+    const matchRole = filterRole.value === '' || user.role === filterRole.value;
+    return matchKeyword && matchRole;
+    });
   } catch (e) {
     ElMessage.error('加载用户失败')
   }
 }
+
+//还原回原状态
+const resetFilters = () => {
+  searchKeyword.value = '';
+  filterRole.value = '';
+  loadUsers();
+};
 
 const handleCheck = async (id,role) => {
   try {
