@@ -48,11 +48,13 @@
           </span>
           <template #dropdown>
             <el-dropdown-menu>
+              <el-dropdown-item @click="showChange = true">修改密码</el-dropdown-item>
               <el-dropdown-item @click="goToChat">我的私聊</el-dropdown-item>
               <el-dropdown-item divided @click="logout">退出登录</el-dropdown-item>
             </el-dropdown-menu>
           </template>
         </el-dropdown>
+        <ChangePasswordDialog v-model:visible="showChange" />
       </header>
       <main class="content">
         <router-view></router-view>
@@ -62,14 +64,24 @@
 </template>
 
 <script setup>
-import { ref, computed } from 'vue'
+import { ref, computed,onMounted } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
 import { User, Document, EditPen, ChatDotRound, Setting } from '@element-plus/icons-vue'
 import { ElMessage } from 'element-plus'
 import { authApi } from '../../api/auth'
+import { getAvatarUrl } from '../../api/info'
+import { useAuthStore } from '../../stores/authStore'
+import ChangePasswordDialog from '../../components/ChangePasswordDialog.vue'
+
 const router = useRouter()
 const route = useRoute()
+
+const showChange = ref(false)
+
+const authStore = useAuthStore()
+const userId = authStore.userId || localStorage.getItem('userId')
 const avatarUrl = ref('https://api.dicebear.com/7.x/miniavs/svg?seed=hr') // 可替换为HR真实头像
+
 const defaultActiveMenu = computed(() => {
   if (route.path === '/hr' || route.path === '/hr/') {
     return '/hr/home'
@@ -88,6 +100,17 @@ function logout() {
 function goToChat() {
   router.push('/chat')
 }
+
+onMounted(async () => {
+  if (userId) {
+    try {
+      const url = await getAvatarUrl(userId)
+      if (url) avatarUrl.value = url
+    } catch (e) {
+      // 保持默认头像
+    }
+  }
+})
 </script>
 
 <style scoped>

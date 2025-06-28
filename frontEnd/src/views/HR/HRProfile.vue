@@ -27,14 +27,14 @@
           <!-- 头像上传 -->
           <el-form-item label="头像">
             <div class="avatar-section">
-              <el-avatar :src="userForm.avatar" :size="80" class="avatar-display">
-                <el-icon v-if="!userForm.avatar"><User /></el-icon>
+              <el-avatar :src="avatarPreview || userForm.avatar" :size="80" class="avatar-display">
+                <el-icon v-if="!userForm.avatar && !avatarPreview"><User /></el-icon>
               </el-avatar>
               <div class="avatar-actions">
                 <el-upload
                   :show-file-list="false"
                   :before-upload="beforeAvatarUpload"
-                  :http-request="handleAvatarUpload"
+                  :on-change="handleAvatarChange"
                   accept="image/*"
                 >
                   <el-button size="small" type="primary">更换头像</el-button>
@@ -139,8 +139,9 @@ import { ref, reactive, onMounted, computed, watch } from 'vue'
 import { ElMessage } from 'element-plus'
 import { User } from '@element-plus/icons-vue'
 import { hrApi } from '../../api/hr.js'
-import { getInfoByUserId, createInfo, updateInfo, uploadFile } from '../../api/info.js'
+import { getInfoByUserId, createInfo, updateInfo } from '../../api/info.js'
 import { useAuthStore } from '../../stores/authStore.js'
+import axios from 'axios'
 
 const authStore = useAuthStore()
 
@@ -149,6 +150,8 @@ const userFormRef = ref()
 const hrFormRef = ref()
 const saving = ref(false)
 const loading = ref(false)
+const avatarFile = ref(null)
+const avatarPreview = ref('')
 
 // 从 localStorage 初始化表单数据
 const getStoredFormData = () => {
@@ -303,19 +306,13 @@ const beforeAvatarUpload = (file) => {
   return true
 }
 
-const handleAvatarUpload = async (options) => {
-  try {
-    const response = await uploadFile(options.file)
-    
-    if (response.data) {
-      // 后端直接返回文件 URL 字符串
-      userForm.avatar = response.data
-      ElMessage.success('头像上传成功')
-    }
-  } catch (error) {
-    console.error('头像上传失败:', error)
-    ElMessage.error('头像上传失败')
+const handleAvatarChange = (file) => {
+  avatarFile.value = file.raw
+  const reader = new FileReader()
+  reader.onload = (e) => {
+    avatarPreview.value = e.target.result
   }
+  reader.readAsDataURL(file.raw)
 }
 
 const saveProfile = async () => {
@@ -328,6 +325,19 @@ const saveProfile = async () => {
 
     saving.value = true
     const userId = authStore.userId || '1'
+
+    // 如果头像文件存在，先上传头像
+    if (avatarFile.value) {
+      const formData = new FormData()
+      formData.append('file', avatarFile.value)
+      const url = await axios.post('http://localhost:8080/api/files/upload', formData)
+      if (url && url.data) {
+        userForm.avatar = url.data
+      } else {
+        ElMessage.error('头像上传失败')
+        return
+      }
+    }
 
     // 保存用户基本信息
     const userInfoData = {
@@ -384,6 +394,10 @@ const saveProfile = async () => {
     
     // 保存成功后清除 localStorage 中的临时数据
     clearStoredFormData()
+    
+    // 清除头像文件引用
+    avatarFile.value = null
+    avatarPreview.value = ''
   } catch (error) {
     console.error('保存个人信息失败:', error)
     ElMessage.error('保存失败，请稍后重试')
