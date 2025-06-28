@@ -49,7 +49,7 @@
           <template #dropdown>
             <el-dropdown-menu>
               <el-dropdown-item @click="showChange = true">修改密码</el-dropdown-item>
-              <el-dropdown-item @click="goToChat">我的私聊</el-dropdown-item>
+              <el-dropdown-item divided @click="goToChat">我的私聊</el-dropdown-item>
               <el-dropdown-item divided @click="logout">退出登录</el-dropdown-item>
             </el-dropdown-menu>
           </template>

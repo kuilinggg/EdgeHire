@@ -62,7 +62,7 @@
 <script setup>
 import { ref, reactive, onMounted, computed, nextTick } from 'vue'
 import { ElMessage, ElForm } from 'element-plus'
-import { getInfoByUserId, createInfo, updateInfo, uploadFile } from '../../api/info'
+import { getInfoByUserId, createInfo, updateInfo } from '../../api/info'
 import axios from 'axios'
 
 const user_id = localStorage.getItem('userId')
