@@ -12,18 +12,18 @@ import java.util.Map;
 public class AiService {
     private final WebClient webClient;
 
-    public Flux<String> resumeOptimizeStream(String conversationId, String resumeContent) {
+    public Flux<String> resumeOptimizeStream(String conversationId, String resumeContent, String prompt) {
         return webClient.post()
                 .uri("/api/ai/optimizeStream")
-                .bodyValue(Map.of("id", conversationId, "resume", resumeContent))
+                .bodyValue(Map.of("id", conversationId, "resume", resumeContent, "prompt", prompt))
                 .retrieve()
                 .bodyToFlux(String.class);
     }
 
-    public String resumeOptimize(String conversationId, String resumeContent) {
+    public String resumeOptimize(String conversationId, String resumeContent, String prompt) {
         return webClient.post()
                 .uri("/api/ai/optimize")
-                .bodyValue(Map.of("id", conversationId, "resume", resumeContent))
+                .bodyValue(Map.of("id", conversationId, "resume", resumeContent, "prompt", prompt))
                 .retrieve()
                 .bodyToMono(String.class)
                 .block();
