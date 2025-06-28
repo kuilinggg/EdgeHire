@@ -12,6 +12,11 @@ export function getPostById(id) {
   return axios.get(`${API_BASE}/${id}`);
 }
 
+// 根据userId获取投递记录
+export function getPostsByUserId(userId) {
+  return axios.get(`${API_BASE}/user/${userId}`);
+}
+
 // 创建投递记录
 export function createPost(data) {
   return axios.post(API_BASE, data);

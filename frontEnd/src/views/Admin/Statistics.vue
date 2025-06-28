@@ -11,20 +11,20 @@
         </el-col>
         <el-col :span="6">
           <el-card class="stat-card">
-            <div class="stat-title">HR数量</div>
+            <div class="stat-title">HR总数</div>
             <div class="stat-value">{{ HRnum }}</div>
           </el-card>
         </el-col>
         <el-col :span="6">
           <el-card class="stat-card">
-            <div class="stat-title">求职者数量</div>
-            <div class="stat-value">{{ seekernum }}</div>
+            <div class="stat-title">在线人数</div>
+            <div class="stat-value">{{onlineUserCount }}</div>
           </el-card>
         </el-col>
         <el-col :span="6">
           <el-card class="stat-card">
             <div class="stat-title">求职申请数</div>
-            <div class="stat-value">{{ resumenum }}</div>
+            <div class="stat-value">{{ resumenum}}</div>
           </el-card>
         </el-col>
         
@@ -37,7 +37,7 @@
           <div ref="resumeChartRef" style="height: 300px;"></div>
         </el-card>
       </el-col>
-      <el-col :span="11">
+      <el-col :span="12">
         <el-card class="chart-card">
           <h3>用户画像(求职者和HR占比)</h3>
           <div ref="userChartRef" style="width: 100%; height: 300px;"></div>
@@ -49,7 +49,7 @@
           <div class="chart-placeholder">图表1</div>
         </el-card>
       </el-col>
-      <el-col :span="11">
+      <el-col :span="12">
         <el-card class="chart-card">
           <h3>示例图表</h3>
            <div ref="chartRef2" style="width: 100%; height: 300px;"></div>
@@ -68,6 +68,8 @@ import { getAllResumes } from '../../api/resume';
 import { ElMessage } from 'element-plus';
 import { usePieChart } from '../../util/usePieChart';
 import * as echarts from 'echarts';
+import axios from 'axios';
+
 
 const userList=ref([])
 const HRList=ref([])
@@ -77,6 +79,8 @@ const usernum=ref(0)
 const HRnum=ref(33)
 const seekernum=ref(667)
 const resumenum=ref(0)
+const onlineUserCount=ref(100)
+
 
 const userChartRef = ref(null)
 const chartRef2 = ref(null)
@@ -134,7 +138,7 @@ const {
   isDonut: true
 })
 
-const loadChart = async () => {
+const loadBarChart = async () => {
   const { data } = await getAllResumes();
 
   // 按年份分组统计
@@ -171,11 +175,22 @@ const loadChart = async () => {
   });
 };
 
+const fetchOnlineCount = async () => {
+  try {
+    const response = await axios.get('/onlineCount')
+    onlineUserCount.value = response.data
+    console.log('当前在线人数:', onlineUserCount.value)
+  } catch (error) {
+    console.error('获取在线人数失败:', error)
+  }
+}
+
 onMounted(() => {
   load()
-  loadChart()
+  loadBarChart()
   window.addEventListener('resize', resizeChart)
   window.addEventListener('resize', resizeChart2)
+  fetchOnlineCount()
 })
 
 onBeforeUnmount(() => {

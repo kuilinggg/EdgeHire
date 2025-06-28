@@ -14,6 +14,11 @@ public class PostController {
     @Autowired
     private PostService postService;
 
+    @GetMapping("/user/{userId}")
+    public List<Post> getPostsByUserId(@PathVariable Integer userId) {
+        return postService.getPostsByUserId(userId);
+    }
+
     @GetMapping
     public List<Post> getAllPosts() {
         return postService.getAllPosts();
@@ -33,4 +38,5 @@ public class PostController {
     public void deletePost(@PathVariable Integer id) {
         postService.deletePost(id);
     }
+
 }
