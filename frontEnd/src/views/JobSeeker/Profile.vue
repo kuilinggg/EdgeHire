@@ -1,7 +1,9 @@
 <template>
   <div class="profile-container">
     <el-alert v-if="showFillAlert" title="请先完善个人信息" type="warning" show-icon class="top-alert" />
-    <h2>个人信息</h2>
+    <div class="header-bar">
+      <span class="resume-title">个人信息</span>
+    </div>
     <el-card v-if="!editing">
       <div class="profile-view">
         <el-avatar :src="form.avatar" size="large" style="margin-bottom:16px;" />
@@ -16,12 +18,12 @@
       <el-form-item label="头像">
         <el-upload
           class="avatar-uploader"
+          :auto-upload="false"
           :show-file-list="false"
-          :http-request="customAvatarUpload"
-          :on-success="handleAvatarSuccess"
+          :on-change="handleAvatarChange"
           :before-upload="beforeAvatarUpload"
         >
-          <el-avatar :src="form.avatar" size="large" style="cursor:pointer;" />
+          <el-avatar :src="avatarPreview||form.avatar" size="large" style="cursor:pointer;" />
           <template #tip>
             <div class="el-upload__tip">点击头像上传，仅支持jpg/png，最大2MB</div>
           </template>
@@ -61,6 +63,7 @@
 import { ref, reactive, onMounted, computed, nextTick } from 'vue'
 import { ElMessage, ElForm } from 'element-plus'
 import { getInfoByUserId, createInfo, updateInfo, uploadFile } from '../../api/info'
+import axios from 'axios'
 
 const user_id = localStorage.getItem('userId')
 const form = reactive({
@@ -99,6 +102,9 @@ const rules = {
     { pattern: /^1[3-9]\d{9}$/, message: '手机号格式不正确', trigger: 'blur' }
   ]
 }
+
+const avatarFile = ref(null)
+const avatarPreview = ref('')
 
 async function fetchProfile() {
   try {
@@ -145,6 +151,21 @@ function autoSave() {
 async function saveProfile() {
   try {
     saveLoading.value = true
+
+    // 如果头像文件存在，先上传头像
+    if(avatarFile.value) {
+      const formData = new FormData()
+      formData.append('file', avatarFile.value)
+      const url = await axios.post('http://localhost:8080/api/files/upload', formData)
+      if(url){
+        form.avatar = url.data
+      } else {
+        ElMessage.error('头像上传失败')
+        return
+      }
+    }
+
+    //保存个人信息
     form.userId = user_id // 确保userId始终有值
     if (form.id) {
       await updateInfo(form.id, form)
@@ -159,6 +180,7 @@ async function saveProfile() {
     editing.value = false
     original.value = { ...form }
   } catch (e) {
+    console.log(e)
     ElMessage.error('保存失败')
   } finally {
     saveLoading.value = false
@@ -179,17 +201,15 @@ async function onSaveClick() {
   })
 }
 
-const uploadHeaders = { }
-function handleAvatarSuccess(res) {
-  // 假设后端返回 { url: 'xxx' }
-  if (res && res.url) {
-    form.avatar = res.url
-    ElMessage.success('头像上传成功')
-    // 不再自动保存，等待用户点击保存按钮
-  } else {
-    ElMessage.error('头像上传失败')
+function handleAvatarChange(file) {
+  avatarFile.value = file.raw
+  const reader = new FileReader()
+  reader.onload = (e) => {
+    avatarPreview.value = e.target.result
   }
+  reader.readAsDataURL(file.raw)
 }
+
 function beforeAvatarUpload(file) {
   const isJPG = file.type === 'image/jpeg' || file.type === 'image/png'
   const isLt2M = file.size / 1024 / 1024 < 2
@@ -202,32 +222,17 @@ function beforeAvatarUpload(file) {
   return isJPG && isLt2M
 }
 
-function customAvatarUpload(option) {
-  // option.file 是上传的文件
-  uploadFile(option.file)
-    .then(res => {
-      if (res.data && res.data.url) {
-        handleAvatarSuccess(res.data)
-        option.onSuccess(res.data)
-      } else {
-        option.onError(new Error('上传失败'))
-      }
-    })
-    .catch(() => {
-      option.onError(new Error('上传失败'))
-    })
-}
-
 onMounted(fetchProfile)
 </script>
 
 <style scoped>
 .profile-container {
-  padding: 40px 24px 32px 24px;
-  max-width: 500px;
-  margin: 32px auto 0 auto;
+  padding: 32px;
+  max-width: 900px;
+  min-width: 700px;
+  margin: 0 auto;
   background: #fff;
-  border-radius: 18px;
+  border-radius: 4px;
   box-shadow: 0 4px 24px 0 rgba(64,158,255,0.08), 0 1.5px 6px 0 rgba(0,0,0,0.04);
   position: relative;
 }
@@ -256,7 +261,6 @@ onMounted(fetchProfile)
   font-size: 17px;
   font-weight: 600;
   letter-spacing: 2px;
-  border-radius: 10px;
   box-shadow: 0 2px 8px rgba(64,158,255,0.13);
   background: linear-gradient(90deg, #409EFF 0%, #66b1ff 100%);
   color: #fff;
@@ -268,7 +272,6 @@ onMounted(fetchProfile)
   box-shadow: 0 4px 16px rgba(64,158,255,0.18);
 }
 .el-button {
-  border-radius: 10px;
   font-weight: 600;
   letter-spacing: 2px;
   font-size: 16px;
@@ -303,7 +306,6 @@ onMounted(fetchProfile)
 }
 .el-form {
   background: #f8fbff;
-  border-radius: 12px;
   padding: 24px 18px 12px 18px;
   box-shadow: 0 1.5px 6px 0 rgba(0,0,0,0.03);
 }
@@ -323,16 +325,30 @@ onMounted(fetchProfile)
   border: none;
   color: #fff;
   font-weight: 500;
-  border-radius: 6px;
   box-shadow: 0 2px 8px rgba(64,158,255,0.10);
 }
 .el-button[type="success"]:hover {
   background: linear-gradient(90deg, #66b1ff 0%, #409EFF 100%);
 }
 .el-button {
-  border-radius: 10px;
   font-weight: 600;
   letter-spacing: 2px;
   font-size: 16px;
+}
+
+.header-bar {
+  display: flex;
+  justify-content: flex-start;
+  align-items: center;
+  margin-bottom: 16px;
+  padding-left: 0;
+  min-height: 40px;
+}
+.resume-title {
+  font-size: 24px;
+  font-weight: bold;
+  color: #222;
+  letter-spacing: 1px;
+  line-height: 1.2;
 }
 </style>
