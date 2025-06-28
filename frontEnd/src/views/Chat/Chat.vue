@@ -1,13 +1,16 @@
 <template>
   <div class="chat-container">
     <div class="chat-sidebar">
-      <div class="chat-title">我的私聊</div>
+      <div class="chat-title">我的消息</div>
       <el-input v-model="search" placeholder="搜索联系人" class="chat-search" clearable />
       <el-menu :default-active="activeUser" class="chat-user-list">
         <el-menu-item v-for="user in filteredUsers" :key="user.id" :index="user.id.toString()" @click="selectUser(user)">
           <el-avatar :src="user.avatar" size="small" />
           <div class="user-info">
-            <span class="user-name">{{ user.username }}</span>
+            <div class="user-texts">
+              <div class="user-name">{{ user.username }}</div>
+              <div class="user-latest-message">{{ user.latestMessage }}</div>
+            </div>
             <span v-if="user.unReadCount && user.unReadCount > 0" class="user-unread-count">{{ user.unReadCount }}</span>
           </div>
         </el-menu-item>
@@ -41,17 +44,31 @@
         </div>
       </div>
       <div class="chat-input">
-        <el-input
-          v-model="inputMsg"
-          type="textarea"
-          :rows="3"
-          placeholder="请输入聊天内容"
-          @keydown.enter.exact.prevent="sendMsg"
-          @keydown.shift.enter="handleShiftEnter"
-          clearable
-          resize="none"
-        />
-        <el-button type="primary" @click="sendMsg" class="send-button">发送</el-button>
+        <div class="input-wrapper">
+          <el-input
+            v-model="inputMsg"
+            type="textarea"
+            :rows="3"
+            placeholder="请输入聊天内容"
+            @keydown.enter.exact.prevent="sendMsg"
+            @keydown.shift.enter="handleShiftEnter"
+            clearable
+            resize="none"
+            class="message-input"
+          />
+          <div class="input-actions">
+            <el-button 
+              type="primary" 
+              @click="sendMsg" 
+              class="send-button"
+              :disabled="!inputMsg.trim()"
+              circle
+              size="large"
+            >
+              ➤
+            </el-button>
+          </div>
+        </div>
       </div>
     </div>
   </div>
@@ -64,6 +81,7 @@ import { ref, computed, nextTick, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import axios from 'axios'
 import { ElMessage } from 'element-plus'
+import { getAvatarUrl } from '../../api/info'
 
 
 const router = useRouter()
@@ -73,14 +91,27 @@ const activeUser = ref('0')
 
 const speaker = localStorage.getItem('userId')
 const users = ref([
-  { id: 0, username: '管理员', avatar: 'https://api.dicebear.com/7.x/miniavs/svg?seed=admin', unReadCount: 3 },
-  { id: 1, username: '测试用户', avatar: 'https://api.dicebear.com/7.x/miniavs/svg?seed=test', unReadCount: 5 }
+  { id: 0, username: '系统消息', latestMessage: '', avatar: 'https://api.dicebear.com/7.x/miniavs/svg?seed=admin', unReadCount: 0 }
 ])
 
 var messageMap = ref(null) // 用于接收服务器推送的消息
 
-const myAvatar = ref('https://api.dicebear.com/7.x/miniavs/svg?seed=jobseeker') // 当前用户头像
+const myAvatar = ref('') // 当前用户头像
 const currentUser = computed(() => users.value.find(u => u.id.toString() === activeUser.value) || {})
+
+onMounted(async () => {
+  try {
+    const userId = localStorage.getItem('userId')
+    if (userId) {
+      myAvatar.value = await getAvatarUrl(userId)
+    }
+    if (!myAvatar.value) {
+      myAvatar.value = `https://api.dicebear.com/7.x/miniavs/svg?seed=jobseeker`
+    }
+  } catch (e) {
+    myAvatar.value = `https://api.dicebear.com/7.x/miniavs/svg?seed=jobseeker`
+  }
+})
 
 onMounted(async () => {
   try {
@@ -88,16 +119,23 @@ onMounted(async () => {
     if (!userId) return
 
     const res = await axios.get(`/chat/users/${userId}`)
-
     console.log('获取聊天对象列表:', res.data)
 
-    const chatUsers = res.data.map(u => ({
-      ...u,
-      avatar: u.avatar || `https://api.dicebear.com/7.x/miniavs/svg?seed=${u.username || u.username || u.id}`
+    // 异步获取所有用户头像
+    const chatUsers = await Promise.all(res.data.map(async u => {
+      let avatar = ''
+      try {
+        avatar = await getAvatarUrl(u.id)
+      } catch (e) {
+        avatar = `https://api.dicebear.com/7.x/miniavs/svg?seed=${u.username || u.id}`
+      }
+      return {
+        ...u,
+        avatar
+      }
     }))
 
     users.value = [
-      { id: 0, username: '管理员', avatar: 'https://api.dicebear.com/7.x/miniavs/svg?seed=admin' },
       ...chatUsers
     ]
 
@@ -106,9 +144,7 @@ onMounted(async () => {
   }
 })
 
-const messages = ref([
-  { fromMe: false, avatar: users.value[0].avatar, content: '你好，有什么可以帮您？', time: Date.now() }
-])
+const messages = ref([])
 
 onMounted(async () => {
   try {
@@ -154,30 +190,36 @@ onMounted(() => {
 function selectUser(user) {
   activeUser.value = user.id.toString()
   localStorage.setItem('activeUser', activeUser.value)
-  
   // 清除选中用户的未读消息数量
   const selectedUser = users.value.find(u => u.id === user.id)
   if (selectedUser && selectedUser.unReadCount) {
     selectedUser.unReadCount = 0
   }
-
   var res = axios.post(`/chat/messages/read/${user.id}/${speaker}`)
   console.log('已标记消息为已读:', res.data)
-
   // 切换联系人时可加载历史消息
   if (!messageMap.data) {
-    messages.value[0].avatar = user.avatar
     return
   }
   var tempMessages = messageMap.data[user.id] || []
-
   messages.value = tempMessages.map(msg => ({
     fromMe: msg.senderId === parseInt(localStorage.getItem('userId')),
-    avatar: msg.senderId === parseInt(localStorage.getItem('userId')) ? myAvatar.value : user.avatar,
+    avatar: '', // 先占位，后面异步获取
     content: msg.content,
     time: msg.time
   }))
-
+  // 异步为每条消息获取头像
+  messages.value.forEach(async (msg, idx) => {
+    if (msg.fromMe) {
+      msg.avatar = myAvatar.value
+    } else {
+      try {
+        msg.avatar = await getAvatarUrl(user.id)
+      } catch (e) {
+        msg.avatar = `https://api.dicebear.com/7.x/miniavs/svg?seed=${user.username || user.id}`
+      }
+    }
+  })
   nextTick(() => {
     if (messagesRef.value) messagesRef.value.scrollTop = messagesRef.value.scrollHeight
   })
@@ -199,6 +241,19 @@ function sendMsg() {
   }
 
   messages.value.push({ fromMe: true, avatar: myAvatar.value, content: inputMsg.value, time: Date.now() })
+
+  messageMap.data[activeUser.value].push({
+    senderId: userId,
+    receiverId: activeUser.value,
+    content: inputMsg.value,
+    time: Date.now()
+  })
+
+  users.value.forEach(u => {
+    if (u.id == parseInt(activeUser.value)) {
+      u.latestMessage = inputMsg.value
+    }
+  })
 
   // 发送消息到服务器
   socket.value.send(JSON.stringify({
@@ -251,60 +306,86 @@ function logout() {
 
 onMounted(() => {
   if (socket && typeof socket.value !== 'string') {
-    socket.value.onmessage = function(event) {
+    socket.value.onmessage = async function(event) {
       try {
         const msg = JSON.parse(event.data)
-
         console.log("接收到消息:", msg)
-        
-        // 如果是当前聊天对象的消息，直接显示
-        if (msg.senderId == activeUser.value || msg.senderId == parseInt(localStorage.getItem('userId'))) {
+        const myId = parseInt(localStorage.getItem('userId'))
+        if (msg.senderId == activeUser.value || msg.senderId == myId) {
+          let avatar = ''
+          if (msg.senderId === myId) {
+            avatar = myAvatar.value
+          } else {
+            try {
+              avatar = await getAvatarUrl(msg.senderId)
+            } catch (e) {
+              const u = users.value.find(u => u.id == msg.senderId)
+              avatar = `https://api.dicebear.com/7.x/miniavs/svg?seed=${u?.username || msg.senderId}`
+            }
+          }
           messages.value.push({
-            fromMe: msg.senderId === parseInt(localStorage.getItem('userId')),
-            avatar: msg.senderId === parseInt(localStorage.getItem('userId')) ? myAvatar.value : (users.value.find(u => u.id == msg.senderId)?.avatar || ''),
+            fromMe: msg.senderId === myId,
+            avatar,
             content: msg.content,
             time: msg.time
           })
-
-          console.log("时间：" + msg.time)
-
           nextTick(() => {
             if (messagesRef.value) messagesRef.value.scrollTop = messagesRef.value.scrollHeight
           })
         } else {
           // 如果消息不来自当前聊天对象，增加未读消息数量
-          const senderUser = users.value.find(u => u.id == msg.senderId)
+          let senderUser = users.value.find(u => u.id == msg.senderId)
           if (senderUser) {
             if (!senderUser.unReadCount) {
               senderUser.unReadCount = 0
             }
             senderUser.unReadCount++
-
             if (messageMap.data[senderUser.id]) {
               messageMap.data[senderUser.id].push(msg)
-            } 
-          }
-          else {
-              //TODO: 不存在该用户的消息列表，即边栏不存在该用户，需要请求该用户信息
-
+            }
+            if (msg.senderId !== 0) {
+              const idx = users.value.findIndex(u => u.id == msg.senderId)
+              if (idx > 1) {
+                const [userObj] = users.value.splice(idx, 1)
+                users.value.splice(1, 0, userObj)
+              }
+            }
+          } else {
+            //TODO: 不存在该用户的消息列表，即边栏不存在该用户，需要请求该用户信息
             const fetchUser = async () => {
               const res = await axios.get(`/chat/newChatUser/${msg.senderId}`)
-              console.log("获得新的用户信息:", res.data)
+              let avatar = ''
+              try {
+                avatar = await getAvatarUrl(msg.senderId)
+              } catch (e) {
+                avatar = `https://api.dicebear.com/7.x/miniavs/svg?seed=${res.data.username || res.data.id}`
+              }
               if (res.data) {
                 users.value.push({
                   id: msg.senderId,
                   username: res.data.username,
-                  avatar: res.data.avatar || `https://api.dicebear.com/7.x/miniavs/svg?seed=${res.data.username || res.data.id}`,
+                  avatar,
                   unReadCount: res.data.unReadCount || 1
                 })
                 messageMap.data[msg.senderId] = [msg]
+                if (msg.senderId !== 0) {
+                  const idx = users.value.findIndex(u => u.id == msg.senderId)
+                  if (idx > 1) {
+                    const [userObj] = users.value.splice(idx, 1)
+                    users.value.splice(1, 0, userObj)
+                  }
+                }
               } else {
                 console.warn('未找到用户信息:', msg.senderId)
-              } 
+              }
             }
-
             fetchUser()
+          }
+          users.value.forEach(u => {
+            if (u.id === msg.senderId) {
+              u.latestMessage = msg.content
             }
+          })
         }
       } catch (e) {
         console.error('出现错误', e)
@@ -342,35 +423,95 @@ onMounted(() => {
   flex: 1;
   border: none;
   background: transparent;
+  padding: 0 4px;
 }
+
 .chat-user-list .el-menu-item {
   display: flex;
   align-items: center;
+  padding: 12px 16px;
+  margin: 4px 8px;
+  border-radius: 8px;
+  transition: all 0.3s ease;
+  cursor: pointer;
+  border: none;
+}
+
+.chat-user-list .el-menu-item:hover {
+  background-color: #f5f7fa;
+}
+
+.chat-user-list .el-menu-item.is-active {
+  background-color: #e8ecf0;
+  border-left: 3px solid #3a36db;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
+}
+
+.chat-user-list .el-menu-item.is-active .user-name {
+  color: #3a36db;
+  font-weight: 500;
 }
 .user-info {
   flex: 1;
   display: flex;
+  flex-direction: row;
   align-items: center;
+  justify-content: space-between;
   margin-left: 12px;
+  min-width: 0;
+  position: relative;
+  gap: 0px;
+}
+.user-texts {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  flex: 1;
 }
 .user-name {
-  flex: 1;
+  flex: none;
+  font-size: 14px;
+  color: #333;
+  font-weight: 400;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  transition: all 0.3s ease;
+  margin: 0;
+  line-height: 1.1;
+}
+.user-latest-message {
+  font-size: 12px;
+  color: #a8abb2;
+  max-width: 140px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  margin: 0;
+  line-height: 1.1;
 }
 .user-unread-count {
   background: #ff4757;
   color: white;
-  border-radius: 50%;
-  width: 18px;
+  border-radius: 10px;
+  min-width: 18px;
   height: 18px;
   font-size: 11px;
   line-height: 18px;
   text-align: center;
-  margin-left: 8px;
+  padding: 0 6px;
   flex-shrink: 0;
   display: flex;
   align-items: center;
   justify-content: center;
   font-weight: 500;
+  box-sizing: border-box;
+  transition: all 0.3s ease;
+  margin-left: 8px;
+}
+
+.chat-user-list .el-menu-item.is-active .user-unread-count {
+  background: #3a36db;
 }
 .chat-main {
   flex: 1;
@@ -435,20 +576,109 @@ onMounted(() => {
   color: #3a36db;
 }
 .chat-input {
-  display: flex;
-  align-items: flex-end;
-  padding: 16px 32px;
+  padding: 20px 32px 24px;
   background: #fff;
   border-top: 1px solid #ebeef5;
-  gap: 12px;
+  position: relative;
 }
-.chat-input .el-input {
+
+.chat-input::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 32px;
+  right: 32px;
+  height: 1px;
+  background: linear-gradient(90deg, transparent, #e4e7ed 20%, #e4e7ed 80%, transparent);
+}
+
+.input-wrapper {
+  display: flex;
+  align-items: flex-end;
+  gap: 16px;
+  position: relative;
+  background: #fafbfc;
+  border-radius: 16px;
+  padding: 12px;
+  border: 1px solid #f0f2f5;
+  transition: all 0.3s ease;
+}
+
+.input-wrapper:focus-within {
+  background: #fff;
+  border-color: #3a36db;
+  box-shadow: 0 0 0 3px rgba(58, 54, 219, 0.08);
+}
+
+.message-input {
   flex: 1;
 }
+
+.message-input :deep(.el-textarea__inner) {
+  border: none !important;
+  background: transparent !important;
+  padding: 8px 12px;
+  font-size: 14px;
+  line-height: 1.5;
+  transition: all 0.3s ease;
+  resize: none !important;
+  box-shadow: none !important;
+  min-height: 60px;
+}
+
+.message-input :deep(.el-textarea__inner):focus {
+  outline: none !important;
+  box-shadow: none !important;
+}
+
+.message-input :deep(.el-textarea__inner)::placeholder {
+  color: #a8abb2;
+  font-size: 14px;
+}
+
+.input-actions {
+  display: flex;
+  align-items: center;
+  margin-bottom: 2px;
+}
+
 .send-button {
-  height: 40px;
-  padding: 0 20px;
-  flex-shrink: 0;
+  width: 48px !important;
+  height: 48px !important;
+  border-radius: 50% !important;
+  background: linear-gradient(135deg, #3a36db 0%, #5b57e8 100%) !important;
+  border: none !important;
+  box-shadow: 0 4px 12px rgba(58, 54, 219, 0.3) !important;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1) !important;
+  position: relative;
+  overflow: hidden;
+  font-size: 18px !important;
+  font-weight: bold !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+}
+
+.send-button:hover:not(:disabled) {
+  transform: translateY(-2px) !important;
+  box-shadow: 0 6px 20px rgba(58, 54, 219, 0.4) !important;
+  background: linear-gradient(135deg, #4a46e5 0%, #6b67eb 100%) !important;
+}
+
+.send-button:active:not(:disabled) {
+  transform: translateY(0) !important;
+  box-shadow: 0 2px 8px rgba(58, 54, 219, 0.3) !important;
+}
+
+.send-button:disabled {
+  background: #c0c4cc !important;
+  box-shadow: none !important;
+  cursor: not-allowed;
+  opacity: 0.6;
+}
+
+.send-button:hover:not(:disabled) {
+  transform: translateY(-2px) scale(1.05) !important;
 }
 .chat-header-avatar-menu {
   position: absolute;
