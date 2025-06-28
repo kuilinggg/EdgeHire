@@ -90,7 +90,7 @@ const testConnection = async () => {
   testing.connection = true
   try {
     // 简单的连接测试
-    const response = await fetch('http://localhost:8080/api/hr/kpi/1', {
+    const response = await fetch('http://localhost:8080/api/t_user/1', {
       method: 'GET',
       headers: {
         'Content-Type': 'application/json'

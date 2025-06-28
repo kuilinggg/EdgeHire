@@ -76,6 +76,8 @@ const onLogin = async () => {
                 return
             }
 
+            window._socket = new WebSocket(`ws://localhost:8080/webSocket?userId=${res.data.id}`)
+
             ElMessage.success('登录成功')
             localStorage.setItem('userRole', res.data.role) // 新增：存储用户角色
             if (res.data.role === 1) {

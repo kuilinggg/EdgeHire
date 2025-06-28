@@ -174,15 +174,17 @@ const filteredUsers = computed(() => {
   return users.value.filter(u => u.username.includes(search.value))
 })
 
-const socket = ref(null)
+const socket = ref(window._socket || null)
 onMounted(() => {
   const userId = localStorage.getItem('userId')
   if (!userId) return
 
-  socket.value = new WebSocket(`ws://localhost:8080/webSocket?userId=${userId}`)
+  if (!socket.value) {
+    socket.value = new WebSocket(`ws://localhost:8080/webSocket?userId=${userId}`)
 
-  socket.value.onopen = () => {
+    socket.value.onopen = () => {
     console.log('WebSocket连接已建立')
+    }
   }
 })
 
