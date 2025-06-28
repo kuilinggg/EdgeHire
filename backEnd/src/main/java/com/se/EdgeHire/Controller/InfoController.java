@@ -51,11 +51,18 @@ public class InfoController {
 
     @GetMapping("/avatar/{userId}")
     public ResponseEntity<String> getAvatar(@PathVariable Integer userId){
+
+        if(userId == 0) {
+            String sysAvatar = "http://localhost:8080/api/files/" + "sys.png";
+            return ResponseEntity.ok(sysAvatar);
+        }
+
         String avatar = infoService.getAvatarByUserId(userId);
         if (avatar != null && !avatar.isEmpty()) {
             return ResponseEntity.ok(avatar);
         } else {
-            return ResponseEntity.notFound().build();
+            avatar = "http://localhost:8080/api/files/" + "default.png";
+            return ResponseEntity.ok(avatar);
         }
     }
 }

@@ -81,6 +81,7 @@ import { ref, computed, nextTick, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import axios from 'axios'
 import { ElMessage } from 'element-plus'
+import { getAvatarUrl } from '../../api/info'
 
 
 const router = useRouter()
@@ -95,8 +96,22 @@ const users = ref([
 
 var messageMap = ref(null) // 用于接收服务器推送的消息
 
-const myAvatar = ref('https://api.dicebear.com/7.x/miniavs/svg?seed=jobseeker') // 当前用户头像
+const myAvatar = ref('') // 当前用户头像
 const currentUser = computed(() => users.value.find(u => u.id.toString() === activeUser.value) || {})
+
+onMounted(async () => {
+  try {
+    const userId = localStorage.getItem('userId')
+    if (userId) {
+      myAvatar.value = await getAvatarUrl(userId)
+    }
+    if (!myAvatar.value) {
+      myAvatar.value = `https://api.dicebear.com/7.x/miniavs/svg?seed=jobseeker`
+    }
+  } catch (e) {
+    myAvatar.value = `https://api.dicebear.com/7.x/miniavs/svg?seed=jobseeker`
+  }
+})
 
 onMounted(async () => {
   try {
@@ -104,14 +119,20 @@ onMounted(async () => {
     if (!userId) return
 
     const res = await axios.get(`/chat/users/${userId}`)
-
     console.log('获取聊天对象列表:', res.data)
 
-    const chatUsers = res.data.map(u => ({
-      ...u,
-      avatar: u.avatar ||
-        `https://api.dicebear.com/7.x/miniavs/svg?seed=${u.username
-      || u.username || u.id}`
+    // 异步获取所有用户头像
+    const chatUsers = await Promise.all(res.data.map(async u => {
+      let avatar = ''
+      try {
+        avatar = await getAvatarUrl(u.id)
+      } catch (e) {
+        avatar = `https://api.dicebear.com/7.x/miniavs/svg?seed=${u.username || u.id}`
+      }
+      return {
+        ...u,
+        avatar
+      }
     }))
 
     users.value = [
@@ -169,30 +190,36 @@ onMounted(() => {
 function selectUser(user) {
   activeUser.value = user.id.toString()
   localStorage.setItem('activeUser', activeUser.value)
-  
   // 清除选中用户的未读消息数量
   const selectedUser = users.value.find(u => u.id === user.id)
   if (selectedUser && selectedUser.unReadCount) {
     selectedUser.unReadCount = 0
   }
-
   var res = axios.post(`/chat/messages/read/${user.id}/${speaker}`)
   console.log('已标记消息为已读:', res.data)
-
   // 切换联系人时可加载历史消息
   if (!messageMap.data) {
-  //  messages.value[0].avatar = user.avatar
     return
   }
   var tempMessages = messageMap.data[user.id] || []
-
   messages.value = tempMessages.map(msg => ({
     fromMe: msg.senderId === parseInt(localStorage.getItem('userId')),
-    avatar: msg.senderId === parseInt(localStorage.getItem('userId')) ? myAvatar.value : user.avatar,
+    avatar: '', // 先占位，后面异步获取
     content: msg.content,
     time: msg.time
   }))
-
+  // 异步为每条消息获取头像
+  messages.value.forEach(async (msg, idx) => {
+    if (msg.fromMe) {
+      msg.avatar = myAvatar.value
+    } else {
+      try {
+        msg.avatar = await getAvatarUrl(user.id)
+      } catch (e) {
+        msg.avatar = `https://api.dicebear.com/7.x/miniavs/svg?seed=${user.username || user.id}`
+      }
+    }
+  })
   nextTick(() => {
     if (messagesRef.value) messagesRef.value.scrollTop = messagesRef.value.scrollHeight
   })
@@ -279,39 +306,43 @@ function logout() {
 
 onMounted(() => {
   if (socket && typeof socket.value !== 'string') {
-    socket.value.onmessage = function(event) {
+    socket.value.onmessage = async function(event) {
       try {
         const msg = JSON.parse(event.data)
-
         console.log("接收到消息:", msg)
         const myId = parseInt(localStorage.getItem('userId'))
-        // 如果是当前聊天对象的消息，直接显示
         if (msg.senderId == activeUser.value || msg.senderId == myId) {
+          let avatar = ''
+          if (msg.senderId === myId) {
+            avatar = myAvatar.value
+          } else {
+            try {
+              avatar = await getAvatarUrl(msg.senderId)
+            } catch (e) {
+              const u = users.value.find(u => u.id == msg.senderId)
+              avatar = `https://api.dicebear.com/7.x/miniavs/svg?seed=${u?.username || msg.senderId}`
+            }
+          }
           messages.value.push({
             fromMe: msg.senderId === myId,
-            avatar: msg.senderId === myId ? myAvatar.value : (users.value.find(u => u.id == msg.senderId)?.avatar || ''),
+            avatar,
             content: msg.content,
             time: msg.time
           })
-
-          console.log("时间：" + msg.time)
-
           nextTick(() => {
             if (messagesRef.value) messagesRef.value.scrollTop = messagesRef.value.scrollHeight
           })
         } else {
           // 如果消息不来自当前聊天对象，增加未读消息数量
-          const senderUser = users.value.find(u => u.id == msg.senderId)
+          let senderUser = users.value.find(u => u.id == msg.senderId)
           if (senderUser) {
             if (!senderUser.unReadCount) {
               senderUser.unReadCount = 0
             }
             senderUser.unReadCount++
-
             if (messageMap.data[senderUser.id]) {
               messageMap.data[senderUser.id].push(msg)
-            } 
-            // --- 新增逻辑：将用户移到管理员下方 ---
+            }
             if (msg.senderId !== 0) {
               const idx = users.value.findIndex(u => u.id == msg.senderId)
               if (idx > 1) {
@@ -319,22 +350,24 @@ onMounted(() => {
                 users.value.splice(1, 0, userObj)
               }
             }
-          }
-          else {
-              //TODO: 不存在该用户的消息列表，即边栏不存在该用户，需要请求该用户信息
-
+          } else {
+            //TODO: 不存在该用户的消息列表，即边栏不存在该用户，需要请求该用户信息
             const fetchUser = async () => {
               const res = await axios.get(`/chat/newChatUser/${msg.senderId}`)
-              console.log("获得新的用户信息:", res.data)
+              let avatar = ''
+              try {
+                avatar = await getAvatarUrl(msg.senderId)
+              } catch (e) {
+                avatar = `https://api.dicebear.com/7.x/miniavs/svg?seed=${res.data.username || res.data.id}`
+              }
               if (res.data) {
                 users.value.push({
                   id: msg.senderId,
                   username: res.data.username,
-                  avatar: res.data.avatar || `https://api.dicebear.com/7.x/miniavs/svg?seed=${res.data.username || res.data.id}`,
+                  avatar,
                   unReadCount: res.data.unReadCount || 1
                 })
                 messageMap.data[msg.senderId] = [msg]
-                // --- 新增逻辑：新用户直接插入管理员下方 ---
                 if (msg.senderId !== 0) {
                   const idx = users.value.findIndex(u => u.id == msg.senderId)
                   if (idx > 1) {
@@ -344,12 +377,10 @@ onMounted(() => {
                 }
               } else {
                 console.warn('未找到用户信息:', msg.senderId)
-              } 
+              }
             }
-
             fetchUser()
           }
-
           users.value.forEach(u => {
             if (u.id === msg.senderId) {
               u.latestMessage = msg.content

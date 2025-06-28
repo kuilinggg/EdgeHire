@@ -20,11 +20,6 @@ public class ChatUser implements Serializable {
      */
     private String company;
 
-    /**
-     * 头像路径
-     */
-    private String avatar;
-
     private int unReadCount;
 
     private String latestMessage;
