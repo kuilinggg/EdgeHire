@@ -175,6 +175,19 @@ const filteredUsers = computed(() => {
 })
 
 const socket = ref(window._socket || null)
+onMounted(() => {
+  const userId = localStorage.getItem('userId')
+  if (!userId) return
+
+  if (!socket.value) {
+    socket.value = new WebSocket(`ws://localhost:8080/webSocket?userId=${userId}`)
+
+    socket.value.onopen = () => {
+    console.log('WebSocket连接已建立')
+    }
+  }
+})
+
 
 function selectUser(user) {
   activeUser.value = user.id.toString()
