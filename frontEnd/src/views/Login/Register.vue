@@ -40,13 +40,18 @@
 
 <script setup>
 import { ref, reactive, watch} from 'vue'
-import { useRouter } from 'vue-router'
+import { useRoute,useRouter } from 'vue-router'
 import { ElMessage } from 'element-plus'
 import { User, Lock, Message, Key } from '@element-plus/icons-vue'
 import { authApi } from '../../api/auth'
 
+const route = useRoute()
 const router = useRouter()
 const role = ref('jobseeker')
+if (route.query.role && ['jobseeker', 'hr'].includes(route.query.role)) {
+    role.value = route.query.role
+}
+
 const roleMap = { jobseeker: 1, hr: 2 }
 const loading = ref(false)
 const registerForm = ref(null)
@@ -111,7 +116,7 @@ watch(role, () => {
 })
 
 const goLogin = () => {
-    router.push('/login')
+    router.push({ path: '/login', query: { role: role.value } })
 }
 </script>
 
