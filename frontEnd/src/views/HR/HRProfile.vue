@@ -141,7 +141,7 @@ import { User } from '@element-plus/icons-vue'
 import { hrApi } from '../../api/hr.js'
 import { getInfoByUserId, createInfo, updateInfo } from '../../api/info.js'
 import { useAuthStore } from '../../stores/authStore.js'
-import axios from 'axios'
+import { uploadFile } from '../../util/upload.js'
 
 const authStore = useAuthStore()
 
@@ -330,7 +330,7 @@ const saveProfile = async () => {
     if (avatarFile.value) {
       const formData = new FormData()
       formData.append('file', avatarFile.value)
-      const url = await axios.post('http://localhost:8080/api/files/upload', formData)
+      const url = await uploadFile(formData)
       if (url && url.data) {
         userForm.avatar = url.data
       } else {
