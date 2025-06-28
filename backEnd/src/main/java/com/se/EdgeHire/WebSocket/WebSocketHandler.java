@@ -158,6 +158,14 @@ public class WebSocketHandler {
     }
 
     /**
+     * 外部接口，获取在线用户数量
+     * @return 在线用户数量
+     */
+    public static int getOnlineUserCount() {
+        return SESSION_MAP.size();
+    }
+
+    /**
      *  外部发送消息接口
      * @param from 发送方用户ID
      * @param to 接收方用户ID

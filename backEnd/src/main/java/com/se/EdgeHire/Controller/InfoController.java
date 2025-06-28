@@ -58,11 +58,9 @@ public class InfoController {
         }
 
         String avatar = infoService.getAvatarByUserId(userId);
-        if (avatar != null && !avatar.isEmpty()) {
-            return ResponseEntity.ok(avatar);
-        } else {
+        if (avatar == null || avatar.isEmpty()) {
             avatar = "http://localhost:8080/api/files/" + "default.png";
-            return ResponseEntity.ok(avatar);
         }
+        return ResponseEntity.ok(avatar);
     }
 }
