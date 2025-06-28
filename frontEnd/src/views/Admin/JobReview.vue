@@ -10,6 +10,11 @@
           <el-table :data="paginatedResumes" style="width: 100%">
             <el-table-column prop="id" label="ID" width="180"/>
             <el-table-column prop="userId" label="用户ID" />
+            <el-table-column label="用户名">
+                <template #default="scope">
+               {{ scope.row.username || '加载中...' }}
+           </template>
+            </el-table-column>
             <el-table-column label="头像">
            <template #default="scope">
              <el-image
@@ -28,7 +33,7 @@
              <template #default="scope">
                 <el-button type="success" @click="contentCheck(scope.row)">查看简历内容</el-button>
                 <el-button type="success">通过</el-button>
-                <el-button type="danger">驳回</el-button>
+                <el-button type="danger" @click="handleDelete(scope.row)">驳回</el-button>
               </template>
             </el-table-column>
           </el-table>
@@ -64,8 +69,9 @@
 
 <script setup>
 import{ ref , computed , onMounted }from 'vue'
-import { getAllResumes } from '../../api/resume';
-import { ElMessage } from 'element-plus';
+import { getUser } from '../../api/user';
+import { getAllResumes , deleteResume } from '../../api/resume';
+import { ElMessage ,ElMessageBox } from 'element-plus';
 import dayjs from 'dayjs'
 
 const dialogVisible=ref(false);
@@ -90,6 +96,29 @@ const handleSearch = () => {
   filterResumes()
 }
 
+// 获取用户信息并合并到简历数据
+const enhanceResumesWithUserInfo = async (resumesData) => {
+  // 使用Promise.all并行获取所有用户信息
+  const enhancedResumes = await Promise.all(
+    resumesData.map(async (resume) => {
+      try {
+        const response = await getUser(resume.userId)
+        return {
+          ...resume,
+          username: response.data.username || '未知用户'
+        }
+      } catch (error) {
+        return {
+          ...resume,
+          username: '加载失败'
+        }
+      }
+    })
+  )
+  
+  return enhancedResumes
+}
+
 // 过滤函数
 const filterResumes = () => {
   if (!searchKeyword.value) {
@@ -98,21 +127,26 @@ const filterResumes = () => {
   }
   
   filteredResumes.value = resumes.value.filter(resume => 
-    String(resume.userId).includes(searchKeyword.value)
+    String(resume.username).includes(searchKeyword.value)
   )
 }
 
 const loadResumes = async () => {
   try {
     const res = await getAllResumes()
-    resumes.value = Array.isArray(res.data) ? res.data : [res.data]
+    const rawResumes = Array.isArray(res.data) ? res.data : [res.data]
+
+    // 增强简历数据
+    const enhancedResumes = await enhanceResumesWithUserInfo(rawResumes)
+    resumes.value = enhancedResumes
+
     filterResumes() // 初始加载时也执行过滤
   } catch (e) {
     ElMessage.error('加载简历失败')
   }
 }
 
-
+//简历内容查询
 const contentCheck=async(row)=>{
   try {
     selectedResumeContent.value = row.content || '暂无简历内容'
@@ -124,6 +158,21 @@ const contentCheck=async(row)=>{
 
 const handlePageChange = (page) => {
   currentPage.value = page
+}
+
+const handleDelete=async(resume)=>{
+  try {
+    await ElMessageBox.confirm(
+      `确定驳回该简历吗？`,
+      '提示',
+      { type: 'warning' }
+    )
+    await deleteResume(resume.id)
+    ElMessage.success('删除成功')
+    loadResumes()
+  } catch (e) {
+    if (e !== 'cancel') ElMessage.error('删除失败')
+  }
 }
 
 function formatDate(datetime) {
