@@ -1,23 +1,37 @@
 <template>
   <div class="resume-view-container">
+    <el-card class="seekerinfo-card">
+      <div class="profile-view">
+        <p><strong>学历：</strong>{{ educationText }}</p>
+        <p><strong>学校：</strong>{{ seekerInfo.school || '-' }}</p>
+        <p><strong>理想岗位：</strong>{{ seekerInfo.favor || '-' }}</p>
+        <p><strong>会员类型：</strong>{{ membershipLabel }}</p>
+      </div>
+    </el-card>
     <el-card>
       <template #header>
         <div class="header-bar">
-          <span class="resume-title">查看简历</span>
+          <span class="resume-title">历史匹配</span>
         </div>
       </template>
       <el-row :gutter="32" class="resume-main-row">
-        <template v-if="resumeList.length > 0">
+        <template v-if="matchList.length > 0">
           <el-col :span="5" class="resume-list-col">
-            <el-menu :default-active="selectedIndex" @select="handleSelect" class="resume-list-menu"
-              style="height: 100%">
-              <el-menu-item v-for="(item, idx) in resumeList" :key="item.id" :index="String(idx)"
-                class="resume-menu-item">
+            <el-menu
+              :default-active="selectedIndex"
+              @select="handleSelect"
+              class="resume-list-menu"
+              style="height: 100%"
+            >
+              <el-menu-item
+                v-for="(item, idx) in matchList"
+                :key="item.id"
+                :index="String(idx)"
+                class="resume-menu-item"
+              >
                 <div class="menu-item-flex">
-                  <el-icon style="margin-right: 4px;">
-                    <Document />
-                  </el-icon>
-                  <span>简历{{ idx + 1 }}</span>
+                  <el-icon style="margin-right: 4px;"><Document /></el-icon>
+                  <span>匹配{{ idx + 1 }}</span>
                 </div>
               </el-menu-item>
             </el-menu>
@@ -38,16 +52,13 @@
                 <div class="resume-a4-section" v-if="parsedResumeContent['个人信息']">
                   <div class="resume-a4-section-title">个人信息</div>
                   <div class="resume-a4-section-content">
-                    <span v-for="(v, k) in parsedResumeContent['个人信息']" :key="k" class="resume-a4-field">{{ k }}：{{ v
-                    }}</span>
+                    <span v-for="(v, k) in parsedResumeContent['个人信息']" :key="k" class="resume-a4-field">{{ k }}：{{ v }}</span>
                   </div>
                 </div>
                 <div class="resume-a4-section" v-if="parsedResumeContent['教育背景']">
                   <div class="resume-a4-section-title">教育背景</div>
                   <div class="resume-a4-section-content">
-                    <span v-for="(v, k) in parsedResumeContent['教育背景']" :key="k" class="resume-a4-field">{{ k
-                    }}：<template v-if="Array.isArray(v)">{{ v.join('，') }}</template><template v-else>{{ v
-                      }}</template></span>
+                    <span v-for="(v, k) in parsedResumeContent['教育背景']" :key="k" class="resume-a4-field">{{ k }}：<template v-if="Array.isArray(v)">{{ v.join('，') }}</template><template v-else>{{ v }}</template></span>
                   </div>
                 </div>
                 <div class="resume-a4-section" v-if="parsedResumeContent['任职情况'] && parsedResumeContent['任职情况'].length">
@@ -58,8 +69,7 @@
                     </div>
                   </div>
                 </div>
-                <div class="resume-a4-section"
-                  v-if="parsedResumeContent['实习_兼职'] && parsedResumeContent['实习_兼职'].length">
+                <div class="resume-a4-section" v-if="parsedResumeContent['实习_兼职'] && parsedResumeContent['实习_兼职'].length">
                   <div class="resume-a4-section-title">实习/兼职</div>
                   <div class="resume-a4-section-content">
                     <div v-for="(exp, idx) in parsedResumeContent['实习_兼职']" :key="idx" class="resume-a4-job-block">
@@ -72,31 +82,13 @@
                   <div class="resume-a4-section-content">{{ parsedResumeContent['自我评价'] }}</div>
                 </div>
               </div>
-              <div class="resume-create-time-a4">
-                创建时间：<span class="resume-label">{{ formatDate(selectedResume.createTime) }}</span>
-              </div>
-              <div style="margin-top: 32px; text-align: center; display: flex; justify-content: center; gap: 16px;">
-                <el-button type="success" size="large" icon="Document" @click="exportPdf">
-                  导出为PDF
-                </el-button>
-                <el-button type="primary" size="large" icon="Edit" class="edit-btn-main" @click="onEditSelected">
-                  编辑
-                </el-button>
-                <el-popconfirm title="确定删除该简历？" @confirm="onDeleteSelected">
-                  <template #reference>
-                    <el-button type="danger" size="large" icon="Delete" class="delete-btn-main">
-                      删除当前简历
-                    </el-button>
-                  </template>
-                </el-popconfirm>
-              </div>
             </div>
-            <el-empty v-else description="请选择左侧简历" />
+            <el-empty v-else description="请选择左侧历史匹配" />
           </el-col>
         </template>
         <template v-else>
           <el-col :span="24">
-            <el-empty description="暂无简历数据" />
+            <el-empty description="暂无历史匹配数据" />
           </el-col>
         </template>
       </el-row>
@@ -106,64 +98,101 @@
 
 <script setup>
 import { ref, onMounted, computed } from 'vue'
-import { getResumesByUserId, deleteResume } from '../../api/resume'
-import { useAuthStore } from '../../stores/authStore'
-import { useRouter } from 'vue-router'
-import { Document, Delete, Edit } from '@element-plus/icons-vue'
+import { Document } from '@element-plus/icons-vue'
 import { ElMessage } from 'element-plus'
-import html2pdf from 'html2pdf.js'
+// import { getMatchHistory } from '../../api/post' // 需实现
+// import { getResumeById } from '../../api/resume' // 需实现
+import { useAuthStore } from '../../stores/authStore'
+// import { seekerApi } from '../../api/hr' // 需实现
 
-const resumeList = ref([])
+const matchList = ref([]) // 历史匹配列表
 const selectedIndex = ref('0')
+const selectedMatch = ref(null)
 const selectedResume = ref(null)
 const authStore = useAuthStore()
-const router = useRouter()
+
+const seekerInfo = ref({ education: '', school: '', favor: '', membership: 0 })
+const educationOptions = [
+  { value: 1, label: '小学' },
+  { value: 2, label: '初中' },
+  { value: 3, label: '高中' },
+  { value: 4, label: '大专' },
+  { value: 5, label: '本科' },
+  { value: 6, label: '硕士' },
+  { value: 7, label: '博士' }
+]
+const membershipLabel = '普通会员'
+const educationText = computed(() => {
+  const found = educationOptions.find(e => e.value === seekerInfo.value.education)
+  return found ? found.label : '-'
+})
 
 const handleSelect = (idx) => {
   selectedIndex.value = idx
-  selectedResume.value = resumeList.value[Number(idx)]
+  selectedMatch.value = matchList.value[Number(idx)]
+  selectedResume.value = selectedMatch.value?.resume || null
 }
 
-const onDeleteSelected = async () => {
-  if (!selectedResume.value) return
-  const id = selectedResume.value.id
-  try {
-    await deleteResume(id)
-    ElMessage.success('删除成功')
-    // 删除成功后刷新简历列表
-    await refreshResumeList()
-  } catch (e) {
-    ElMessage.error('删除失败')
-  }
-}
-
-const onEditSelected = () => {
-  if (!selectedResume.value) return
-  router.push({
-    path: '/jobseeker/resume-edit',
-    query: { id: selectedResume.value.id }
-  })
-}
-
-// 拉取简历列表并刷新选中项
-const refreshResumeList = async () => {
+// 拉取历史匹配列表并刷新选中项
+const refreshMatchList = async () => {
   const userId = authStore.userId || authStore.user?.id
   try {
-    const res = await getResumesByUserId(userId)
-    if (res.data && res.data.length > 0) {
-      resumeList.value = res.data
-      selectedResume.value = res.data[0]
+    // const res = await getMatchHistory(userId)
+    // if (res.data && res.data.length > 0) {
+    //   matchList.value = res.data
+    //   selectedMatch.value = res.data[0]
+    //   selectedResume.value = res.data[0].resume
+    //   selectedIndex.value = '0'
+    // } else {
+    //   matchList.value = []
+    //   selectedMatch.value = null
+    //   selectedResume.value = null
+    //   selectedIndex.value = '0'
+    // }
+    // mock数据
+    matchList.value = [
+      {
+        id: 1,
+        createTime: '2025-06-28T10:00:00',
+        resume: {
+          id: 101,
+          avatar: '',
+          content: '{"姓名":"张三","求职意向":"前端开发","个人信息":{"性别":"男","年龄":25},"教育背景":{"学校":"XX大学","学历":"本科"},"自我评价":"认真负责"}',
+        }
+      },
+      {
+        id: 2,
+        createTime: '2025-06-27T09:00:00',
+        resume: {
+          id: 102,
+          avatar: '',
+          content: '{"姓名":"李四","求职意向":"后端开发","个人信息":{"性别":"女","年龄":27},"教育背景":{"学校":"YY大学","学历":"硕士"},"自我评价":"学习能力强"}',
+        }
+      }
+    ]
+    if (matchList.value.length > 0) {
+      selectedMatch.value = matchList.value[0]
+      selectedResume.value = matchList.value[0].resume
       selectedIndex.value = '0'
     } else {
-      resumeList.value = []
+      selectedMatch.value = null
       selectedResume.value = null
       selectedIndex.value = '0'
     }
   } catch (e) {
-    resumeList.value = []
+    matchList.value = []
+    selectedMatch.value = null
     selectedResume.value = null
     selectedIndex.value = '0'
   }
+}
+
+const fetchSeekerInfo = async () => {
+  // const userId = authStore.userId || authStore.user?.id
+  // const { data } = await seekerApi.getSeekerInfo(userId)
+  // seekerInfo.value = data || { education: '', school: '', favor: '', membership: 0 }
+  // mock
+  seekerInfo.value = { education: 5, school: 'XX大学', favor: '前端开发', membership: 0 }
 }
 
 const parsedResumeContent = computed(() => {
@@ -188,45 +217,10 @@ const formatDate = (dateStr) => {
   return `${y}年${m}月${day}日 ${h}:${min}`
 }
 
-//导出简历为PDF
-function exportPdf() {
-  const element = document.querySelector('.resume-a4-paper')
-  if (!element) {
-    ElMessage.error('没有可导出的简历内容')
-    return
-  }
-  html2pdf()
-    .from(element)
-    .set({
-      margin: 0,
-      filename: (parsedResumeContent.value.姓名 || '简历') + '.pdf',
-      html2canvas: { scale: 2, useCORS: true },
-      jsPDF: {
-        unit: 'mm', format: 'a4', orientation: 'portrait',
-      },
-      pagebreak: { mode: ['avoid-all'] },
-      pagesplit: false
-    })
-    .toPdf()
-    .get('pdf')
-    .then(function(pdf){
-      // 删除多余的页面
-      while (pdf.internal.getNumberOfPages() > 1) {
-        pdf.deletePage(2)
-      }
-      return pdf
-    })
-    .save()
-    .then(() => {
-      ElMessage.success('导出成功')
-    })
-    .catch((err) => {
-      console.error('导出失败:', err)
-      ElMessage.error('导出失败，请稍后重试')
-    })
-}
-
-onMounted(refreshResumeList)
+onMounted(() => {
+  fetchSeekerInfo()
+  refreshMatchList()
+})
 </script>
 
 <style scoped>
@@ -238,57 +232,40 @@ onMounted(refreshResumeList)
   font-family: 'Microsoft YaHei', Arial, sans-serif;
   background: #f8f9fa;
 }
-
-.resume-edit-container {
-  padding: 32px;
-  max-width: 900px;
-  min-width: 700px;
-  margin: 0 auto;
-  font-family: 'Microsoft YaHei', Arial, sans-serif;
-  background: #f8f9fa;
-}
-
-.profile-container {
-  padding: 32px;
-  max-width: 900px;
-  min-width: 700px;
-  margin: 32px auto 0 auto;
+.seekerinfo-card {
+  margin-bottom: 24px;
   background: #fff;
-  border-radius: 18px;
-  box-shadow: 0 4px 24px 0 rgba(64, 158, 255, 0.08), 0 1.5px 6px 0 rgba(0, 0, 0, 0.04);
-  position: relative;
+  border-radius: 4px;
+  box-shadow: 0 4px 24px 0 rgba(64,158,255,0.08), 0 1.5px 6px 0 rgba(0,0,0,0.04);
 }
-
-.header-bar {
+.profile-view {
   display: flex;
-  justify-content: space-between;
-  align-items: center;
-  margin-bottom: 8px;
+  flex-direction: column;
+  align-items: flex-start;
+  padding: 16px 0 8px 0;
+  width: 100%;
 }
-
-.resume-title {
-  font-size: 22px;
-  font-weight: bold;
-  color: #222;
-  letter-spacing: 1px;
+.profile-view p {
+  margin: 10px 0 4px 0;
+  font-size: 16px;
+  color: #333;
+  letter-spacing: 0.5px;
+  text-align: left;
+  width: 100%;
 }
-
 .resume-main-row {
   min-height: 800px;
 }
-
 .resume-list-col {
   min-width: 180px;
   max-width: 260px;
 }
-
 .resume-a4-col {
   min-width: 700px;
   display: flex;
   flex-direction: column;
   align-items: center;
 }
-
 .resume-a4-wrapper {
   width: 100%;
   display: flex;
@@ -296,13 +273,12 @@ onMounted(refreshResumeList)
   align-items: center;
   margin: 0 auto;
 }
-
 .resume-a4-paper {
   width: 210mm;
   max-width: 100%;
   min-height: 297mm;
   background: #fff;
-  box-shadow: 0 4px 24px rgba(0, 0, 0, 0.12);
+  box-shadow: 0 4px 24px rgba(0,0,0,0.12);
   border-radius: 8px;
   padding: 32px 36px 24px 36px;
   margin-bottom: 18px;
@@ -310,21 +286,18 @@ onMounted(refreshResumeList)
   position: relative;
   overflow: hidden;
 }
-
 .resume-a4-header {
   display: flex;
   align-items: center;
   margin-bottom: 24px;
   justify-content: space-between;
 }
-
 .resume-a4-title {
   display: flex;
   flex-direction: column;
   justify-content: center;
   flex: 1;
 }
-
 .resume-a4-avatar {
   margin-left: 32px;
   margin-right: 0;
@@ -334,23 +307,19 @@ onMounted(refreshResumeList)
   width: 90px;
   height: 90px;
 }
-
 .resume-a4-name {
   font-size: 28px;
   font-weight: bold;
   color: #222;
   margin-bottom: 8px;
 }
-
 .resume-a4-job {
   font-size: 18px;
   color: #666;
 }
-
 .resume-a4-section {
   margin-bottom: 18px;
 }
-
 .resume-a4-section-title {
   font-size: 18px;
   font-weight: 600;
@@ -359,7 +328,6 @@ onMounted(refreshResumeList)
   border-left: 4px solid #409EFF;
   padding-left: 8px;
 }
-
 .resume-a4-section-content {
   display: flex;
   flex-wrap: wrap;
@@ -368,26 +336,13 @@ onMounted(refreshResumeList)
   color: #333;
   line-height: 1.8;
 }
-
 .resume-a4-field {
   min-width: 120px;
 }
-
 .resume-a4-job-block {
   margin-bottom: 8px;
   display: flex;
   flex-wrap: wrap;
   gap: 12px 24px;
-}
-
-.resume-create-time-a4 {
-  margin-top: 12px;
-  font-size: 15px;
-  color: #888;
-  text-align: left;
-  width: 210mm;
-  max-width: 100%;
-  margin-left: auto;
-  margin-right: auto;
 }
 </style>

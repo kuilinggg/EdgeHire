@@ -64,12 +64,14 @@ export const authApi = {
       return response
     })
   },
+
   // 用户登出
   logout() {
     const authStore = useAuthStore()
     authStore.clearToken()
     window.location.href = '/login' // 重定向到登录页面
   },
+
   // 用户注册
   register(username, password, role) {
     return apiClient.post('/auth/register', {
@@ -83,4 +85,14 @@ export const authApi = {
   getUserInfo() {
     return apiClient.get('/auth/user-info')
   },
+
+  // 修改密码
+  changePassword(userId, oldPassword, newPassword) {
+    return apiClient.post('/auth/change-password', {
+      userId,
+      oldPassword,
+      newPassword
+    })
+  },
+
 }

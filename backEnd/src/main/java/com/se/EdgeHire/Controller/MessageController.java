@@ -33,6 +33,7 @@ public class MessageController {
     @GetMapping("/users/{id}")
     public ResponseEntity<?> getChatUsers(@PathVariable Integer id) {
         List<Integer> userIds = messageRepository.findAllChatUsers(id);
+        Map<Integer, Message> latestMessagesMap = messageService.getLatestMessagesMap(id);
         List<ChatUser> chatUsers = new ArrayList<>();
 
         Map<Integer, Integer> unreadCountMap = messageService.getUnreadCountByUserId(id);
@@ -44,9 +45,25 @@ public class MessageController {
                 chatUser.setChatUser(temp.get());
                 int unreadCount = unreadCountMap.getOrDefault(i, 0);
                 chatUser.setUnReadCount(unreadCount);
+                chatUser.setLatestMessage(latestMessagesMap.get(i).getContent());
+                chatUser.setLatestMessageTime(latestMessagesMap.get(i).getTime());
                 chatUsers.add(chatUser);
             }
         }
+        chatUsers.sort(Comparator
+                .comparing(ChatUser::getLatestMessageTime
+                        , Comparator.nullsLast(Comparator.reverseOrder())));
+
+        ChatUser systemUser = new ChatUser();
+        systemUser.setUsername("系统消息");
+        systemUser.setId(0);
+        if(latestMessagesMap.get(0) != null) {
+            systemUser.setLatestMessage(latestMessagesMap.get(0).getContent());
+            systemUser.setLatestMessageTime(latestMessagesMap.get(0).getTime());
+        }
+
+        systemUser.setUnReadCount(unreadCountMap.getOrDefault(0, 0));
+        chatUsers.addFirst(systemUser);
 
         log.info("用户: {} 请求获取聊天用户列表", id);
 

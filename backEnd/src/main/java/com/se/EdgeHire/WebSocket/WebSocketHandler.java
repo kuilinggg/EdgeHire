@@ -12,8 +12,6 @@ import com.se.EdgeHire.Repository.MessageRepository;
 import com.se.EdgeHire.Repository.UserRepository;
 import jakarta.websocket.*;
 import jakarta.websocket.server.ServerEndpoint;
-import lombok.AllArgsConstructor;
-import lombok.NoArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
@@ -32,11 +30,17 @@ public class WebSocketHandler {
     private static UserRepository userRepository;
     private static MessageRepository messageRepository;
     ObjectMapper objectMapper = new ObjectMapper();
+    private static WebSocketHandler INSTANCE;
 
     @Autowired
     public void setInstance(UserRepository userRepository, MessageRepository messageRepository) {
         WebSocketHandler.userRepository = userRepository;
         WebSocketHandler.messageRepository = messageRepository;
+        INSTANCE = this;
+    }
+
+    public static WebSocketHandler getInstance() {
+        return INSTANCE;
     }
 
     public WebSocketHandler() {
@@ -149,8 +153,30 @@ public class WebSocketHandler {
                 log.error("发送消息失败: {}", e.getMessage());
             }
         } else {
-            log.warn("用户 {} 不在线，无法发送消息", message.getReceiverId());
+            log.warn("用户 {} 不在线，消息暂存到数据库", message.getReceiverId());
         }
+    }
+
+    /**
+     *  外部发送消息接口
+     * @param from 发送方用户ID
+     * @param to 接收方用户ID
+     * @param content 消息内容
+     */
+    public void sendMessageToUser(int from, int to, String content) {
+        // 构建消息对象
+        Message message = new Message();
+        message.setSenderId(from);
+        message.setReceiverId(to);
+        message.setContent(content);
+        message.setTime(LocalDateTime.now());
+        message.setIsRead(0);
+
+        // 保存消息到数据库
+        messageRepository.save(message);
+
+        // 发送消息给接收方
+        sendOneMessage(message);
     }
 
     private Integer getUserIdBySession(Session session) {

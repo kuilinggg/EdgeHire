@@ -41,4 +41,18 @@ public class AuthService {
     public String generateToken(int userId){
         return JwtUtil.generateToken(userId);
     }
+
+    // 修改密码
+    public void changePassword(int userId, String oldPassword, String newPassword) {
+        Optional<User> userOpt = userRepository.findById(userId);
+        if (userOpt.isEmpty()) {
+            throw new RuntimeException("用户不存在");
+        }
+        User user = userOpt.get();
+        if (!passwordEncoder.matches(oldPassword, user.getPassword())) {
+            throw new RuntimeException("原密码错误");
+        }
+        user.setPassword(passwordEncoder.encode(newPassword));
+        userRepository.save(user);
+    }
 }

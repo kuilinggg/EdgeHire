@@ -4,6 +4,7 @@ import lombok.Data;
 
 import java.io.Serial;
 import java.io.Serializable;
+import java.time.LocalDateTime;
 
 @Data
 public class ChatUser implements Serializable {
@@ -19,12 +20,11 @@ public class ChatUser implements Serializable {
      */
     private String company;
 
-    /**
-     * 头像路径
-     */
-    private String avatar;
-
     private int unReadCount;
+
+    private String latestMessage;
+
+    private LocalDateTime latestMessageTime;
 
     public void setChatUser(User user) {
         this.id = user.getId();
