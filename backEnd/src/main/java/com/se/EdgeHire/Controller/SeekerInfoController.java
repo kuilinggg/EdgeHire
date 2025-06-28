@@ -26,10 +26,6 @@ public class SeekerInfoController {
 
     @PostMapping
     public SeekerInfo create(@RequestBody SeekerInfo seekerInfo) {
-        Optional<SeekerInfo> existing = seekerInfoService.findByUserId(seekerInfo.getUserId());
-        if (existing.isPresent()) {
-            seekerInfo.setId(existing.get().getId());
-        }
         return seekerInfoService.save(seekerInfo);
     }
 

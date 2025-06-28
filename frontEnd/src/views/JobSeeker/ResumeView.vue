@@ -31,7 +31,7 @@
                     <div class="resume-a4-job">{{ parsedResumeContent.求职意向 || '求职意向' }}</div>
                   </div>
                   <div class="resume-a4-avatar">
-                    <el-avatar v-if="selectedResume.avatar" :src="selectedResume.avatar" size="large" />
+                    <el-avatar v-if="selectedResume.avatar" :src="selectedResume.avatar" size="large" shape="square" class="resume-avatar"/>
                     <span v-else>无</span>
                   </div>
                 </div>
@@ -332,7 +332,7 @@ onMounted(refreshResumeList)
   align-items: center;
   justify-content: center;
   width: 90px;
-  height: 90px;
+  height: 120px;
 }
 
 .resume-a4-name {
@@ -389,5 +389,13 @@ onMounted(refreshResumeList)
   max-width: 100%;
   margin-left: auto;
   margin-right: auto;
+}
+
+.resume-avatar {
+  width: 90px !important;
+  height: 120px !important;
+  object-fit: cover;
+  border: 1px solid #e4e7ed;
+  background: #fff;
 }
 </style>
