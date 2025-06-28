@@ -21,8 +21,9 @@ public class AiController {
     public Flux<String> resumeOptimizeStream(@RequestBody Map<String, String> request) {
         String conversationId = request.get("id");
         String resumeContent = request.get("resume");
+        String prompt = request.get("prompt");
 
-        return aiService.resumeOptimizeStream(conversationId, resumeContent)
+        return aiService.resumeOptimizeStream(conversationId, resumeContent, prompt)
                 .map(data -> "data: " + data + "\n\n")
                 .doOnCancel(() -> logger.info("客户端断开连接"));
     }
@@ -31,7 +32,8 @@ public class AiController {
     public String resumeOptimize(@RequestBody Map<String, String> request) {
         String conversationId = request.get("id");
         String resumeContent = request.get("resume");
+        String prompt = request.get("prompt");
 
-        return aiService.resumeOptimize(conversationId, resumeContent);
+        return aiService.resumeOptimize(conversationId, resumeContent, prompt);
     }
 }

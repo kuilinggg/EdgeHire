@@ -65,8 +65,9 @@ public class AiController {
     public Flux<String> optimizeStream(@RequestBody Map<String, String> request) {
         String conversationId = request.get("id");
         String resumeContent = request.get("resume");
+        String prompt = request.get("prompt");
         return chatClient
-                .prompt(resumeContent)
+                .prompt(prompt + resumeContent)
                 .advisors(a -> a.param(ChatMemory.CONVERSATION_ID, conversationId))
                 .stream()
                 .content()
