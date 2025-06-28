@@ -66,6 +66,11 @@ const routes = [
         component: () => import('../views/HR/HRHome.vue')
       },
       {
+        path: 'profile',
+        name: 'HRProfile',
+        component: () => import('../views/HR/HRProfile.vue')
+      },
+      {
         path: 'resume-list',
         name: 'HRResumeList',
         component: () => import('../views/HR/ResumeList.vue')
