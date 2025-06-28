@@ -159,28 +159,20 @@
       </div>
     </div>
 
-    <!-- 简历详情弹窗 -->
+    <!-- 简历详情对话框 -->
     <el-dialog
       v-model="showDetailDialog"
       title="简历详情"
       width="80%"
       :before-close="handleCloseDetail"
-      class="resume-detail-dialog"
+      destroy-on-close
     >
       <ResumeDetail
         v-if="selectedResume"
         :resume="selectedResume"
         @start-chat="handleStartChat"
-        @give-suggestion="handleGiveSuggestion"
       />
     </el-dialog>
-
-    <!-- 简历评论对话框 -->
-    <ResumeCommentDialog
-      v-model="showCommentDialog"
-      :resume="commentResume"
-      @success="handleCommentSuccess"
-    />
   </div>
 </template>
 
@@ -190,8 +182,7 @@ import { useRouter, useRoute } from 'vue-router'
 import { Search, Star, StarFilled } from '@element-plus/icons-vue'
 import { ElMessage, ElLoading } from 'element-plus'
 import ResumeDetail from './components/ResumeDetail.vue'
-import ResumeCommentDialog from './components/ResumeCommentDialog.vue'
-import { resumeRecommendationApi, resumeCommentApi } from '../../api/hr.js'
+import { resumeRecommendationApi } from '../../api/hr.js'
 import { useAuthStore } from '../../stores/authStore.js'
 
 const router = useRouter()
@@ -213,8 +204,6 @@ const showDetailDialog = ref(false)
 const selectedResume = ref(null)
 const loading = ref(false)
 const dataLoaded = ref(false)
-const showCommentDialog = ref(false)
-const commentResume = ref(null)
 
 // 计算属性
 const isSearchMode = computed(() => {
@@ -280,8 +269,7 @@ const loadResumeData = async (isSearch = false) => {
         isFavorited: false, // 后续可以从收藏API获取
         matchScore: item.matchScore,
         updateTime: item.createTime,
-        averageScore: item.averageScore,
-        hasCommented: item.hasCommented
+        averageScore: item.averageScore
       }))
       totalCount.value = response.data.total
     }
@@ -378,20 +366,6 @@ const handleCloseDetail = () => {
 const handleStartChat = (resume) => {
   router.push(`/chat?userId=${resume.id}`)
   handleCloseDetail()
-}
-
-const handleGiveSuggestion = (resume) => {
-  commentResume.value = resume
-  showCommentDialog.value = true
-  handleCloseDetail()
-}
-
-const handleCommentSuccess = (commentData) => {
-  ElMessage.success('评价提交成功')
-  // 可以更新简历的评价状态
-  if (commentResume.value) {
-    commentResume.value.hasCommented = true
-  }
 }
 
 const handleSizeChange = async (val) => {

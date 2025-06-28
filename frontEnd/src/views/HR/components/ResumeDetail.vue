@@ -19,10 +19,6 @@
           <el-icon><ChatDotRound /></el-icon>
           发起沟通
         </el-button>
-        <el-button type="success" size="large" @click="giveSuggestion">
-          <el-icon><EditPen /></el-icon>
-          提出修改建议
-        </el-button>
       </div>
     </div>
 
@@ -235,7 +231,6 @@
 import { ref, computed } from 'vue'
 import { 
   ChatDotRound, 
-  EditPen, 
   User, 
   Aim, 
   Briefcase, 
@@ -252,7 +247,7 @@ const props = defineProps({
   }
 })
 
-const emit = defineEmits(['start-chat', 'give-suggestion'])
+const emit = defineEmits(['start-chat'])
 
 // 模拟详细简历数据
 const resumeDetail = ref({
@@ -353,10 +348,6 @@ const getSkillType = (level) => {
 
 const startChat = () => {
   emit('start-chat', props.resume)
-}
-
-const giveSuggestion = () => {
-  emit('give-suggestion', props.resume)
 }
 </script>
 
