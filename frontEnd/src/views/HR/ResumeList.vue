@@ -24,6 +24,10 @@
             <el-option label="硕士" value="6" />
             <el-option label="博士" value="7" />
           </el-select>
+          <el-select v-model="filters.membership" placeholder="会员等级" clearable class="filter-item">
+            <el-option label="普通会员" value="0" />
+            <el-option label="高级会员" value="1" />
+          </el-select>
           <el-button type="primary" @click="handleSearch" class="search-btn">筛选</el-button>
         </div>
       </div>
@@ -127,7 +131,8 @@ const authStore = useAuthStore()
 // 响应式数据
 const searchKeyword = ref('')
 const filters = ref({
-  education: ''
+  education: '',
+  membership: ''
 })
 const sortBy = ref('match')
 const currentPage = ref(1)
@@ -184,10 +189,11 @@ const loadResumeData = async (isSearch = false) => {
   try {
     loading.value = true
     let response
-    if (isSearch && (searchKeyword.value || filters.value.education)) {
+    if (isSearch && (searchKeyword.value || filters.value.education || filters.value.membership !== '')) {
       response = await getPostsByFilter({
         keyword: searchKeyword.value,
-        education: filters.value.education
+        education: filters.value.education,
+        membership: filters.value.membership
       })
     } else {
       response = await getPostsWithDetails()
