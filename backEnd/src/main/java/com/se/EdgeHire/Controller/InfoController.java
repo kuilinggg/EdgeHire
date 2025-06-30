@@ -1,6 +1,7 @@
 package com.se.EdgeHire.Controller;
 
 import com.se.EdgeHire.Entity.Info;
+import com.se.EdgeHire.Entity.User;
 import com.se.EdgeHire.Repository.InfoRepository;
 import com.se.EdgeHire.Service.InfoService;
 import jakarta.annotation.Resources;
@@ -23,6 +24,11 @@ public class InfoController {
     @Autowired
     private InfoService infoService;
     private InfoRepository infoRepository;
+
+    @GetMapping
+    public List<Info> getAllInfos() {
+        return infoService.getAllInfos();
+    }
 
     @GetMapping("/user/{userId}")
     public ResponseEntity<Info> getInfoByUserId(@PathVariable Integer userId) {
