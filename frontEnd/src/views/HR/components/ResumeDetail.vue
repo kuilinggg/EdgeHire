@@ -1,17 +1,23 @@
 <template>
   <div class="resume-detail">
-    <!-- 顶部：t_info展示 -->
+    <!-- 顶部：与ResumeList一致的信息区 -->
     <div class="detail-header">
       <div class="user-info">
-        <el-avatar :src="tInfo.avatar || resume.avatar" :size="80" />
+        <el-avatar :src="info.avatar" :size="80" />
         <div class="user-basic">
-          <h2 class="user-name">{{ tInfo.realname || tInfo.name || parsedResumeContent.姓名 || resume.name || '姓名' }}</h2>
-          <p class="user-position">{{ tInfo.position || parsedResumeContent.求职意向 || resume.expectedPosition || '求职意向' }}</p>
+          <h2 class="user-name">
+            {{ info.realname || '姓名' }}
+          </h2>
+          <div class="favor-tags">
+            <el-tag v-for="favor in parseFavor(seekerInfo.favor)" :key="favor" class="favor-tag" effect="plain">
+              {{ favor }}
+            </el-tag>
+          </div>
           <div class="user-tags">
-            <el-tag class="basic-tag" v-if="tInfo.age">年龄：{{ tInfo.age }}</el-tag>
-            <el-tag class="basic-tag" v-if="tInfo.gender">{{ tInfo.gender === 1 ? '男' : tInfo.gender === 2 ? '女' : '保密' }}</el-tag>
-            <el-tag class="basic-tag" v-if="tInfo.phone">{{ tInfo.phone }}</el-tag>
-            <el-tag class="basic-tag" v-if="tInfo.email">{{ tInfo.email }}</el-tag>
+            <el-tag class="basic-tag" v-if="seekerInfo.education">学历：{{ getEducationText(seekerInfo.education) }}</el-tag>
+            <el-tag class="basic-tag" v-if="seekerInfo.school">毕业院校：{{ seekerInfo.school }}</el-tag>
+            <el-tag class="basic-tag" v-if="info.phone">手机号：{{ info.phone }}</el-tag>
+            <el-tag class="basic-tag" v-if="info.email">邮箱：{{ info.email }}</el-tag>
           </div>
         </div>
       </div>
@@ -78,27 +84,21 @@
 
 <script setup>
 import { ref, computed } from 'vue'
-import {
-  ChatDotRound,
-  User,
-  Aim,
-  Briefcase,
-  School,
-  Monitor,
+import { 
+  ChatDotRound, 
+  User, 
+  Aim, 
+  Briefcase, 
+  School, 
+  Monitor, 
   Medal,
   ChatLineRound
 } from '@element-plus/icons-vue'
 
 const props = defineProps({
-  resume: {
-    type: Object,
-    required: true
-  },
-  tInfo: {
-    type: Object,
-    required: false,
-    default: () => ({})
-  }
+  resume: { type: Object, required: true },
+  info: { type: Object, required: false, default: () => ({}) }, // t_info
+  seekerInfo: { type: Object, required: false, default: () => ({}) } // t_seeker_info
 })
 
 const emit = defineEmits(['start-chat'])
@@ -128,6 +128,30 @@ const formatDate = (dateStr) => {
 
 const startChat = () => {
   emit('start-chat', props.resume)
+}
+
+// favor解析
+function parseFavor(favor) {
+  if (!favor) return []
+  try {
+    const arr = JSON.parse(favor)
+    return Array.isArray(arr) ? arr : [favor]
+  } catch {
+    return favor ? [favor] : []
+  }
+}
+
+function getEducationText(educationValue) {
+  const educationMap = {
+    1: '小学',
+    2: '初中',
+    3: '高中',
+    4: '大专',
+    5: '本科',
+    6: '硕士',
+    7: '博士'
+  }
+  return educationMap[educationValue] || '未填写'
 }
 </script>
 
@@ -166,11 +190,30 @@ const startChat = () => {
   margin: 0;
 }
 
-.user-position {
-  font-size: 16px;
+.favor-tags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin: 6px 0 4px 0;
+}
+
+.favor-tag {
+  background: #eaf3ff;
   color: #3a36db;
+  border: 1px solid #e0e7ef;
+  font-size: 12px;
   font-weight: 500;
+  border-radius: 12px;
+  padding: 2px 12px;
+  transition: background 0.2s, color 0.2s, border 0.2s;
+  box-shadow: none;
   margin: 0;
+}
+
+.favor-tag:hover {
+  background: #d2e6ff;
+  color: #222;
+  border-color: #b3bff7;
 }
 
 .user-tags {
