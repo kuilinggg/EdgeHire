@@ -26,3 +26,13 @@ export function createPost(data) {
 export function deletePost(id) {
   return axios.delete(`${API_BASE}/${id}`);
 }
+
+// 获取投递记录及其关联的简历和用户信息
+export function getPostsWithDetails() {
+  return axios.get(`${API_BASE}/with-details`);
+}
+
+// 根据条件筛选投递记录
+export function getPostsByFilter(filters) {
+  return axios.get(`${API_BASE}/filter`, { params: filters });
+}
