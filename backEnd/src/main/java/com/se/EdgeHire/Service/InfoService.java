@@ -1,9 +1,11 @@
 package com.se.EdgeHire.Service;
 
 import com.se.EdgeHire.Entity.Info;
+import com.se.EdgeHire.Entity.User;
 import com.se.EdgeHire.Repository.InfoRepository;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
+import org.springframework.web.bind.annotation.GetMapping;
 
 import java.util.List;
 import java.util.Optional;
@@ -12,6 +14,10 @@ import java.util.Optional;
 public class InfoService {
     @Autowired
     private InfoRepository infoRepository;
+
+    public List<Info> getAllInfos() {
+        return infoRepository.findAll();
+    }
 
     public List<Info> findByUserId(Integer userId) {
         return infoRepository.findByUserId(userId);

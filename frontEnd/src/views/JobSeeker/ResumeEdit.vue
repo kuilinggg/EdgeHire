@@ -381,7 +381,29 @@ const onSubmit = async () => {
       return
     }
     //照片上传
-    if (avatarFile.value) {
+      if (form.value.avatar && form.value.avatar.startsWith('data:image')) {
+      //解析base64字符串
+      const arr = form.value.avatar.split(',')
+      const mime = arr[0].match(/:(.*?);/)[1]
+      const bstr = atob(arr[1])
+      //转成二进制数据
+      let n = bstr.length
+      const u8arr = new Uint8Array(n)
+      while (n--) {
+        u8arr[n] = bstr.charCodeAt(n)
+      }
+      //创建File对象并上传
+      const file = new File([u8arr], 'avatar.png', { type: mime })
+      const formData = new FormData()
+      formData.append('file', file)
+      const url = await uploadFile(formData)
+      if (url) {
+        form.value.avatar = url.data
+      } else {
+        ElMessage.error('头像上传失败')
+        return
+      }
+    } else if (avatarFile.value) {
       const formData = new FormData()
       formData.append('file', avatarFile.value)
       const url = await uploadFile(formData)

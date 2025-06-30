@@ -2,6 +2,11 @@ import axios from 'axios'
 
 const API_BASE = 'http://localhost:8080/api/t_info';
 
+//获取全部用户信息
+export function getAllInfos(){
+  return axios.get(API_BASE)
+}
+
 // 获取用户信息
 export function getInfoByUserId(userId) {
   return axios.get(`${API_BASE}/user/${userId}`)
