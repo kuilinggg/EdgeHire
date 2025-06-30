@@ -52,7 +52,7 @@
       </el-form-item>
     </el-form>
     <div style="display: flex; justify-content: center; margin-top: 18px;">
-      <el-button type="primary" class="edit-btn" @click="editing = true" v-if="!editing" style="margin-top: 18px; align-self: flex-end;">编辑</el-button>
+      <el-button type="primary" class="edit-btn" @click="startEdit" v-if="!editing" style="margin-top: 18px; align-self: flex-end;">编辑</el-button>
     </div>
   </div>
 </template>
@@ -91,13 +91,32 @@ const favorList = computed(() => {
 
 function addFavor() {
   const val = favorInput.value && favorInput.value.trim()
-  if (val && !favorEditList.value.includes(val)) {
-    favorEditList.value.push(val)
-    favorInput.value = ''
+  if (!val) {
+    ElMessage.warning('请输入岗位名称')
+    return
   }
+  if (favorEditList.value.includes(val)) {
+    ElMessage.warning('岗位已存在')
+    favorInput.value = ''
+    return
+  }
+  favorEditList.value.push(val)
+  favorInput.value = ''
+  console.log('添加岗位后的列表:', favorEditList.value) // 调试用
 }
 function removeFavor(idx) {
   favorEditList.value.splice(idx, 1)
+}
+
+// 开始编辑时同步数据
+function startEdit() {
+  try {
+    favorEditList.value = form.favor ? JSON.parse(form.favor) : []
+  } catch {
+    favorEditList.value = form.favor ? [form.favor] : []
+  }
+  favorInput.value = ''
+  editing.value = true
 }
 
 const educationOptions = [
@@ -125,12 +144,6 @@ async function fetchSeekerInfo() {
     const { data } = await getSeekerByUserId(user_id)
     if (data && data.id) {
       Object.assign(form, data)
-      // 解析 favor 字段为数组
-      try {
-        favorEditList.value = data.favor ? JSON.parse(data.favor) : []
-      } catch {
-        favorEditList.value = data.favor ? [data.favor] : []
-      }
       original.value = { ...data }
       showFillAlert.value = false
       editing.value = false
@@ -154,17 +167,26 @@ function cancelEdit() {
   } catch {
     favorEditList.value = original.value.favor ? [original.value.favor] : []
   }
+  favorInput.value = ''
   editing.value = false
 }
 
 async function onSaveClick() {
+  // 校验理想岗位不能为空
+  if (!favorEditList.value || favorEditList.value.length === 0) {
+    ElMessage.error('请至少添加一个理想岗位')
+    console.log('favorEditList:', favorEditList.value) // 调试用
+    return
+  }
+  
+  // 设置 favor 字段用于表单验证
+  form.favor = JSON.stringify(favorEditList.value)
+  
   await nextTick()
   matchForm.value.validate(async (valid) => {
     if (valid) {
       try {
         form.userId = user_id
-        // 保存前将 favorEditList 转为 JSON 字符串
-        form.favor = JSON.stringify(favorEditList.value)
         if (form.id) {
           await updateSeeker(form.id, form)
         } else {
@@ -176,7 +198,10 @@ async function onSaveClick() {
         original.value = { ...form }
       } catch (e) {
         ElMessage.error('保存失败')
+        console.error('保存错误:', e)
       }
+    } else {
+      console.log('表单验证失败')
     }
   })
 }
