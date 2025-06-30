@@ -131,6 +131,7 @@ import { ElMessage, ElMessageBox } from 'element-plus'
 import { getUsers, updateUser, deleteUser } from '../../api/user'
 import { getInfoByUserId } from '../../api/info'
 import { getSeekerByUserId } from '../../api/seeker'
+import { hrApi } from '../../api/hr'
 
 // 响应式数据
 const users = ref([])
@@ -203,11 +204,33 @@ const handleCheck = async (id,role) => {
   } catch (error) {
     console.error(error)
   }
+
   //detailInfoList处理
   if(role===1)
   {
-    const res1 = await getSeekerByUserId(id)
-    detailInfoList.value = Array.isArray(res1.data) ? res1.data : [res1.data]
+    try {
+      const res1 = await getSeekerByUserId(id)
+      detailInfoList.value = Array.isArray(res1.data) ? res1.data : [res1.data]
+    } catch (error) {
+      if (error.response?.status === 404) {
+      console.error('求职者信息不存在'); 
+      } else {
+      console.error('请求失败:', error);
+      }
+    }
+  }
+  if(role===2)
+  {
+    try {
+      const res2 = await hrApi.getHrInfo(id);
+      detailInfoList.value = Array.isArray(res2.data) ? res2.data : [res2.data]
+    } catch (error) {
+      if (error.response?.status === 404) {
+      console.error('HR信息不存在'); 
+      } else {
+      console.error('请求失败:', error);
+      }
+    }
   }
   if(role!==0&&(isEmptyContent(infoList.value) || isEmptyContent(detailInfoList.value))) {
     ElMessage.error('用户详细信息不完整')

@@ -31,8 +31,7 @@
           </el-table-column>
             <el-table-column label="操作" width="300">
              <template #default="scope">
-                <el-button type="success" @click="contentCheck(scope.row)">查看简历内容</el-button>
-                <el-button type="success">通过</el-button>
+                <el-button type="success" @click="selectedResumeContent='',contentCheck(scope.row)">查看简历内容</el-button>
                 <el-button type="danger" @click="handleDelete(scope.row)">驳回</el-button>
               </template>
             </el-table-column>
@@ -96,6 +95,29 @@ const handleSearch = () => {
   filterResumes()
 }
 
+const isStrictJSON=(str)=> {
+  try {
+    const parsed = JSON.parse(str);
+    return typeof parsed === 'object' && parsed !== null;
+  } catch (e) {
+    return false;
+  }
+}
+
+const jsonToTxt= (obj, indent = "")=> {
+  let result = "";
+  for (const key in obj) {
+    if (Array.isArray(obj[key])) {
+      result += `${indent}${key}：${obj[key].join(", ")}\n`;
+    } else if (typeof obj[key] === "object") {
+      result += `${indent}${key}：\n${jsonToTxt(obj[key], indent + "  ")}`;
+    } else {
+      result += `${indent}${key}：${obj[key]}\n`;
+    }
+  }
+  return result;
+}
+
 // 获取用户信息并合并到简历数据
 const enhanceResumesWithUserInfo = async (resumesData) => {
   // 使用Promise.all并行获取所有用户信息
@@ -147,13 +169,25 @@ const loadResumes = async () => {
 }
 
 //简历内容查询
-const contentCheck=async(row)=>{
-  try {
-    selectedResumeContent.value = row.content || '暂无简历内容'
-  } catch (e) {
-    ElMessage.error('加载简历内容失败')
+const contentCheck = async (row) => {
+  console.log(row.content)
+  if (!row || !row.content) {
+    selectedResumeContent.value = '暂无简历内容'
+    dialogVisible.value = true
+    return
   }
-  dialogVisible.value=true;
+  
+    // 尝试解析JSON
+  if(isStrictJSON(row.content))
+  { 
+    const parsedData = JSON.parse(row.content);
+    //转化后赋值
+    selectedResumeContent.value = jsonToTxt(parsedData);
+  }
+  else
+    selectedResumeContent.value = row.content
+  
+  dialogVisible.value = true
 }
 
 const handlePageChange = (page) => {
@@ -168,10 +202,10 @@ const handleDelete=async(resume)=>{
       { type: 'warning' }
     )
     await deleteResume(resume.id)
-    ElMessage.success('删除成功')
+    ElMessage.success('驳回成功')
     loadResumes()
   } catch (e) {
-    if (e !== 'cancel') ElMessage.error('删除失败')
+    if (e !== 'cancel') ElMessage.error('驳回失败')
   }
 }
 

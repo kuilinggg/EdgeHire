@@ -11,20 +11,20 @@
         </el-col>
         <el-col :span="6">
           <el-card class="stat-card">
-            <div class="stat-title">HR人数</div>
+            <div class="stat-title">HR总数</div>
             <div class="stat-value">{{ HRnum }}</div>
-          </el-card>
-        </el-col>
-        <el-col :span="6">
-          <el-card class="stat-card">
-            <div class="stat-title">在线人数</div>
-            <div class="stat-value">{{onlineUserCount }}</div>
           </el-card>
         </el-col>
         <el-col :span="6">
           <el-card class="stat-card">
             <div class="stat-title">求职申请总数</div>
             <div class="stat-value">{{ resumenum}}</div>
+          </el-card>
+        </el-col>
+        <el-col :span="6">
+          <el-card class="stat-card">
+            <div class="stat-title">在线人数</div>
+            <div class="stat-value">{{ onlineUserCount }}</div>
           </el-card>
         </el-col>
       </el-row>
