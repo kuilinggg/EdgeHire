@@ -33,10 +33,6 @@
             <el-icon><ChatDotRound /></el-icon>
             <span>私聊</span>
           </el-menu-item>
-          <el-menu-item index="/hr/api-test">
-            <el-icon><Setting /></el-icon>
-            <span>API测试</span>
-          </el-menu-item>
         </el-menu>
       </nav>
     </div>

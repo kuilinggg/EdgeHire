@@ -32,4 +32,14 @@ public class PostService {
     public List<Post> getPostsByUserId(Integer userId) {
         return postRepository.findByUserId(userId);
     }
+
+    // 获取所有投递记录及其关联信息
+    public List<Post> getAllPostsWithDetails() {
+        return postRepository.findAllWithDetails();
+    }
+
+    // 根据条件筛选投递记录
+    public List<Post> getPostsByFilter(String keyword, Integer education, String favor) {
+        return postRepository.findByFilter(keyword, education, favor);
+    }
 }

@@ -39,4 +39,18 @@ public class PostController {
         postService.deletePost(id);
     }
 
+    // 获取所有投递记录及其关联信息
+    @GetMapping("/with-details")
+    public List<Post> getPostsWithDetails() {
+        return postService.getAllPostsWithDetails();
+    }
+
+    // 根据条件筛选投递记录
+    @GetMapping("/filter")
+    public List<Post> getPostsByFilter(
+            @RequestParam(required = false) String keyword,
+            @RequestParam(required = false) Integer education,
+            @RequestParam(required = false) String favor) {
+        return postService.getPostsByFilter(keyword, education, favor);
+    }
 }
