@@ -243,6 +243,20 @@ onMounted(async () => {
   font-family: 'Microsoft YaHei', Arial, sans-serif;
   background: #f8f9fa;
 }
+.header-bar {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 0 16px;
+  height: 64px;
+}
+.resume-title {
+  font-size: 24px;
+  font-weight: bold;
+  color: #222;
+  letter-spacing: 1px;
+  line-height: 1.2;
+}
 .seekerinfo-card {
   margin-bottom: 24px;
   background: #fff;

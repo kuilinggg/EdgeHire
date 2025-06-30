@@ -362,13 +362,13 @@ onMounted(() => {
   align-items: center;
   padding: 0 16px;
   height: 64px;
-  background: #f5f7fa;
-  border-bottom: 1px solid #e4e7ec;
 }
 .resume-title {
-  font-size: 18px;
-  font-weight: 500;
-  color: #333;
+  font-size: 24px;
+  font-weight: bold;
+  color: #222;
+  letter-spacing: 1px;
+  line-height: 1.2;
 }
 .seeker-main-row-short {
   min-height: unset;
