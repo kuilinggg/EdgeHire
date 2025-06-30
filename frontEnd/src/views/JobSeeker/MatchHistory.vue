@@ -36,7 +36,12 @@
                   <div class="profile-view">
                     <p><strong>学历：</strong>{{ educationText }}</p>
                     <p><strong>学校：</strong>{{ seekerInfo.school || '-' }}</p>
-                    <p><strong>理想岗位：</strong>{{ seekerInfo.favor || '-' }}</p>
+                    <p><strong>理想岗位：</strong>
+                      <template v-if="favorList.length > 0">
+                        <el-tag v-for="(item, idx) in favorList" :key="idx" type="info" style="margin-right: 8px;">{{ item }}</el-tag>
+                      </template>
+                      <template v-else>-</template>
+                    </p>
                     <p><strong>会员类型：</strong>{{ seekerInfo.membership == 0 ? '普通会员': '高级会员' }}</p>
                   </div>
                 </el-card>
@@ -105,10 +110,8 @@
 import { ref, onMounted, computed } from 'vue'
 import { Document } from '@element-plus/icons-vue'
 import { ElMessage } from 'element-plus'
-import { getPostsByUserId, deletePost } from '../../api/post'
-import { getResumeById } from '../../api/resume'
+import { getPostsByUserIdWithDetails, deletePost } from '../../api/post'
 import { useAuthStore } from '../../stores/authStore'
-import { getSeekerById } from '../../api/seeker'
 
 const matchList = ref([]) // 历史匹配列表
 const selectedIndex = ref('0')
@@ -132,10 +135,20 @@ const educationText = computed(() => {
   return found ? found.label : '-'
 })
 
+const favorList = computed(() => {
+  if (!seekerInfo.value.favor) return []
+  try {
+    const arr = JSON.parse(seekerInfo.value.favor)
+    return Array.isArray(arr) ? arr : [seekerInfo.value.favor]
+  } catch {
+    return seekerInfo.value.favor ? [seekerInfo.value.favor] : []
+  }
+})
+
 const refreshMatchList = async () => {
   const userId = authStore.userId || authStore.user?.id
   try {
-    const res = await getPostsByUserId(userId)
+    const res = await getPostsByUserIdWithDetails(userId)
     if (res.data && res.data.length > 0) {
       matchList.value = res.data
       // 默认选中第一个
@@ -159,28 +172,25 @@ const handleSelect = async (idx) => {
   const match = matchList.value[Number(idx)]
   selectedMatch.value = match
   if (match) {
-    // 更新求职者信息
-    if (match.seekerInfoId) {
-      const seekerRes = await getSeekerById(match.seekerInfoId)
-      seekerInfo.value = seekerRes.data || { education: '', school: '', favor: '', membership: 0 }
+    // 直接使用从后端返回的关联数据
+    if (match.seekerInfo) {
+      seekerInfo.value = match.seekerInfo
+    } else {
+      seekerInfo.value = { education: '', school: '', favor: '', membership: 0 }
     }
-    // 更新简历
-    if (match.resumeId) {
-      const resumeRes = await getResumeById(match.resumeId)
-      selectedResume.value = resumeRes.data || null
+    
+    if (match.resume) {
+      selectedResume.value = match.resume
     } else {
       selectedResume.value = null
     }
   } else {
+    seekerInfo.value = { education: '', school: '', favor: '', membership: 0 }
     selectedResume.value = null
   }
 }
 
 // 拉取历史匹配列表并刷新选中项
-const fetchSeekerInfo = async () => {
-  // 默认显示第一个匹配的求职者信息，已由 handleSelect 处理
-}
-
 const parsedResumeContent = computed(() => {
   if (!selectedResume.value || !selectedResume.value.content) return {}
   try {
@@ -227,6 +237,20 @@ onMounted(async () => {
   margin: 0 auto;
   font-family: 'Microsoft YaHei', Arial, sans-serif;
   background: #f8f9fa;
+}
+.header-bar {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 0 16px;
+  height: 64px;
+}
+.resume-title {
+  font-size: 24px;
+  font-weight: bold;
+  color: #222;
+  letter-spacing: 1px;
+  line-height: 1.2;
 }
 .seekerinfo-card {
   margin-bottom: 24px;

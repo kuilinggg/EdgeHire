@@ -24,7 +24,6 @@ public class AiController {
         String prompt = request.get("prompt");
 
         return aiService.resumeOptimizeStream(conversationId, resumeContent, prompt)
-                .map(data -> "data: " + data + "\n\n")
                 .doOnCancel(() -> logger.info("客户端断开连接"));
     }
 
