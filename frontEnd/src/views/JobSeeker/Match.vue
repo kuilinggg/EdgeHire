@@ -3,14 +3,17 @@
     <el-alert v-if="showFillAlert" title="请先完善求职信息" type="warning" show-icon class="top-alert" />
     <div class="header-bar">
       <span class="resume-title">求职信息</span>
-      <el-button type="primary" class="create-btn" @click="onCreateClick" v-if="!editing" style="margin-left: 24px;">新建</el-button>
-      <el-button type="primary" class="edit-btn" @click="editing = true" v-if="!editing" style="margin-left: 12px;">编辑</el-button>
     </div>
     <el-card v-if="!editing">
       <div class="profile-view">
         <p><strong>学历：</strong>{{ educationText }}</p>
         <p><strong>学校：</strong>{{ form.school || '-' }}</p>
-        <p><strong>理想岗位：</strong>{{ form.favor || '-' }}</p>
+        <p><strong>理想岗位：</strong>
+          <template v-if="favorList.length > 0">
+            <el-tag v-for="(item, idx) in favorList" :key="idx" type="info" style="margin-right: 8px;">{{ item }}</el-tag>
+          </template>
+          <template v-else>-</template>
+        </p>
         <p><strong>会员类型：</strong>{{ form.membership === 0 ? '普通会员' : '高级会员' }}</p>
       </div>
     </el-card>
@@ -24,68 +27,40 @@
         <el-input v-model="form.school" placeholder="请输入毕业学校" />
       </el-form-item>
       <el-form-item label="理想岗位" prop="favor" :required="true">
-        <el-input v-model="form.favor" placeholder="请输入理想岗位" />
+        <div style="display: flex; flex-wrap: wrap; align-items: center; gap: 8px;">
+          <el-tag
+            v-for="(item, idx) in favorEditList"
+            :key="idx"
+            closable
+            @close="removeFavor(idx)"
+            type="info"
+            style="margin-bottom: 4px;"
+          >{{ item }}</el-tag>
+          <el-input
+            v-model="favorInput"
+            placeholder="输入岗位后回车或点击添加"
+            size="small"
+            style="width: 160px;"
+            @keyup.enter.native="addFavor"
+          />
+          <el-button type="primary" size="small" @click="addFavor">添加</el-button>
+        </div>
       </el-form-item>
       <el-form-item>
         <el-button type="success" @click="onSaveClick" :loading="saveLoading">保存</el-button>
         <el-button @click="cancelEdit" style="margin-left:8px;">取消</el-button>
       </el-form-item>
     </el-form>
-
-    <!-- 求职者信息列表+选取卡片 -->
-    <el-card style="margin-top: 32px;">
-      <template #header>
-        <div class="header-bar">
-          <span class="resume-title">全部求职信息</span>
-        </div>
-      </template>
-      <el-row :gutter="32" class="seeker-main-row-short">
-        <template v-if="seekerList.length > 0">
-          <el-col :span="5" class="seeker-list-col-scroll">
-            <el-menu
-              :default-active="selectedSeekerIndex"
-              @select="handleSeekerSelect"
-              class="resume-list-menu"
-              style="height: 100%"
-            >
-              <el-menu-item
-                v-for="(item, idx) in seekerList"
-                :key="item.id"
-                :index="String(idx)"
-                class="resume-menu-item"
-              >
-                <div class="menu-item-flex">
-                  <el-icon style="margin-right: 4px;"><Document /></el-icon>
-                  <span>{{ item.favor || '未填写岗位' }}</span>
-                </div>
-              </el-menu-item>
-            </el-menu>
-          </el-col>
-          <el-col :span="19">
-            <el-card v-if="selectedSeeker" class="seeker-single-card">
-              <div><strong>学历：</strong>{{ educationOptions.find(e => e.value === selectedSeeker.education)?.label || '-' }}</div>
-              <div><strong>学校：</strong>{{ selectedSeeker.school || '-' }}</div>
-              <div><strong>理想岗位：</strong>{{ selectedSeeker.favor || '-' }}</div>
-              <div><strong>会员类型：</strong>{{ selectedSeeker.membership === 0 ? '普通会员' : '高级会员' }}</div>
-            </el-card>
-            <el-empty v-else description="请选择左侧求职者" />
-          </el-col>
-        </template>
-        <template v-else>
-          <el-col :span="24">
-            <el-empty description="暂无求职者数据" />
-          </el-col>
-        </template>
-      </el-row>
-    </el-card>
+    <div style="display: flex; justify-content: center; margin-top: 18px;">
+      <el-button type="primary" class="edit-btn" @click="editing = true" v-if="!editing" style="margin-top: 18px; align-self: flex-end;">编辑</el-button>
+    </div>
   </div>
 </template>
 
 <script setup>
 import { ref, reactive, onMounted, computed, nextTick } from 'vue'
 import { ElMessage } from 'element-plus'
-import { getAllSeekers,getSeekerByUserId, getSeekerById,createSeeker,updateSeeker } from '../../api/seeker'
-import { Document } from '@element-plus/icons-vue'
+import { getSeekerByUserId, createSeeker, updateSeeker } from '../../api/seeker'
 
 const user_id = localStorage.getItem('userId')
 const form = reactive({
@@ -101,9 +76,29 @@ const editing = ref(false)
 const original = ref({})
 const matchForm = ref(null)
 const saveLoading = ref(false)
-const seekerList = ref([])
-const selectedSeekerIndex = ref('0')
-const selectedSeeker = ref(null)
+
+const favorEditList = ref([])
+const favorInput = ref('')
+const favorList = computed(() => {
+  if (!form.favor) return []
+  try {
+    const arr = JSON.parse(form.favor)
+    return Array.isArray(arr) ? arr : []
+  } catch {
+    return form.favor ? [form.favor] : []
+  }
+})
+
+function addFavor() {
+  const val = favorInput.value && favorInput.value.trim()
+  if (val && !favorEditList.value.includes(val)) {
+    favorEditList.value.push(val)
+    favorInput.value = ''
+  }
+}
+function removeFavor(idx) {
+  favorEditList.value.splice(idx, 1)
+}
 
 const educationOptions = [
   { value: 1, label: '小学' },
@@ -122,7 +117,7 @@ const educationText = computed(() => {
 const rules = {
   education: [ { required: true, message: '请选择学历', trigger: 'change' } ],
   school: [ { required: true, message: '请输入毕业学校', trigger: 'blur' } ],
-  favor: [ { required: true, message: '请输入理想岗位', trigger: 'blur' } ]
+  favor: [ { required: true, message: '请至少添加一个理想岗位', trigger: 'blur' } ]
 }
 
 async function fetchSeekerInfo() {
@@ -130,44 +125,35 @@ async function fetchSeekerInfo() {
     const { data } = await getSeekerByUserId(user_id)
     if (data && data.id) {
       Object.assign(form, data)
+      // 解析 favor 字段为数组
+      try {
+        favorEditList.value = data.favor ? JSON.parse(data.favor) : []
+      } catch {
+        favorEditList.value = data.favor ? [data.favor] : []
+      }
       original.value = { ...data }
       showFillAlert.value = false
       editing.value = false
     } else {
       showFillAlert.value = true
       editing.value = true
+      favorEditList.value = []
     }
   } catch (e) {
     showFillAlert.value = true
     editing.value = true
+    favorEditList.value = []
   }
-}
-
-const fetchSeekerList = async () => {
-  try {
-    const res = await getAllSeekers()
-    seekerList.value = res.data || []
-    if (seekerList.value.length > 0) {
-      selectedSeeker.value = seekerList.value[0]
-      selectedSeekerIndex.value = '0'
-    } else {
-      selectedSeeker.value = null
-      selectedSeekerIndex.value = '0'
-    }
-  } catch {
-    seekerList.value = []
-    selectedSeeker.value = null
-    selectedSeekerIndex.value = '0'
-  }
-}
-
-const handleSeekerSelect = (idx) => {
-  selectedSeekerIndex.value = idx
-  selectedSeeker.value = seekerList.value[Number(idx)]
 }
 
 function cancelEdit() {
   Object.assign(form, original.value)
+  // 恢复编辑列表
+  try {
+    favorEditList.value = original.value.favor ? JSON.parse(original.value.favor) : []
+  } catch {
+    favorEditList.value = original.value.favor ? [original.value.favor] : []
+  }
   editing.value = false
 }
 
@@ -177,6 +163,8 @@ async function onSaveClick() {
     if (valid) {
       try {
         form.userId = user_id
+        // 保存前将 favorEditList 转为 JSON 字符串
+        form.favor = JSON.stringify(favorEditList.value)
         if (form.id) {
           await updateSeeker(form.id, form)
         } else {
@@ -192,33 +180,9 @@ async function onSaveClick() {
     }
   })
 }
-/*-----------------------此处新建未完成--------------------------------------------------*/
-function onCreateClick() {
-  // 先请求后端创建一条空的求职信息，再进入编辑
-  createSeeker({
-    userId: user_id,
-    education: '',
-    school: '',
-    favor: '',
-    membership: 0
-  }).then(res => {
-    if (res.data && res.data.id) {
-      Object.assign(form, res.data)
-      original.value = { ...res.data }
-      editing.value = true
-      showFillAlert.value = false
-      ElMessage.success('新建成功，请完善信息后保存')
-    } else {
-      ElMessage.error('新建失败')
-    }
-  }).catch(() => {
-    ElMessage.error('新建失败')
-  })
-}
 
 onMounted(() => {
   fetchSeekerInfo()
-  fetchSeekerList()
 })
 </script>
 
@@ -327,27 +291,5 @@ onMounted(() => {
 }
 .el-input, .el-select {
   width: 100%;
-}
-.seeker-main-row-short {
-  min-height: unset;
-  height: 220px;
-  align-items: flex-start;
-}
-.seeker-list-col-scroll {
-  min-width: 180px;
-  max-width: 260px;
-  height: 200px;
-  overflow-y: auto;
-}
-.seeker-single-card {
-  min-height: 180px;
-  max-width: 400px;
-  margin: 0 auto;
-  display: flex;
-  flex-direction: column;
-  justify-content: center;
-}
-.create-btn {
-  margin-left: 24px;
 }
 </style>

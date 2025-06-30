@@ -27,9 +27,9 @@
               </el-col>
               <el-col :span="6" style="display:flex;align-items:center;justify-content:center;">
                 <div class="avatar-box">
-                  <el-upload class="avatar-uploader" action="" :show-file-list="false"
+                  <el-upload class="avatar-uploader" :auto-upload="false" :show-file-list="false"
                     :before-upload="beforeAvatarUpload" :on-change="handleAvatarChange">
-                    <el-avatar v-if="form.avatar" :src="form.avatar" size="large" />
+                    <el-avatar v-if="form.avatar" :src="form.avatar" size="large" shape="square" class="resume-avatar"/>
                     <el-icon v-else>
                       <User />
                     </el-icon>
@@ -159,6 +159,7 @@ import { useAuthStore } from '../../stores/authStore'
 import { createResume, updateResume, getResumeByUserId, getResumeById } from '../../api/resume'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { User } from '@element-plus/icons-vue'
+import { uploadFile } from '../../util/upload'
 
 const defaultForm = {
   Resume: {
@@ -184,6 +185,8 @@ const form = ref(JSON.parse(JSON.stringify(defaultForm)))
 const resumeId = ref(null)
 const router = useRouter()
 const authStore = useAuthStore()
+
+const avatarFile = ref(null)
 
 // 新增：根据id获取简历详情
 async function loadResumeById(id) {
@@ -293,6 +296,7 @@ const beforeAvatarUpload = (file) => {
 
 const handleAvatarChange = (file) => {
   // 这里只做本地预览，实际项目应上传到服务器后返回url
+  avatarFile.value = file.raw
   const reader = new FileReader()
   reader.onload = (e) => {
     form.value.avatar = e.target.result
@@ -375,6 +379,40 @@ const onSubmit = async () => {
     if (!userId) {
       ElMessage.error('请先登录')
       return
+    }
+    //照片上传
+      if (form.value.avatar && form.value.avatar.startsWith('data:image')) {
+      //解析base64字符串
+      const arr = form.value.avatar.split(',')
+      const mime = arr[0].match(/:(.*?);/)[1]
+      const bstr = atob(arr[1])
+      //转成二进制数据
+      let n = bstr.length
+      const u8arr = new Uint8Array(n)
+      while (n--) {
+        u8arr[n] = bstr.charCodeAt(n)
+      }
+      //创建File对象并上传
+      const file = new File([u8arr], 'avatar.png', { type: mime })
+      const formData = new FormData()
+      formData.append('file', file)
+      const url = await uploadFile(formData)
+      if (url) {
+        form.value.avatar = url.data
+      } else {
+        ElMessage.error('头像上传失败')
+        return
+      }
+    } else if (avatarFile.value) {
+      const formData = new FormData()
+      formData.append('file', avatarFile.value)
+      const url = await uploadFile(formData)
+      if (url) {
+        form.value.avatar = url.data
+      } else {
+        ElMessage.error('头像上传失败')
+        return
+      }
     }
     // 处理时间字段拼接（如有需要可在此处理）
     const data = {
@@ -502,5 +540,13 @@ const onClearAll = () => {
   box-shadow: 0 0 0 2px #f56c6c;
   border-radius: 4px;
   transition: box-shadow 0.3s;
+}
+
+.resume-avatar {
+  width: 120px !important;
+  height: 160px !important;
+  object-fit: cover;
+  border: 1px solid #e4e7ed;
+  background: #fff;
 }
 </style>

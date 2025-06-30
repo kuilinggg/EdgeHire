@@ -20,8 +20,8 @@ public class SeekerInfo {
     @Column(name = "school", length = 255)
     private String school;
 
-    @Column(name = "favor", length = 255)
-    private String favor; // 理想岗位
+    @Column(name = "favor", columnDefinition = "MEDIUMTEXT", nullable = false)
+    private String favor; // 理想岗位，存储JSON文本
 
     @Column(name = "membership", nullable = false)
     private Integer membership = 0; // 0-普通会员 1-高级会员
