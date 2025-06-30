@@ -1,6 +1,15 @@
 <template>
   <div class="resume-view-container">
-    <!-- 求职者列表及选取功能，搬到最上方 -->
+    <!-- 顶部提示 -->
+    <el-alert
+      title="请在下方选择需要提交的简历"
+      type="warning"
+      show-icon
+      center
+      class="top-tip-el-alert"
+      :closable="false"
+    />
+    <!-- 求职信息单卡片展示 -->
     <el-card style="margin-bottom: 24px;">
       <template #header>
         <div class="header-bar">
@@ -8,49 +17,22 @@
         </div>
       </template>
       <el-row :gutter="32" class="seeker-main-row-short">
-        <template v-if="seekerList.length > 0">
-          <el-col :span="5" class="seeker-list-col-scroll">
-            <el-menu
-              :default-active="selectedSeekerIndex"
-              @select="handleSeekerSelect"
-              class="resume-list-menu"
-              style="height: 100%"
-            >
-              <el-menu-item
-                v-for="(item, idx) in seekerList"
-                :key="item.id"
-                :index="String(idx)"
-                class="resume-menu-item"
-              >
-                <div class="menu-item-flex">
-                  <el-icon style="margin-right: 4px;"><Document /></el-icon>
-                  <span>{{ item.favor || '未填写岗位' }}</span>
-                </div>
-              </el-menu-item>
-            </el-menu>
-          </el-col>
-          <el-col :span="19">
-            <el-card v-if="selectedSeeker" class="seeker-single-card">
-              <div><strong>学历：</strong>{{ educationOptions.find(e => e.value === selectedSeeker.education)?.label || '-' }}</div>
-              <div><strong>学校：</strong>{{ selectedSeeker.school || '-' }}</div>
-              <div><strong>理想岗位：</strong>{{ selectedSeeker.favor || '-' }}</div>
-              <div><strong>会员类型：</strong>{{ selectedSeeker.membership === 0 ? '普通会员' : '高级会员' }}</div>
-            </el-card>
-            <el-empty v-else description="请选择左侧求职者" />
-          </el-col>
-        </template>
-        <template v-else>
-          <el-col :span="24">
-            <el-empty description="暂无求职者数据" />
-          </el-col>
-        </template>
+        <el-col :span="24">
+          <el-card v-if="seekerInfo && seekerInfo.id" class="seeker-single-card">
+            <div><strong>学历：</strong>{{ educationOptions.find(e => e.value === seekerInfo.education)?.label || '-' }}</div>
+            <div><strong>学校：</strong>{{ seekerInfo.school || '-' }}</div>
+            <div><strong>理想岗位：</strong>{{ seekerInfo.favor || '-' }}</div>
+            <div><strong>会员类型：</strong>{{ seekerInfo.membership === 0 ? '普通会员' : '高级会员' }}</div>
+          </el-card>
+          <el-empty v-else description="暂无求职信息" />
+        </el-col>
       </el-row>
     </el-card>
     <!-- 新建匹配卡片 -->
     <el-card>
       <template #header>
         <div class="header-bar">
-          <span class="resume-title">新建匹配</span>
+          <span class="resume-title">简历列表</span>
         </div>
       </template>
       <el-row :gutter="32" class="resume-main-row">
@@ -132,7 +114,7 @@
         </template>
       </el-row>
       <div style="margin-top: 32px; text-align: center; display: flex; justify-content: center; gap: 16px;">
-        <el-button type="primary" size="large" @click="onSubmitMatch" :disabled="!selectedResume || !selectedSeeker || !selectedSeeker.id">提交匹配</el-button>
+        <el-button type="primary" size="large" @click="onSubmitMatch" :disabled="!selectedResume || !seekerInfo || !seekerInfo.id">提交匹配</el-button>
       </div>
     </el-card>
   </div>
@@ -146,8 +128,6 @@ import { createPost } from '../../api/post'
 import { useAuthStore } from '../../stores/authStore'
 import { getSeekerByUserId } from '../../api/seeker'
 import { getResumesByUserId } from '../../api/resume'
-import { getAllSeekers } from '../../api/seeker'
-//求职信息仅获取当前userid的，这里要改，不然权限有问题
 
 const resumeList = ref([])
 const selectedIndex = ref('0')
@@ -163,10 +143,6 @@ const educationOptions = [
   { value: 6, label: '硕士' },
   { value: 7, label: '博士' }
 ]
-
-const seekerList = ref([])
-const selectedSeekerIndex = ref('0')
-const selectedSeeker = ref(null)
 
 const educationText = computed(() => {
   const found = educationOptions.find(e => e.value === seekerInfo.value.education)
@@ -208,29 +184,6 @@ const fetchResumeList = async () => {
   }
 }
 
-const fetchSeekerList = async () => {
-  try {
-    const res = await getAllSeekers()
-    seekerList.value = res.data || []
-    if (seekerList.value.length > 0) {
-      selectedSeeker.value = seekerList.value[0]
-      selectedSeekerIndex.value = '0'
-    } else {
-      selectedSeeker.value = null
-      selectedSeekerIndex.value = '0'
-    }
-  } catch {
-    seekerList.value = []
-    selectedSeeker.value = null
-    selectedSeekerIndex.value = '0'
-  }
-}
-
-const handleSeekerSelect = (idx) => {
-  selectedSeekerIndex.value = idx
-  selectedSeeker.value = seekerList.value[Number(idx)]
-}
-
 const parsedResumeContent = computed(() => {
   if (!selectedResume.value || !selectedResume.value.content) return {}
   try {
@@ -243,13 +196,13 @@ const parsedResumeContent = computed(() => {
 
 const onSubmitMatch = async () => {
   const userId = authStore.userId || authStore.user?.id
-  if (!userId || !selectedSeeker.value?.id || !selectedResume.value?.id) {
+  if (!userId || !seekerInfo.value?.id || !selectedResume.value?.id) {
     ElMessage.error('信息不完整，无法提交')
     return
   }
   const postData = {
     userId: userId,
-    seekerInfoId: selectedSeeker.value.id,
+    seekerInfoId: seekerInfo.value.id,
     resumeId: selectedResume.value.id
   }
   try {
@@ -261,7 +214,7 @@ const onSubmitMatch = async () => {
 }
 
 onMounted(() => {
-  fetchSeekerList()
+  fetchSeekerInfo()
   fetchResumeList()
 })
 </script>
@@ -420,5 +373,12 @@ onMounted(() => {
   display: flex;
   flex-direction: column;
   justify-content: center;
+}
+.top-tip-el-alert {
+  margin-bottom: 18px;
+  font-size: 18px;
+  max-width: 600px;
+  margin-left: auto;
+  margin-right: auto;
 }
 </style>
