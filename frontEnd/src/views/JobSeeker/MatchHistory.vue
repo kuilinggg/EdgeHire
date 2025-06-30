@@ -36,7 +36,12 @@
                   <div class="profile-view">
                     <p><strong>学历：</strong>{{ educationText }}</p>
                     <p><strong>学校：</strong>{{ seekerInfo.school || '-' }}</p>
-                    <p><strong>理想岗位：</strong>{{ seekerInfo.favor || '-' }}</p>
+                    <p><strong>理想岗位：</strong>
+                      <template v-if="favorList.length > 0">
+                        <el-tag v-for="(item, idx) in favorList" :key="idx" type="info" style="margin-right: 8px;">{{ item }}</el-tag>
+                      </template>
+                      <template v-else>-</template>
+                    </p>
                     <p><strong>会员类型：</strong>{{ seekerInfo.membership == 0 ? '普通会员': '高级会员' }}</p>
                   </div>
                 </el-card>
@@ -130,6 +135,16 @@ const educationOptions = [
 const educationText = computed(() => {
   const found = educationOptions.find(e => e.value === seekerInfo.value.education)
   return found ? found.label : '-'
+})
+
+const favorList = computed(() => {
+  if (!seekerInfo.value.favor) return []
+  try {
+    const arr = JSON.parse(seekerInfo.value.favor)
+    return Array.isArray(arr) ? arr : [seekerInfo.value.favor]
+  } catch {
+    return seekerInfo.value.favor ? [seekerInfo.value.favor] : []
+  }
 })
 
 const refreshMatchList = async () => {
