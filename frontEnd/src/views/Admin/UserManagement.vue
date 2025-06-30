@@ -85,20 +85,20 @@
       </el-table>
       
       <el-table v-if="userrole === 1" :data="detailInfoList" style="width: 100%" >
-        <el-table-column prop="education" label="学历" width="225" >      
-          <template #default="scope">
-       <span> {{ educationMap[scope.row.education] || '未知学历' }}</span>
+        <el-table-column prop="education" label="学历" width="225">
+       <template #default="scope">
+       <span>{{ scope.row?.education ? educationMap[scope.row.education] : '未知学历' }}</span>
       </template>
-        </el-table-column>
+       </el-table-column> 
         <el-table-column prop="school" label="毕业院校" width="225"/> 
         <el-table-column prop="favor" label="理想岗位" width="225"/>
         <el-table-column prop="membership" label="会员等级" width="225">
-        <template #default="scope">
-             <span>{{ scope.row.membership === undefined ||scope.row.membership===null
-        ? '  '
-        : scope.row.membership =='0' ? '普通会员' : '高级会员' }}</span>
-          </template>
-        </el-table-column>
+       <template #default="scope">
+       <span>{{ scope.row?.membership === undefined || scope.row?.membership === null
+      ? '  '
+      : scope.row?.membership == '0' ? '普通会员' : '高级会员' }}</span>
+        </template>
+       </el-table-column>
       </el-table>
         <el-table v-else-if="userrole === 2" :data="detailInfoList" style="width: 100%">
                 <el-table-column prop="company" label="所属公司" width="300" />
@@ -126,11 +126,12 @@
 </template>
 
 <script setup>
-import { ref, computed, onMounted } from 'vue'
+import { ref, computed, onMounted, onBeforeUnmount } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { getUsers, updateUser, deleteUser } from '../../api/user'
 import { getInfoByUserId } from '../../api/info'
 import { getSeekerByUserId } from '../../api/seeker'
+import { hrApi } from '../../api/hr'
 
 // 响应式数据
 const users = ref([])
@@ -144,6 +145,7 @@ const editUser = ref({})
 const infoList = ref([])
 const detailInfoList=ref([]) 
 const userrole = ref(0)
+const isMounted = ref(true)
 
 const roleOptions = [
   { value: 1, label: '求职者' },
@@ -179,13 +181,15 @@ const loadUsers = async () => {
   try {
     const res = await getUsers()
     //搜索和筛选
-    users.value = res.data.filter(user => {
-    const matchKeyword = user.username.includes(searchKeyword.value);
-    const matchRole = filterRole.value === '' || user.role === filterRole.value;
-    return matchKeyword && matchRole;
-    });
+    if(isMounted.value) {
+      users.value = res.data.filter(user => {
+        const matchKeyword = user.username.includes(searchKeyword.value);
+        const matchRole = filterRole.value === '' || user.role === filterRole.value;
+        return matchKeyword && matchRole;
+      });
+    }
   } catch (e) {
-    ElMessage.error('加载用户失败')
+    if(isMounted.value) ElMessage.error('加载用户失败')
   }
 }
 
@@ -203,11 +207,33 @@ const handleCheck = async (id,role) => {
   } catch (error) {
     console.error(error)
   }
+
   //detailInfoList处理
   if(role===1)
   {
-    const res1 = await getSeekerByUserId(id)
-    detailInfoList.value = Array.isArray(res1.data) ? res1.data : [res1.data]
+    try {
+      const res1 = await getSeekerByUserId(id)
+      detailInfoList.value = Array.isArray(res1.data) ? res1.data : [res1.data]
+    } catch (error) {
+      if (error.response?.status === 404) {
+      console.error('求职者信息不存在'); 
+      } else {
+      console.error('请求失败:', error);
+      }
+    }
+  }
+  if(role===2)
+  {
+    try {
+      const res2 = await hrApi.getHrInfo(id);
+      detailInfoList.value = Array.isArray(res2.data) ? res2.data : [res2.data]
+    } catch (error) {
+      if (error.response?.status === 404) {
+      console.error('HR信息不存在'); 
+      } else {
+      console.error('请求失败:', error);
+      }
+    }
   }
   if(role!==0&&(isEmptyContent(infoList.value) || isEmptyContent(detailInfoList.value))) {
     ElMessage.error('用户详细信息不完整')
@@ -259,6 +285,10 @@ const handlePageChange = (page) => {
 // 生命周期
 onMounted(() => {
   loadUsers()
+})
+
+onBeforeUnmount(() => {
+  isMounted.value = false
 })
 </script>
  
