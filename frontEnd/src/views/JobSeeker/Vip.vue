@@ -37,22 +37,44 @@
             </el-list>
           </el-col>
         </el-row>
+        <div v-if="seekerInfo.membership === 0" class="upgrade-btn-area">
+          <el-button type="warning" size="large" class="upgrade-btn" @click="showPayDialog = true">升级为高级会员</el-button>
+        </div>
         <slot />
       </el-card>
+      <!-- 支付弹窗 -->
+      <el-dialog v-model="showPayDialog" title="升级为高级会员" width="380px" :close-on-click-modal="false">
+        <div class="pay-content">
+          <el-icon style="font-size:38px;color:#FFD700;margin-bottom:12px;"><svg viewBox="0 0 24 24" width="38" height="38"><path fill="#FFD700" d="M2 7l5.5 7 4.5-7 4.5 7L22 7l-2 12H4L2 7z"/></svg></el-icon>
+          <div class="pay-title">开通高级会员</div>
+          <div class="pay-desc">仅需 <span class="pay-price">¥99</span>，享受全部专属权益！</div>
+        </div>
+        <template #footer>
+          <el-button @click="showPayDialog = false">取消</el-button>
+          <el-button type="primary" @click="onPayConfirm" :loading="paying">确认支付</el-button>
+        </template>
+      </el-dialog>
     </el-col>
   </el-row>
 </template>
 
 <script setup>
 import { ref, onMounted } from 'vue'
-import { getSeekerByUserId } from '../../api/seeker'
+import { getSeekerByUserId, updateSeeker } from '../../api/seeker'
 import { useAuthStore } from '../../stores/authStore'
+import { ElMessage } from 'element-plus'
 
 const seekerInfo = ref({ membership: 0 })
 const loading = ref(true)
 const authStore = useAuthStore()
+const showPayDialog = ref(false)
+const paying = ref(false)
 
 onMounted(async () => {
+  await fetchSeeker()
+})
+
+async function fetchSeeker() {
   const userId = authStore.userId || authStore.user?.id
   if (!userId) {
     loading.value = false
@@ -66,7 +88,25 @@ onMounted(async () => {
   } finally {
     loading.value = false
   }
-})
+}
+
+async function onPayConfirm() {
+  paying.value = true
+  try {
+    // 实际项目应调用后端支付接口，支付成功后再升级
+    // 这里只做本地模拟升级
+    const userId = authStore.userId || authStore.user?.id
+    if (!userId) throw new Error('未获取到用户ID')
+    await updateSeeker(seekerInfo.value.id, { ...seekerInfo.value, membership: 1 })
+    ElMessage.success('支付成功，已升级为高级会员！')
+    showPayDialog.value = false
+    await fetchSeeker()
+  } catch {
+    ElMessage.error('支付失败，请重试')
+  } finally {
+    paying.value = false
+  }
+}
 </script>
 
 <style scoped>
@@ -136,5 +176,39 @@ onMounted(async () => {
   color: #333;
   margin-left: 8px;
   font-weight: 500;
+}
+.upgrade-btn-area {
+  display: flex;
+  justify-content: center;
+  margin-top: 32px;
+  margin-bottom: 8px;
+}
+.upgrade-btn {
+  font-size: 16px;
+  font-weight: 600;
+  letter-spacing: 1px;
+  padding: 8px 32px;
+}
+.pay-content {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  margin: 18px 0 8px 0;
+}
+.pay-title {
+  font-size: 22px;
+  font-weight: 700;
+  color: #222;
+  margin-bottom: 8px;
+}
+.pay-desc {
+  font-size: 16px;
+  color: #666;
+  margin-bottom: 8px;
+}
+.pay-price {
+  color: #F56C6C;
+  font-size: 20px;
+  font-weight: bold;
 }
 </style>
