@@ -7,12 +7,18 @@
       <nav class="menu">
         <el-menu :default-openeds="[]" :default-active="defaultActiveMenu" class="el-menu-vertical-demo" router
           background-color="#fff" text-color="#333" active-text-color="#3a36db">
-          <el-menu-item index="/jobseeker/profile">
-            <el-icon>
-              <User />
-            </el-icon>
-            <span>个人信息</span>
-          </el-menu-item>
+          <el-sub-menu index="profile">
+            <template #title>
+              <el-icon>
+                <User />
+              </el-icon>
+              <span>个人信息</span>
+            </template>
+            <el-menu-item index="/jobseeker/profile">
+              <el-icon><User /></el-icon>
+              <span>基本信息</span>
+            </el-menu-item>
+          </el-sub-menu>
           <el-sub-menu index="resume">
             <template #title>
               <el-icon>
@@ -51,12 +57,22 @@
               <span>历史匹配</span>
             </el-menu-item>
           </el-sub-menu>
-          <el-menu-item index="/jobseeker/vip">
-            <el-icon>
-              <Star />
-            </el-icon>
-            <span>会员功能</span>
-          </el-menu-item>
+          <el-sub-menu index="vip">
+            <template #title>
+              <el-icon>
+                <Star />
+              </el-icon>
+              <span>会员功能</span>
+            </template>
+            <el-menu-item index="/jobseeker/vip">
+              <el-icon><Star /></el-icon>
+              <span>升级会员</span>
+            </el-menu-item>
+            <el-menu-item index="/jobseeker/teach-vip">
+              <el-icon><Star /></el-icon>
+              <span>求职指导</span>
+            </el-menu-item>
+          </el-sub-menu>
         </el-menu>
       </nav>
     </div>

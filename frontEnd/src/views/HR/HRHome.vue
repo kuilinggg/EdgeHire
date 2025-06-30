@@ -65,11 +65,11 @@
         <div class="quick-entry-row">
           <div class="quick-entry clickable" @click="goToResumeList">
             <el-icon><Document /></el-icon>
-            <span>浏览推荐简历</span>
+            <span>浏览简历</span>
           </div>
           <div class="quick-entry clickable" @click="goToResumeSearch">
             <el-icon><Search /></el-icon>
-            <span>搜索特定人才</span>
+            <span>搜索人才</span>
           </div>
         </div>
       </el-card>
@@ -213,7 +213,7 @@ function goToChat() {
   router.push('/chat')
 }
 function goToResumeList() {
-  router.push({ path: '/hr/resume-list', query: { recommend: 'true' } })
+  router.push('/hr/resume-list')
 }
 function goToResumeSearch() {
   router.push({ path: '/hr/resume-list', query: { searchFocus: 'true' } })

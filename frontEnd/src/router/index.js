@@ -60,6 +60,11 @@ const routes = [
         path: 'profile',
         name: 'Profile',
         component: () => import('../views/JobSeeker/Profile.vue')
+      },
+      {
+        path: 'teach-vip',
+        name: 'TeachVip',
+        component: () => import('../views/JobSeeker/TeachVip.vue')
       }
     ],
     meta: { requiresAuth: true }
@@ -89,11 +94,6 @@ const routes = [
         path: 'guidance',
         name: 'HRGuidance',
         component: () => import('../views/HR/Guidance.vue')
-      },
-      {
-        path: 'api-test',
-        name: 'HRApiTest',
-        component: () => import('../views/HR/ApiTest.vue')
       },
       // 这里可继续添加其他HR子页面
     ]

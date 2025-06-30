@@ -17,6 +17,11 @@ export function getPostsByUserId(userId) {
   return axios.get(`${API_BASE}/user/${userId}`);
 }
 
+// 根据userId获取投递记录及其关联信息
+export function getPostsByUserIdWithDetails(userId) {
+  return axios.get(`${API_BASE}/user/${userId}/with-details`);
+}
+
 // 创建投递记录
 export function createPost(data) {
   return axios.post(API_BASE, data);
@@ -25,4 +30,14 @@ export function createPost(data) {
 // 删除投递记录
 export function deletePost(id) {
   return axios.delete(`${API_BASE}/${id}`);
+}
+
+// 获取投递记录及其关联的简历和用户信息
+export function getPostsWithDetails() {
+  return axios.get(`${API_BASE}/with-details`);
+}
+
+// 根据条件筛选投递记录
+export function getPostsByFilter(filters) {
+  return axios.get(`${API_BASE}/filter`, { params: filters });
 }
