@@ -8,7 +8,12 @@
       <div class="profile-view">
         <p><strong>学历：</strong>{{ educationText }}</p>
         <p><strong>学校：</strong>{{ form.school || '-' }}</p>
-        <p><strong>理想岗位：</strong>{{ form.favor || '-' }}</p>
+        <p><strong>理想岗位：</strong>
+          <template v-if="favorList.length > 0">
+            <el-tag v-for="(item, idx) in favorList" :key="idx" type="info" style="margin-right: 8px;">{{ item }}</el-tag>
+          </template>
+          <template v-else>-</template>
+        </p>
         <p><strong>会员类型：</strong>{{ form.membership === 0 ? '普通会员' : '高级会员' }}</p>
       </div>
     </el-card>
@@ -22,16 +27,33 @@
         <el-input v-model="form.school" placeholder="请输入毕业学校" />
       </el-form-item>
       <el-form-item label="理想岗位" prop="favor" :required="true">
-        <el-input v-model="form.favor" placeholder="请输入理想岗位" />
+        <div style="display: flex; flex-wrap: wrap; align-items: center; gap: 8px;">
+          <el-tag
+            v-for="(item, idx) in favorEditList"
+            :key="idx"
+            closable
+            @close="removeFavor(idx)"
+            type="info"
+            style="margin-bottom: 4px;"
+          >{{ item }}</el-tag>
+          <el-input
+            v-model="favorInput"
+            placeholder="输入岗位后回车或点击添加"
+            size="small"
+            style="width: 160px;"
+            @keyup.enter.native="addFavor"
+          />
+          <el-button type="primary" size="small" @click="addFavor">添加</el-button>
+        </div>
       </el-form-item>
       <el-form-item>
         <el-button type="success" @click="onSaveClick" :loading="saveLoading">保存</el-button>
         <el-button @click="cancelEdit" style="margin-left:8px;">取消</el-button>
       </el-form-item>
     </el-form>
-      <div style="display: flex; justify-content: center; margin-top: 18px;">
-        <el-button type="primary" class="edit-btn" @click="editing = true" v-if="!editing" style="margin-top: 18px; align-self: flex-end;">编辑</el-button>
-      </div>
+    <div style="display: flex; justify-content: center; margin-top: 18px;">
+      <el-button type="primary" class="edit-btn" @click="editing = true" v-if="!editing" style="margin-top: 18px; align-self: flex-end;">编辑</el-button>
+    </div>
   </div>
 </template>
 
@@ -55,6 +77,29 @@ const original = ref({})
 const matchForm = ref(null)
 const saveLoading = ref(false)
 
+const favorEditList = ref([])
+const favorInput = ref('')
+const favorList = computed(() => {
+  if (!form.favor) return []
+  try {
+    const arr = JSON.parse(form.favor)
+    return Array.isArray(arr) ? arr : []
+  } catch {
+    return form.favor ? [form.favor] : []
+  }
+})
+
+function addFavor() {
+  const val = favorInput.value && favorInput.value.trim()
+  if (val && !favorEditList.value.includes(val)) {
+    favorEditList.value.push(val)
+    favorInput.value = ''
+  }
+}
+function removeFavor(idx) {
+  favorEditList.value.splice(idx, 1)
+}
+
 const educationOptions = [
   { value: 1, label: '小学' },
   { value: 2, label: '初中' },
@@ -72,7 +117,7 @@ const educationText = computed(() => {
 const rules = {
   education: [ { required: true, message: '请选择学历', trigger: 'change' } ],
   school: [ { required: true, message: '请输入毕业学校', trigger: 'blur' } ],
-  favor: [ { required: true, message: '请输入理想岗位', trigger: 'blur' } ]
+  favor: [ { required: true, message: '请至少添加一个理想岗位', trigger: 'blur' } ]
 }
 
 async function fetchSeekerInfo() {
@@ -80,21 +125,35 @@ async function fetchSeekerInfo() {
     const { data } = await getSeekerByUserId(user_id)
     if (data && data.id) {
       Object.assign(form, data)
+      // 解析 favor 字段为数组
+      try {
+        favorEditList.value = data.favor ? JSON.parse(data.favor) : []
+      } catch {
+        favorEditList.value = data.favor ? [data.favor] : []
+      }
       original.value = { ...data }
       showFillAlert.value = false
       editing.value = false
     } else {
       showFillAlert.value = true
       editing.value = true
+      favorEditList.value = []
     }
   } catch (e) {
     showFillAlert.value = true
     editing.value = true
+    favorEditList.value = []
   }
 }
 
 function cancelEdit() {
   Object.assign(form, original.value)
+  // 恢复编辑列表
+  try {
+    favorEditList.value = original.value.favor ? JSON.parse(original.value.favor) : []
+  } catch {
+    favorEditList.value = original.value.favor ? [original.value.favor] : []
+  }
   editing.value = false
 }
 
@@ -104,6 +163,8 @@ async function onSaveClick() {
     if (valid) {
       try {
         form.userId = user_id
+        // 保存前将 favorEditList 转为 JSON 字符串
+        form.favor = JSON.stringify(favorEditList.value)
         if (form.id) {
           await updateSeeker(form.id, form)
         } else {
