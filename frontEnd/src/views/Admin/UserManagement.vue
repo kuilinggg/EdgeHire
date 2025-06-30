@@ -26,11 +26,15 @@
         </el-table-column>
         <el-table-column label="操作" width="380">
           <template #default="scope">
-            <el-button size="mini" @click="handleCheck(scope.row.id,scope.row.role)">查看</el-button>
+            <el-button size="mini" @click="
+              infoList=[],detailInfoList=[],
+              handleCheck(scope.row.id,scope.row.role)"
+              >查看</el-button>
             <el-button 
             v-if="scope.row.role !== 0"
             size="mini" 
             @click="handleEdit(scope.row)"
+            type="warning"
             >编辑</el-button>
             <el-button 
             v-if="scope.row.role !== 0"
@@ -96,13 +100,13 @@
           </template>
         </el-table-column>
       </el-table>
-        <el-table v-else-if="userrole === 2" :data="tableData" style="width: 100%">
+        <el-table v-else-if="userrole === 2" :data="detailInfoList" style="width: 100%">
                 <el-table-column prop="company" label="所属公司" width="300" />
         <el-table-column prop="position" label="招聘岗位" width="300" />
         <el-table-column prop="experience" label="资历" width="300" />
       </el-table>
         <template #footer>
-          <el-button @click="checkDialogVisible = false,infoList=[]">返回</el-button>
+          <el-button @click="checkDialogVisible = false">返回</el-button>
         </template>
       </el-dialog>                          
 
@@ -111,16 +115,6 @@
           <el-form-item label="用户名：">
             <el-input v-model="editUser.username" />
           </el-form-item>
-           <el-form-item label="角色 ：">
-          <el-select  v-model="editUser.role" placeholder="请选择角色:">
-            <el-option
-        v-for="item in roleOptions"
-        :key="item.value"
-        :label="item.label"
-        :value="item.value">
-        </el-option>
-      </el-select>
-     </el-form-item>
         </el-form>
         <template #footer>
           <el-button @click="editDialogVisible = false">取消</el-button>
@@ -136,6 +130,7 @@ import { ref, computed, onMounted } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { getUsers, updateUser, deleteUser } from '../../api/user'
 import { getInfoByUserId } from '../../api/info'
+import { getSeekerByUserId } from '../../api/seeker'
 
 // 响应式数据
 const users = ref([])
@@ -148,7 +143,6 @@ const checkDialogVisible = ref(false)
 const editUser = ref({})
 const infoList = ref([])
 const detailInfoList=ref([]) 
-const userid = ref(0)
 const userrole = ref(0)
 
 const roleOptions = [
@@ -174,6 +168,13 @@ const paginatedUsers = computed(() => {
 })
 
 // 方法
+const isEmptyContent = (arr) => {
+  return arr.length === 0 || arr.every(item => 
+    item === null || 
+    item === undefined ||
+    (typeof item === 'object' && Object.keys(item).length === 0)
+)};
+
 const loadUsers = async () => {
   try {
     const res = await getUsers()
@@ -199,12 +200,23 @@ const handleCheck = async (id,role) => {
   try {
     const res = await getInfoByUserId(id)
     infoList.value = Array.isArray(res.data) ? res.data : [res.data]
-    //detailInfoList处理
   } catch (error) {
-    ElMessage.error('用户详细信息为空')
     console.error(error)
   }
-  userid.value = id
+  //detailInfoList处理
+  if(role===1)
+  {
+    const res1 = await getSeekerByUserId(id)
+    detailInfoList.value = Array.isArray(res1.data) ? res1.data : [res1.data]
+  }
+  if(role!==0&&(isEmptyContent(infoList.value) || isEmptyContent(detailInfoList.value))) {
+    ElMessage.error('用户详细信息不完整')
+    return;
+  }
+  if(role===0&&isEmptyContent(infoList.value)){
+    ElMessage.error('用户详细信息不完整')
+    return;
+  }
   userrole.value = role
   checkDialogVisible.value = true
 }

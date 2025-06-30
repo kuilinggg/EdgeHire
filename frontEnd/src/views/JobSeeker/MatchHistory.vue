@@ -1,13 +1,5 @@
 <template>
   <div class="resume-view-container">
-    <el-card class="seekerinfo-card">
-      <div class="profile-view">
-        <p><strong>学历：</strong>{{ educationText }}</p>
-        <p><strong>学校：</strong>{{ seekerInfo.school || '-' }}</p>
-        <p><strong>理想岗位：</strong>{{ seekerInfo.favor || '-' }}</p>
-        <p><strong>会员类型：</strong>{{ membershipLabel }}</p>
-      </div>
-    </el-card>
     <el-card>
       <template #header>
         <div class="header-bar">
@@ -39,6 +31,16 @@
           <el-col :span="19" class="resume-a4-col">
             <div v-if="selectedResume" class="resume-a4-wrapper">
               <div class="resume-a4-paper">
+                <!-- 求职者信息卡片，放在简历上方 -->
+                <el-card class="seekerinfo-card" style="margin-bottom: 18px;">
+                  <div class="profile-view">
+                    <p><strong>学历：</strong>{{ educationText }}</p>
+                    <p><strong>学校：</strong>{{ seekerInfo.school || '-' }}</p>
+                    <p><strong>理想岗位：</strong>{{ seekerInfo.favor || '-' }}</p>
+                    <p><strong>会员类型：</strong>{{ seekerInfo.membership == 0 ? '普通会员': '高级会员' }}</p>
+                  </div>
+                </el-card>
+                <!-- 简历内容卡片 -->
                 <div class="resume-a4-header">
                   <div class="resume-a4-title">
                     <div class="resume-a4-name">{{ parsedResumeContent.姓名 || '姓名' }}</div>
@@ -92,6 +94,9 @@
           </el-col>
         </template>
       </el-row>
+      <div class="button-area" v-if="matchList.length > 0">
+        <el-button type="danger" size="large" @click="onDeleteMatch" :disabled="!selectedMatch">删除匹配</el-button>
+      </div>
     </el-card>
   </div>
 </template>
@@ -100,10 +105,10 @@
 import { ref, onMounted, computed } from 'vue'
 import { Document } from '@element-plus/icons-vue'
 import { ElMessage } from 'element-plus'
-// import { getMatchHistory } from '../../api/post' // 需实现
-// import { getResumeById } from '../../api/resume' // 需实现
+import { getPostsByUserId, deletePost } from '../../api/post'
+import { getResumeById } from '../../api/resume'
 import { useAuthStore } from '../../stores/authStore'
-// import { seekerApi } from '../../api/hr' // 需实现
+import { getSeekerById } from '../../api/seeker'
 
 const matchList = ref([]) // 历史匹配列表
 const selectedIndex = ref('0')
@@ -121,60 +126,22 @@ const educationOptions = [
   { value: 6, label: '硕士' },
   { value: 7, label: '博士' }
 ]
-const membershipLabel = '普通会员'
+
 const educationText = computed(() => {
   const found = educationOptions.find(e => e.value === seekerInfo.value.education)
   return found ? found.label : '-'
 })
 
-const handleSelect = (idx) => {
-  selectedIndex.value = idx
-  selectedMatch.value = matchList.value[Number(idx)]
-  selectedResume.value = selectedMatch.value?.resume || null
-}
-
-// 拉取历史匹配列表并刷新选中项
 const refreshMatchList = async () => {
   const userId = authStore.userId || authStore.user?.id
   try {
-    // const res = await getMatchHistory(userId)
-    // if (res.data && res.data.length > 0) {
-    //   matchList.value = res.data
-    //   selectedMatch.value = res.data[0]
-    //   selectedResume.value = res.data[0].resume
-    //   selectedIndex.value = '0'
-    // } else {
-    //   matchList.value = []
-    //   selectedMatch.value = null
-    //   selectedResume.value = null
-    //   selectedIndex.value = '0'
-    // }
-    // mock数据
-    matchList.value = [
-      {
-        id: 1,
-        createTime: '2025-06-28T10:00:00',
-        resume: {
-          id: 101,
-          avatar: '',
-          content: '{"姓名":"张三","求职意向":"前端开发","个人信息":{"性别":"男","年龄":25},"教育背景":{"学校":"XX大学","学历":"本科"},"自我评价":"认真负责"}',
-        }
-      },
-      {
-        id: 2,
-        createTime: '2025-06-27T09:00:00',
-        resume: {
-          id: 102,
-          avatar: '',
-          content: '{"姓名":"李四","求职意向":"后端开发","个人信息":{"性别":"女","年龄":27},"教育背景":{"学校":"YY大学","学历":"硕士"},"自我评价":"学习能力强"}',
-        }
-      }
-    ]
-    if (matchList.value.length > 0) {
-      selectedMatch.value = matchList.value[0]
-      selectedResume.value = matchList.value[0].resume
-      selectedIndex.value = '0'
+    const res = await getPostsByUserId(userId)
+    if (res.data && res.data.length > 0) {
+      matchList.value = res.data
+      // 默认选中第一个
+      await handleSelect('0')
     } else {
+      matchList.value = []
       selectedMatch.value = null
       selectedResume.value = null
       selectedIndex.value = '0'
@@ -187,12 +154,31 @@ const refreshMatchList = async () => {
   }
 }
 
+const handleSelect = async (idx) => {
+  selectedIndex.value = idx
+  const match = matchList.value[Number(idx)]
+  selectedMatch.value = match
+  if (match) {
+    // 更新求职者信息
+    if (match.seekerInfoId) {
+      const seekerRes = await getSeekerById(match.seekerInfoId)
+      seekerInfo.value = seekerRes.data || { education: '', school: '', favor: '', membership: 0 }
+    }
+    // 更新简历
+    if (match.resumeId) {
+      const resumeRes = await getResumeById(match.resumeId)
+      selectedResume.value = resumeRes.data || null
+    } else {
+      selectedResume.value = null
+    }
+  } else {
+    selectedResume.value = null
+  }
+}
+
+// 拉取历史匹配列表并刷新选中项
 const fetchSeekerInfo = async () => {
-  // const userId = authStore.userId || authStore.user?.id
-  // const { data } = await seekerApi.getSeekerInfo(userId)
-  // seekerInfo.value = data || { education: '', school: '', favor: '', membership: 0 }
-  // mock
-  seekerInfo.value = { education: 5, school: 'XX大学', favor: '前端开发', membership: 0 }
+  // 默认显示第一个匹配的求职者信息，已由 handleSelect 处理
 }
 
 const parsedResumeContent = computed(() => {
@@ -217,9 +203,19 @@ const formatDate = (dateStr) => {
   return `${y}年${m}月${day}日 ${h}:${min}`
 }
 
-onMounted(() => {
-  fetchSeekerInfo()
-  refreshMatchList()
+const onDeleteMatch = async () => {
+  if (!selectedMatch.value || !selectedMatch.value.id) return
+  try {
+    await deletePost(selectedMatch.value.id)
+    ElMessage.success('删除成功')
+    await refreshMatchList()
+  } catch {
+    ElMessage.error('删除失败')
+  }
+}
+
+onMounted(async () => {
+  await refreshMatchList()
 })
 </script>
 
@@ -344,5 +340,9 @@ onMounted(() => {
   display: flex;
   flex-wrap: wrap;
   gap: 12px 24px;
+}
+.button-area {
+  text-align: right;
+  padding: 16px 0;
 }
 </style>

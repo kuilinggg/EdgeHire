@@ -5,11 +5,14 @@
         <div class="header-bar">
           <span class="resume-title">填写简历</span>
           <el-button type="success" size="small" class="ai-btn" @click="onAiOptimize">
-            <el-icon style="margin-right:4px;"><User /></el-icon>AI优化
+            <el-icon style="margin-right:4px;">
+              <User />
+            </el-icon>AI优化
           </el-button>
         </div>
       </template>
-      <el-form :model="form.Resume" :rules="rules" ref="formRef" label-width="100px" class="resume-form" @change="autoSave">
+      <el-form :model="form.Resume" :rules="rules" ref="formRef" label-width="100px" class="resume-form"
+        @change="autoSave">
         <el-row :gutter="24">
           <el-col :span="24">
             <el-row>
@@ -24,15 +27,12 @@
               </el-col>
               <el-col :span="6" style="display:flex;align-items:center;justify-content:center;">
                 <div class="avatar-box">
-                  <el-upload
-                    class="avatar-uploader"
-                    action=""
-                    :show-file-list="false"
-                    :before-upload="beforeAvatarUpload"
-                    :on-change="handleAvatarChange"
-                  >
-                    <el-avatar v-if="form.avatar" :src="form.avatar" size="large" />
-                    <el-icon v-else><User /></el-icon>
+                  <el-upload class="avatar-uploader" :auto-upload="false" :show-file-list="false"
+                    :before-upload="beforeAvatarUpload" :on-change="handleAvatarChange">
+                    <el-avatar v-if="form.avatar" :src="form.avatar" size="large" shape="square" class="resume-avatar"/>
+                    <el-icon v-else>
+                      <User />
+                    </el-icon>
                     <div v-if="!form.avatar" class="el-upload__text">点击上传头像</div>
                   </el-upload>
                 </div>
@@ -40,14 +40,20 @@
             </el-row>
             <el-divider>个人信息</el-divider>
             <el-row :gutter="12">
-              <el-col :span="8"><el-form-item label="年龄" prop="个人信息.年龄"><el-input v-model="form.Resume.个人信息.年龄" placeholder="如：22" /></el-form-item></el-col>
-              <el-col :span="8"><el-form-item label="电话" prop="个人信息.电话"><el-input v-model="form.Resume.个人信息.电话" placeholder="如：138****8888" /></el-form-item></el-col>
-              <el-col :span="8"><el-form-item label="民族" prop="个人信息.民族"><el-input v-model="form.Resume.个人信息.民族" placeholder="如：汉族" /></el-form-item></el-col>
+              <el-col :span="8"><el-form-item label="年龄" prop="个人信息.年龄"><el-input v-model="form.Resume.个人信息.年龄"
+                    placeholder="如：22" /></el-form-item></el-col>
+              <el-col :span="8"><el-form-item label="电话" prop="个人信息.电话"><el-input v-model="form.Resume.个人信息.电话"
+                    placeholder="如：138****8888" /></el-form-item></el-col>
+              <el-col :span="8"><el-form-item label="民族" prop="个人信息.民族"><el-input v-model="form.Resume.个人信息.民族"
+                    placeholder="如：汉族" /></el-form-item></el-col>
             </el-row>
             <el-row :gutter="12">
-              <el-col :span="8"><el-form-item label="邮箱" prop="个人信息.邮箱"><el-input v-model="form.Resume.个人信息.邮箱" placeholder="如：xxx@email.com" /></el-form-item></el-col>
-              <el-col :span="8"><el-form-item label="政治面貌" prop="个人信息.政治面貌"><el-input v-model="form.Resume.个人信息.政治面貌" placeholder="如：共青团员" /></el-form-item></el-col>
-              <el-col :span="8"><el-form-item label="籍贯" prop="个人信息.籍贯"><el-input v-model="form.Resume.个人信息.籍贯" placeholder="如：江苏南京" /></el-form-item></el-col>
+              <el-col :span="8"><el-form-item label="邮箱" prop="个人信息.邮箱"><el-input v-model="form.Resume.个人信息.邮箱"
+                    placeholder="如：xxx@email.com" /></el-form-item></el-col>
+              <el-col :span="8"><el-form-item label="政治面貌" prop="个人信息.政治面貌"><el-input v-model="form.Resume.个人信息.政治面貌"
+                    placeholder="如：共青团员" /></el-form-item></el-col>
+              <el-col :span="8"><el-form-item label="籍贯" prop="个人信息.籍贯"><el-input v-model="form.Resume.个人信息.籍贯"
+                    placeholder="如：江苏南京" /></el-form-item></el-col>
             </el-row>
             <el-divider>教育背景</el-divider>
             <el-form-item label="学校" prop="教育背景.学校">
@@ -62,68 +68,78 @@
             <el-form-item label="时间" prop="教育背景.时间">
               <el-input v-model="form.Resume.教育背景.时间" placeholder="如：2021-09 - 2025-06" />
             </el-form-item>
-            <el-form-item label="GPA" prop="教育背景.GPA"><el-input v-model="form.Resume.教育背景.GPA" placeholder="如：3.8/4.0" /></el-form-item>
+            <el-form-item label="GPA" prop="教育背景.GPA"><el-input v-model="form.Resume.教育背景.GPA"
+                placeholder="如：3.8/4.0" /></el-form-item>
             <el-form-item label="主修课程" prop="教育背景.主修课程">
               <div style="width:100%">
-                <el-input v-for="(course, idx) in form.Resume.教育背景.主修课程" :key="idx" v-model="form.Resume.教育背景.主修课程[idx]" :placeholder="'主修课程'+(idx+1)+'（如：数据结构）'" style="margin-bottom:4px;width:90%;display:inline-block;" />
+                <el-input v-for="(course, idx) in form.Resume.教育背景.主修课程" :key="idx" v-model="form.Resume.教育背景.主修课程[idx]"
+                  :placeholder="'主修课程' + (idx + 1) + '（如：数据结构）'"
+                  style="margin-bottom:4px;width:90%;display:inline-block;" />
                 <el-button type="primary" size="small" @click="addCourse" style="margin-left:8px;">添加</el-button>
-                <el-button v-if="form.Resume.教育背景.主修课程.length > 1" type="danger" size="small" @click="removeCourse" style="margin-left:4px;">删除</el-button>
+                <el-button v-if="form.Resume.教育背景.主修课程.length > 1" type="danger" size="small" @click="removeCourse"
+                  style="margin-left:4px;">删除</el-button>
               </div>
             </el-form-item>
             <el-form-item label="个人荣誉" prop="教育背景.个人荣誉">
-              <el-input v-model="form.Resume.教育背景.个人荣誉" type="textarea" :autosize="{ minRows: 2, maxRows: 6 }" placeholder="如：国家奖学金、三好学生等" />
+              <el-input v-model="form.Resume.教育背景.个人荣誉" type="textarea" :autosize="{ minRows: 2, maxRows: 6 }"
+                placeholder="如：国家奖学金、三好学生等" />
             </el-form-item>
             <el-divider>任职情况</el-divider>
             <div v-for="(job, idx) in form.Resume.任职情况" :key="idx" style="margin-bottom:12px;">
               <el-row :gutter="12">
-                <el-col :span="8"><el-form-item :label="'单位'+(idx+1)" :prop="'任职情况.'+idx+'.单位'">
-                  <el-input v-model="job.单位" placeholder="如：字节跳动" />
-                </el-form-item></el-col>
-                <el-col :span="8"><el-form-item label="职位" :prop="'任职情况.'+idx+'.职位'">
-                  <el-input v-model="job.职位" placeholder="如：前端开发实习生" />
-                </el-form-item></el-col>
+                <el-col :span="8"><el-form-item :label="'单位' + (idx + 1)" :prop="'任职情况.' + idx + '.单位'">
+                    <el-input v-model="job.单位" placeholder="如：字节跳动" />
+                  </el-form-item></el-col>
+                <el-col :span="8"><el-form-item label="职位" :prop="'任职情况.' + idx + '.职位'">
+                    <el-input v-model="job.职位" placeholder="如：前端开发实习生" />
+                  </el-form-item></el-col>
                 <el-col :span="8">
-                  <el-form-item label="时间" :prop="'任职情况.'+idx+'.时间'">
+                  <el-form-item label="时间" :prop="'任职情况.' + idx + '.时间'">
                     <el-input v-model="job.时间" placeholder="如：2022-07 - 2022-09" />
                   </el-form-item>
                 </el-col>
               </el-row>
-              <el-form-item label="职责" :prop="'任职情况.'+idx+'.职责'">
-                <el-input v-model="job.职责" type="textarea" :autosize="{ minRows: 2, maxRows: 6 }" placeholder="如：参与企业级管理后台开发" />
+              <el-form-item label="职责" :prop="'任职情况.' + idx + '.职责'">
+                <el-input v-model="job.职责" type="textarea" :autosize="{ minRows: 2, maxRows: 6 }"
+                  placeholder="如：参与企业级管理后台开发" />
               </el-form-item>
-              <el-form-item v-if="job.活动描述 !== undefined" label="活动描述" :prop="'任职情况.'+idx+'.活动描述'">
+              <el-form-item v-if="job.活动描述 !== undefined" label="活动描述" :prop="'任职情况.' + idx + '.活动描述'">
                 <el-input v-model="job.活动描述" placeholder="如：组织技术分享活动" />
               </el-form-item>
-              <el-form-item v-if="job.结果 !== undefined" label="结果" :prop="'任职情况.'+idx+'.结果'">
+              <el-form-item v-if="job.结果 !== undefined" label="结果" :prop="'任职情况.' + idx + '.结果'">
                 <el-input v-model="job.结果" placeholder="如：提升团队协作效率" />
               </el-form-item>
-              <el-button v-if="form.Resume.任职情况.length > 1" type="danger" size="small" @click="removeJob(idx)" style="margin-bottom:8px;">删除</el-button>
+              <el-button v-if="form.Resume.任职情况.length > 1" type="danger" size="small" @click="removeJob(idx)"
+                style="margin-bottom:8px;">删除</el-button>
             </div>
             <el-button type="primary" size="small" @click="addJob" style="margin-bottom:12px;">添加单位</el-button>
             <el-divider>实习/兼职</el-divider>
             <div v-for="(exp, idx) in form.Resume.实习_兼职" :key="idx" style="margin-bottom:12px;">
               <el-row :gutter="12">
-                <el-col :span="8"><el-form-item :label="'单位'+(idx+1)" :prop="'实习_兼职.'+idx+'.单位'">
-                  <el-input v-model="exp.单位" placeholder="如：腾讯" />
-                </el-form-item></el-col>
-                <el-col :span="8"><el-form-item label="职位" :prop="'实习_兼职.'+idx+'.职位'">
-                  <el-input v-model="exp.职位" placeholder="如：兼职助教" />
-                </el-form-item></el-col>
+                <el-col :span="8"><el-form-item :label="'单位' + (idx + 1)" :prop="'实习_兼职.' + idx + '.单位'">
+                    <el-input v-model="exp.单位" placeholder="如：腾讯" />
+                  </el-form-item></el-col>
+                <el-col :span="8"><el-form-item label="职位" :prop="'实习_兼职.' + idx + '.职位'">
+                    <el-input v-model="exp.职位" placeholder="如：兼职助教" />
+                  </el-form-item></el-col>
                 <el-col :span="8">
-                  <el-form-item label="时间" :prop="'实习_兼职.'+idx+'.时间'">
+                  <el-form-item label="时间" :prop="'实习_兼职.' + idx + '.时间'">
                     <el-input v-model="exp.时间" placeholder="如：2023-01 - 2023-03" />
                   </el-form-item>
                 </el-col>
               </el-row>
-              <el-form-item label="职责" :prop="'实习_兼职.'+idx+'.职责'">
-                <el-input v-model="exp.职责" type="textarea" :autosize="{ minRows: 2, maxRows: 6 }" placeholder="如：协助课程答疑" />
+              <el-form-item label="职责" :prop="'实习_兼职.' + idx + '.职责'">
+                <el-input v-model="exp.职责" type="textarea" :autosize="{ minRows: 2, maxRows: 6 }"
+                  placeholder="如：协助课程答疑" />
               </el-form-item>
-              <el-button v-if="form.Resume.实习_兼职.length > 1" type="danger" size="small" @click="removeIntern(idx)" style="margin-bottom:8px;">删除</el-button>
+              <el-button v-if="form.Resume.实习_兼职.length > 1" type="danger" size="small" @click="removeIntern(idx)"
+                style="margin-bottom:8px;">删除</el-button>
             </div>
             <el-button type="primary" size="small" @click="addIntern" style="margin-bottom:12px;">添加单位</el-button>
             <el-divider>自我评价</el-divider>
             <el-form-item label="自我评价" prop="自我评价">
-              <el-input v-model="form.Resume.自我评价" type="textarea" :autosize="{ minRows: 2, maxRows: 6 }" placeholder="如：学习能力强、沟通能力好等" />
+              <el-input v-model="form.Resume.自我评价" type="textarea" :autosize="{ minRows: 2, maxRows: 6 }"
+                placeholder="如：学习能力强、沟通能力好等" />
             </el-form-item>
             <el-form-item>
               <el-button type="primary" @click="onSubmit">提交</el-button>
@@ -143,6 +159,7 @@ import { useAuthStore } from '../../stores/authStore'
 import { createResume, updateResume, getResumeByUserId, getResumeById } from '../../api/resume'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { User } from '@element-plus/icons-vue'
+import { uploadFile } from '../../util/upload'
 
 const defaultForm = {
   Resume: {
@@ -168,6 +185,8 @@ const form = ref(JSON.parse(JSON.stringify(defaultForm)))
 const resumeId = ref(null)
 const router = useRouter()
 const authStore = useAuthStore()
+
+const avatarFile = ref(null)
 
 // 新增：根据id获取简历详情
 async function loadResumeById(id) {
@@ -210,19 +229,7 @@ async function loadResume() {
       // 草稿损坏则忽略
     }
   }
-  // 无草稿再查后端
-  try {
-    const res = await getResumeByUserId(userId)
-    if (res && res.data) {
-      form.value.Resume = JSON.parse(res.data.content)
-      form.value.avatar = res.data.avatar || ''
-      resumeId.value = res.data.id
-    }
-  } catch (e) {
-    // 没有简历则保持默认
-  }
 }
-loadResume()
 
 function getDynamicRules(listKey, fields, labelMap) {
   const rules = {}
@@ -240,7 +247,7 @@ function getCourseRules() {
   const rules = {}
   const courses = form.value.Resume.教育背景.主修课程
   for (let i = 0; i < courses.length; i++) {
-    rules[`教育背景.主修课程.${i}`] = [{ required: true, message: `主修课程${i+1}未填写`, trigger: 'blur' }]
+    rules[`教育背景.主修课程.${i}`] = [{ required: true, message: `主修课程${i + 1}未填写`, trigger: 'blur' }]
   }
   return rules
 }
@@ -289,6 +296,7 @@ const beforeAvatarUpload = (file) => {
 
 const handleAvatarChange = (file) => {
   // 这里只做本地预览，实际项目应上传到服务器后返回url
+  avatarFile.value = file.raw
   const reader = new FileReader()
   reader.onload = (e) => {
     form.value.avatar = e.target.result
@@ -306,7 +314,7 @@ function saveDraft() {
   try {
     const data = JSON.parse(JSON.stringify(form.value))
     localStorage.setItem(LOCAL_DRAFT_KEY.value, JSON.stringify(data))
-  } catch (e) {}
+  } catch (e) { }
 }
 // 读取草稿
 function loadDraft() {
@@ -317,11 +325,12 @@ function loadDraft() {
       form.value = draft
       return true
     }
-  } catch (e) {}
+  } catch (e) { }
   return false
 }
 // 清除草稿
 function clearDraft() {
+  form.value = JSON.parse(JSON.stringify(defaultForm))
   localStorage.removeItem(LOCAL_DRAFT_KEY.value)
   resumeId.value = null
 }
@@ -371,6 +380,18 @@ const onSubmit = async () => {
       ElMessage.error('请先登录')
       return
     }
+    //照片上传
+    if (avatarFile.value) {
+      const formData = new FormData()
+      formData.append('file', avatarFile.value)
+      const url = await uploadFile(formData)
+      if (url) {
+        form.value.avatar = url.data
+      } else {
+        ElMessage.error('头像上传失败')
+        return
+      }
+    }
     // 处理时间字段拼接（如有需要可在此处理）
     const data = {
       userId,
@@ -387,7 +408,12 @@ const onSubmit = async () => {
         res = await createResume(data)
       }
       if (res && res.data) {
-        clearDraft && clearDraft()
+        const id = router.currentRoute.value.query.id
+        if (id) {
+          localStorage.removeItem(LOCAL_DRAFT_KEY.value)
+        } else {
+          clearDraft()
+        }
         ElMessage.success('简历保存成功')
         // 可选：跳转或刷新
         // router.push({ name: 'ResumeView', query: { id: res.data.id } })
@@ -433,8 +459,8 @@ const onClearAll = () => {
     cancelButtonText: '取消',
     type: 'warning',
   }).then(() => {
-    form.value = JSON.parse(JSON.stringify(defaultForm))
-    clearDraft && clearDraft()
+    clearDraft()
+    router.replace({ path: router.currentRoute.value.path, query: {} })
     ElMessage.success('内容已清空')
   })
 }
@@ -452,38 +478,53 @@ const onClearAll = () => {
   font-family: 'Microsoft YaHei', Arial, sans-serif;
   background: #f8f9fa;
 }
+
 .header-bar {
   display: flex;
   justify-content: space-between;
   align-items: center;
 }
+
 .resume-title {
   font-size: 22px;
   font-weight: bold;
   color: #222;
   letter-spacing: 1px;
 }
+
 .ai-btn {
   margin-left: 16px;
 }
+
 .resume-form {
   margin-top: 24px;
 }
+
 .avatar-box {
   display: flex;
   flex-direction: column;
   align-items: center;
   margin-top: 12px;
 }
+
 .avatar-uploader {
   display: flex;
   flex-direction: column;
   align-items: center;
   gap: 16px;
 }
+
 .form-item-error-highlight {
   box-shadow: 0 0 0 2px #f56c6c;
   border-radius: 4px;
   transition: box-shadow 0.3s;
+}
+
+.resume-avatar {
+  width: 120px !important;
+  height: 160px !important;
+  object-fit: cover;
+  border: 1px solid #e4e7ed;
+  background: #fff;
 }
 </style>

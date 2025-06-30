@@ -2,7 +2,6 @@ package com.se.EdgeHire.Controller;
 
 import com.se.EdgeHire.Entity.HrInfo;
 import com.se.EdgeHire.Service.HrService;
-import com.se.EdgeHire.Service.HrStatisticsService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
@@ -17,9 +16,6 @@ public class HrController {
     
     @Autowired
     private HrService hrService;
-    
-    @Autowired
-    private HrStatisticsService hrStatisticsService;
 
     /**
      * 处理预检请求
@@ -81,32 +77,6 @@ public class HrController {
             System.err.println("更新HR信息失败 - 未知异常: " + e.getMessage());
             e.printStackTrace();
             return ResponseEntity.status(500).body(Map.of("error", "服务器内部错误: " + e.getMessage()));
-        }
-    }
-
-    /**
-     * 获取HR主页KPI数据
-     */
-    @GetMapping("/kpi/{hrId}")
-    public ResponseEntity<Map<String, Object>> getHrKpiData(@PathVariable Integer hrId) {
-        try {
-            Map<String, Object> kpiData = hrStatisticsService.getHrKpiData(hrId);
-            return ResponseEntity.ok(kpiData);
-        } catch (Exception e) {
-            return ResponseEntity.badRequest().body(Map.of("error", e.getMessage()));
-        }
-    }
-
-    /**
-     * 获取HR详细统计数据
-     */
-    @GetMapping("/stats/{hrId}")
-    public ResponseEntity<Map<String, Object>> getHrDetailedStats(@PathVariable Integer hrId) {
-        try {
-            Map<String, Object> stats = hrStatisticsService.getHrDetailedStats(hrId);
-            return ResponseEntity.ok(stats);
-        } catch (Exception e) {
-            return ResponseEntity.badRequest().body(Map.of("error", e.getMessage()));
         }
     }
 
