@@ -28,6 +28,7 @@
       </el-form-item>
       <el-form-item label="理想岗位" prop="favor" :required="true">
         <div style="display: flex; flex-wrap: wrap; align-items: center; gap: 8px;">
+          <!-- 已保存的岗位标签 -->
           <el-tag
             v-for="(item, idx) in favorEditList"
             :key="idx"
@@ -36,14 +37,46 @@
             type="info"
             style="margin-bottom: 4px;"
           >{{ item }}</el-tag>
+          
+          <!-- 当前编辑中的输入框 -->
           <el-input
+            v-if="showInput"
             v-model="favorInput"
-            placeholder="输入岗位后回车或点击添加"
+            placeholder="请输入理想岗位"
             size="small"
             style="width: 160px;"
-            @keyup.enter.native="addFavor"
+            @keyup.enter.native="confirmAdd"
+            @blur="confirmAdd"
+            ref="favorInputRef"
           />
-          <el-button type="primary" size="small" @click="addFavor">添加</el-button>
+          
+          <!-- 添加按钮 -->
+          <el-button 
+            v-if="!showInput && favorEditList.length > 0" 
+            type="primary" 
+            size="small" 
+            @click="showAddInput"
+            icon="el-icon-plus"
+          >
+            添加岗位
+          </el-button>
+          
+          <!-- 当没有岗位且不显示输入框时的提示按钮 -->
+          <el-button 
+            v-if="!showInput && favorEditList.length === 0" 
+            type="primary" 
+            size="small" 
+            @click="showAddInput"
+            icon="el-icon-plus"
+          >
+            添加第一个岗位
+          </el-button>
+          
+          <!-- 确认和取消按钮 -->
+          <div v-if="showInput" style="display: flex; gap: 4px;">
+            <el-button type="success" size="small" @click="confirmAdd">确认</el-button>
+            <el-button size="small" @click="cancelAdd">取消</el-button>
+          </div>
         </div>
       </el-form-item>
       <el-form-item>
@@ -79,6 +112,8 @@ const saveLoading = ref(false)
 
 const favorEditList = ref([])
 const favorInput = ref('')
+const showInput = ref(false)
+const favorInputRef = ref(null)
 const favorList = computed(() => {
   if (!form.favor) return []
   try {
@@ -89,23 +124,53 @@ const favorList = computed(() => {
   }
 })
 
-function addFavor() {
+// 显示添加输入框
+function showAddInput() {
+  showInput.value = true
+  favorInput.value = ''
+  nextTick(() => {
+    if (favorInputRef.value) {
+      favorInputRef.value.focus()
+    }
+  })
+}
+
+// 确认添加岗位
+function confirmAdd() {
   const val = favorInput.value && favorInput.value.trim()
-  if (!val) {
-    ElMessage.warning('请输入岗位名称')
-    return
-  }
-  if (favorEditList.value.includes(val)) {
+  if (val && !favorEditList.value.includes(val)) {
+    favorEditList.value.push(val)
+    favorInput.value = ''
+    showInput.value = false
+    console.log('添加岗位后的列表:', favorEditList.value)
+  } else if (val && favorEditList.value.includes(val)) {
     ElMessage.warning('岗位已存在')
     favorInput.value = ''
-    return
+  } else {
+    // 如果输入为空，直接关闭输入框
+    showInput.value = false
+    favorInput.value = ''
   }
-  favorEditList.value.push(val)
-  favorInput.value = ''
-  console.log('添加岗位后的列表:', favorEditList.value) // 调试用
 }
+
+// 取消添加
+function cancelAdd() {
+  favorInput.value = ''
+  showInput.value = false
+}
+
 function removeFavor(idx) {
   favorEditList.value.splice(idx, 1)
+  
+  // 如果删除后没有岗位了，自动显示输入框
+  if (favorEditList.value.length === 0) {
+    showInput.value = true
+    nextTick(() => {
+      if (favorInputRef.value) {
+        favorInputRef.value.focus()
+      }
+    })
+  }
 }
 
 // 开始编辑时同步数据
@@ -116,6 +181,20 @@ function startEdit() {
     favorEditList.value = form.favor ? [form.favor] : []
   }
   favorInput.value = ''
+  
+  // 新用户（没有岗位）默认显示输入框
+  if (favorEditList.value.length === 0) {
+    showInput.value = true
+    nextTick(() => {
+      if (favorInputRef.value) {
+        favorInputRef.value.focus()
+      }
+    })
+  } else {
+    // 老用户不显示输入框
+    showInput.value = false
+  }
+  
   editing.value = true
 }
 
@@ -151,11 +230,15 @@ async function fetchSeekerInfo() {
       showFillAlert.value = true
       editing.value = true
       favorEditList.value = []
+      // 新用户默认显示输入框
+      showInput.value = true
     }
   } catch (e) {
     showFillAlert.value = true
     editing.value = true
     favorEditList.value = []
+    // 新用户默认显示输入框
+    showInput.value = true
   }
 }
 
@@ -168,13 +251,34 @@ function cancelEdit() {
     favorEditList.value = original.value.favor ? [original.value.favor] : []
   }
   favorInput.value = ''
+  showInput.value = false
   editing.value = false
 }
 
 async function onSaveClick() {
+  // 如果当前输入框有内容，先确认添加
+  if (showInput.value && favorInput.value && favorInput.value.trim()) {
+    const val = favorInput.value.trim()
+    if (!favorEditList.value.includes(val)) {
+      favorEditList.value.push(val)
+      favorInput.value = ''
+      showInput.value = false
+      console.log('保存时自动添加岗位:', val)
+    }
+  }
+  
   // 校验理想岗位不能为空
   if (!favorEditList.value || favorEditList.value.length === 0) {
     ElMessage.error('请至少添加一个理想岗位')
+    // 如果没有岗位，显示输入框让用户添加
+    if (!showInput.value) {
+      showInput.value = true
+      nextTick(() => {
+        if (favorInputRef.value) {
+          favorInputRef.value.focus()
+        }
+      })
+    }
     console.log('favorEditList:', favorEditList.value) // 调试用
     return
   }
@@ -195,6 +299,7 @@ async function onSaveClick() {
         ElMessage.success('保存成功')
         showFillAlert.value = false
         editing.value = false
+        showInput.value = false
         original.value = { ...form }
       } catch (e) {
         ElMessage.error('保存失败')
