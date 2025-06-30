@@ -17,6 +17,11 @@ export function getPostsByUserId(userId) {
   return axios.get(`${API_BASE}/user/${userId}`);
 }
 
+// 根据userId获取投递记录及其关联信息
+export function getPostsByUserIdWithDetails(userId) {
+  return axios.get(`${API_BASE}/user/${userId}/with-details`);
+}
+
 // 创建投递记录
 export function createPost(data) {
   return axios.post(API_BASE, data);

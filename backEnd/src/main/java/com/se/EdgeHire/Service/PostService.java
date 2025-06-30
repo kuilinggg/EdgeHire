@@ -42,4 +42,9 @@ public class PostService {
     public List<Post> getPostsByFilter(String keyword, Integer education, String favor) {
         return postRepository.findByFilter(keyword, education, favor);
     }
+
+    // 根据userId获取投递记录及其关联信息
+    public List<Post> getPostsByUserIdWithDetails(Integer userId) {
+        return postRepository.findByUserIdWithDetails(userId);
+    }
 }

@@ -53,4 +53,10 @@ public class PostController {
             @RequestParam(required = false) String favor) {
         return postService.getPostsByFilter(keyword, education, favor);
     }
+
+    // 根据userId获取投递记录及其关联信息
+    @GetMapping("/user/{userId}/with-details")
+    public List<Post> getPostsByUserIdWithDetails(@PathVariable Integer userId) {
+        return postService.getPostsByUserIdWithDetails(userId);
+    }
 }

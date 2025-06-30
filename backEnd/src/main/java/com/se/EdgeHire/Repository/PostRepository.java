@@ -11,6 +11,10 @@ import java.util.List;
 public interface PostRepository extends JpaRepository<Post, Integer> {
     List<Post> findByUserId(Integer userId);
 
+    // 根据userId获取投递记录及其关联信息
+    @Query("SELECT p FROM Post p LEFT JOIN FETCH p.user LEFT JOIN FETCH p.seekerInfo LEFT JOIN FETCH p.resume WHERE p.userId = :userId")
+    List<Post> findByUserIdWithDetails(@Param("userId") Integer userId);
+
     // 获取所有投递记录及其关联信息
     @Query("SELECT p FROM Post p LEFT JOIN FETCH p.user LEFT JOIN FETCH p.seekerInfo LEFT JOIN FETCH p.resume")
     List<Post> findAllWithDetails();
