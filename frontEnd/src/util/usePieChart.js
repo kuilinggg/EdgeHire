@@ -1,9 +1,9 @@
-import * as echarts from 'echarts'
+import * as echarts from 'echarts';
 
 export function usePieChart({
   el,           // DOM 元素或 ref
-  dataRef ,
-  title = '',
+  dataRef,      // 数据引用
+  title = '',   // 图表标题
   width = '100%',
   height = '400px',
   legendPosition = 'top',
@@ -11,16 +11,18 @@ export function usePieChart({
   isDonut = false,
   colors = ['#5470C6', '#91CC75', '#FAC858', '#EE6666', '#73C0DE', '#3BA272', '#FC8452', '#9A60B4']
 }) {
-  let chartInstance = null
+  let chartInstance = null;
 
   const initChart = () => {
-    if (!el.value) return
-    chartInstance = echarts.init(el.value)
-    updateChart()
-  }
+    if (!el.value) return;
+    chartInstance = echarts.init(el.value);
+    updateChart();
+  };
 
-  const updateChart = () => {
-    if (!chartInstance) return
+  const updateChart = (data) => {
+    if (!chartInstance) return;
+
+    const displayData = data || dataRef.value;
 
     const option = {
       title: {
@@ -35,7 +37,7 @@ export function usePieChart({
         orient: ['left', 'right'].includes(legendPosition) ? 'vertical' : 'horizontal',
         [legendPosition]: legendPosition,
         left: ['top', 'bottom'].includes(legendPosition) ? 'center' : legendPosition,
-        data:dataRef.value.map(item => item.name)
+        data: displayData.map(item => item.name)
       },
       series: [
         {
@@ -63,7 +65,7 @@ export function usePieChart({
           labelLine: {
             show: showLabel
           },
-          data: dataRef.value.map((item, index) => ({
+          data: displayData.map((item, index) => ({
             ...item,
             itemStyle: {
               color: colors[index % colors.length]
@@ -71,23 +73,23 @@ export function usePieChart({
           }))
         }
       ]
-    }
+    };
 
-    chartInstance.setOption(option)
-  }
+    chartInstance.setOption(option);
+  };
 
   const resizeChart = () => {
-    chartInstance?.resize()
-  }
+    chartInstance?.resize();
+  };
 
   const disposeChart = () => {
-    chartInstance?.dispose()
-  }
+    chartInstance?.dispose();
+  };
 
   return {
     initChart,
     updateChart,
     resizeChart,
     disposeChart
-  }
+  };
 }

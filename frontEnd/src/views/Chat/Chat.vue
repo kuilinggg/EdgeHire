@@ -1,7 +1,7 @@
 <template>
   <div class="chat-container">
     <div class="chat-sidebar">
-      <div class="chat-title">我的消息</div>
+      <div class="chat-title">消息中心</div>
       <el-input v-model="search" placeholder="搜索联系人" class="chat-search" clearable />
       <el-menu :default-active="activeUser" class="chat-user-list">
         <el-menu-item v-for="user in filteredUsers" :key="user.id" :index="user.id.toString()" @click="selectUser(user)">
@@ -82,6 +82,7 @@ import { useRouter } from 'vue-router'
 import axios from 'axios'
 import { ElMessage } from 'element-plus'
 import { getAvatarUrl } from '../../api/info'
+import { authApi } from "../../api/auth"
 
 
 const router = useRouter()
@@ -113,6 +114,21 @@ onMounted(async () => {
   }
 })
 
+const usersLoaded = ref(false)
+const messageMapLoaded = ref(false)
+
+function trySelectActiveUser() {
+  if (usersLoaded.value && messageMapLoaded.value) {
+    const savedActiveUser = localStorage.getItem('activeUser')
+    if (savedActiveUser) {
+      activeUser.value = savedActiveUser
+      nextTick(() => {
+        selectUser(users.value.find(u => u.id.toString() === savedActiveUser) || users.value[0])
+      })
+    }
+  }
+}
+
 onMounted(async () => {
   try {
     const userId = localStorage.getItem('userId')
@@ -138,7 +154,8 @@ onMounted(async () => {
     users.value = [
       ...chatUsers
     ]
-
+    usersLoaded.value = true
+    trySelectActiveUser()
   } catch (error) {
     console.error('获取聊天列表对象失败:', error)
   }
@@ -153,16 +170,8 @@ onMounted(async () => {
 
     messageMap = await axios.get(`/chat/messages/${userId}`)
     console.log('获取历史消息:', messageMap.data)
-
-    const savedActiveUser = localStorage.getItem('activeUser')
-
-    if (savedActiveUser) {
-    activeUser.value = savedActiveUser
-    nextTick(() => {
-      selectUser(users.value.find(u => u.id.toString() === savedActiveUser) || users.value[0])
-    })
-  }
-
+    messageMapLoaded.value = true
+    trySelectActiveUser()
   } catch (error) {
     console.error('获取历史消息失败:', error)
   }
@@ -303,7 +312,7 @@ function formatTime(time) {
 }
 
 function logout() {
-  router.push('/login')
+  authApi.logout()
 }
 
 onMounted(() => {
@@ -401,20 +410,47 @@ onMounted(() => {
 .chat-container {
   display: flex;
   height: 100vh;
-  background: #f5f7fa;
+  background: linear-gradient(135deg, #f5f7fa 0%, #f0f2f7 100%);
+  position: relative;
+  overflow: hidden;
+}
+
+.chat-container::before {
+  content: '';
+  position: absolute;
+  top: -50%;
+  left: -50%;
+  width: 200%;
+  height: 200%;
+  background: radial-gradient(circle, rgba(255,255,255,0.8) 10%, transparent 10.5%);
+  background-size: 20px 20px;
+  opacity: 0.4;
+  z-index: 0;
+  pointer-events: none;
 }
 .chat-sidebar {
-  width: 260px;
-  background: #fff;
-  border-right: 1px solid #ebeef5;
+  width: 280px;
+  background: rgba(255, 255, 255, 0.8);
+  backdrop-filter: blur(10px);
   display: flex;
   flex-direction: column;
+  border-radius: 0 20px 20px 0;
+  margin: 16px 0 16px 16px;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.06);
+  z-index: 1;
+  overflow: hidden;
 }
 .chat-title {
-  font-size: 18px;
+  font-size: 20px;
   font-weight: 600;
   color: #3a36db;
-  padding: 24px 0 12px 32px;
+  padding: 28px 0 16px 32px;
+  position: relative;
+  background: linear-gradient(90deg, #3a36db, #5b57e8);
+  -webkit-background-clip: text;
+  background-clip: text;
+  -webkit-text-fill-color: transparent;
+  text-shadow: 0 2px 4px rgba(58, 54, 219, 0.1);
 }
 .chat-search {
   margin: 0 12px 12px 12px;
@@ -519,19 +555,27 @@ onMounted(() => {
   flex: 1;
   display: flex;
   flex-direction: column;
-  background: #f5f7fa;
+  background: rgba(255, 255, 255, 0.7);
+  backdrop-filter: blur(10px);
+  border-radius: 20px 0 0 20px;
+  margin: 16px 16px 16px 0;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.06);
+  z-index: 1;
+  overflow: hidden;
 }
 .chat-header {
-  height: 64px;
+  height: 70px;
   display: flex;
   align-items: center;
   padding: 0 32px;
-  background: #fff;
-  border-bottom: 1px solid #ebeef5;
+  background: rgba(255, 255, 255, 0.9);
+  border-bottom: 1px solid rgba(235, 238, 245, 0.5);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.02);
   font-size: 16px;
   font-weight: 500;
   color: #333;
   position: relative;
+  z-index: 2;
 }
 .chat-user-name {
   margin-left: 16px;
@@ -540,7 +584,13 @@ onMounted(() => {
   flex: 1;
   overflow-y: auto;
   padding: 24px 32px;
-  background: #f5f7fa;
+  background: transparent;
+  background-image: 
+    linear-gradient(rgba(255, 255, 255, 0.4) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(255, 255, 255, 0.4) 1px, transparent 1px);
+  background-size: 20px 20px;
+  background-position: center;
+  position: relative;
 }
 .chat-message {
   display: flex;
@@ -566,22 +616,35 @@ onMounted(() => {
 .chat-message .msg-content {
   max-width: 320px;
   background: #fff;
-  border-radius: 8px;
-  padding: 10px 16px;
+  border-radius: 18px 18px 18px 4px;
+  padding: 12px 18px;
   margin: 0 12px;
   font-size: 15px;
   color: #333;
-  box-shadow: 0 2px 8px rgba(60,60,60,0.04);
+  box-shadow: 0 2px 12px rgba(60,60,60,0.06);
+  transition: all 0.3s ease;
+  border-left: 3px solid #ebeef5;
 }
+
+.chat-message .msg-content:hover {
+  box-shadow: 0 4px 16px rgba(60,60,60,0.08);
+  transform: translateY(-1px);
+}
+
 .chat-message.from-me .msg-content {
-  background: #e6f0ff;
+  background: linear-gradient(135deg, #e6f0ff 0%, #f0f7ff 100%);
   color: #3a36db;
+  border-radius: 18px 18px 4px 18px;
+  border-left: none;
+  border-right: 3px solid #d0e1ff;
 }
 .chat-input {
   padding: 20px 32px 24px;
-  background: #fff;
-  border-top: 1px solid #ebeef5;
+  background: rgba(255, 255, 255, 0.9);
+  border-top: 1px solid rgba(235, 238, 245, 0.5);
+  box-shadow: 0 -4px 16px rgba(0, 0, 0, 0.03);
   position: relative;
+  z-index: 2;
 }
 
 .chat-input::before {
@@ -599,10 +662,12 @@ onMounted(() => {
   align-items: flex-end;
   gap: 16px;
   position: relative;
-  background: #fafbfc;
-  border-radius: 16px;
-  padding: 12px;
-  border: 1px solid #f0f2f5;
+  background: rgba(250, 251, 252, 0.8);
+  border-radius: 20px;
+  padding: 14px;
+  border: 1px solid rgba(240, 242, 245, 0.8);
+  box-shadow: 0 2px 16px rgba(0, 0, 0, 0.03);
+  backdrop-filter: blur(10px);
   transition: all 0.3s ease;
 }
 

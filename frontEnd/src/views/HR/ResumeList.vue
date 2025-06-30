@@ -7,145 +7,63 @@
         <div class="search-bar">
           <el-input
             v-model="searchKeyword"
-            placeholder="输入关键词搜索，如'岗位'、'技能'、'城市'等"
+            placeholder="输入姓名关键词"
             class="search-input"
             clearable
             @keyup.enter="handleSearch"
-          >
-            <template #prefix>
-              <el-icon><Search /></el-icon>
-            </template>
-          </el-input>
-          <el-button type="primary" @click="handleSearch" class="search-btn">
-            搜索
-          </el-button>
+          />
+          <el-button type="primary" @click="handleSearch" class="search-btn">搜索</el-button>
         </div>
-        <!-- 高级筛选器 -->
         <div class="filter-bar">
-          <el-select v-model="filters.experience" placeholder="工作经验" clearable class="filter-item">
-            <el-option label="应届毕业生" value="0" />
-            <el-option label="1-3年" value="1-3" />
-            <el-option label="3-5年" value="3-5" />
-            <el-option label="5-10年" value="5-10" />
-            <el-option label="10年以上" value="10+" />
-          </el-select>
           <el-select v-model="filters.education" placeholder="学历要求" clearable class="filter-item">
-            <el-option label="高中及以下" value="high_school" />
-            <el-option label="大专" value="college" />
-            <el-option label="本科" value="bachelor" />
-            <el-option label="硕士" value="master" />
-            <el-option label="博士" value="doctor" />
+            <el-option label="小学" value="1" />
+            <el-option label="初中" value="2" />
+            <el-option label="高中" value="3" />
+            <el-option label="大专" value="4" />
+            <el-option label="本科" value="5" />
+            <el-option label="硕士" value="6" />
+            <el-option label="博士" value="7" />
           </el-select>
-          <el-select v-model="filters.industry" placeholder="行业领域" clearable class="filter-item">
-            <el-option label="互联网/IT" value="it" />
-            <el-option label="金融" value="finance" />
-            <el-option label="教育" value="education" />
-            <el-option label="医疗健康" value="healthcare" />
-            <el-option label="制造业" value="manufacturing" />
-            <el-option label="其他" value="other" />
-          </el-select>
-          <el-select v-model="filters.city" placeholder="期望城市" clearable class="filter-item">
-            <el-option label="北京" value="beijing" />
-            <el-option label="上海" value="shanghai" />
-            <el-option label="广州" value="guangzhou" />
-            <el-option label="深圳" value="shenzhen" />
-            <el-option label="杭州" value="hangzhou" />
-            <el-option label="成都" value="chengdu" />
-          </el-select>
-          <el-button @click="resetFilters" class="reset-btn">重置</el-button>
+          <el-button type="primary" @click="handleSearch" class="search-btn">筛选</el-button>
         </div>
       </div>
     </div>
 
     <!-- 主内容区：简历列表 -->
     <div class="content-area">
-      <!-- 列表头部信息 -->
-      <div class="list-header">
-        <div class="result-info">
-          <span v-if="!isSearchMode" class="recommend-tag">
-            <el-icon><Star /></el-icon>
-            为您推荐
-          </span>
-          <span v-else class="search-result">
-            找到 <strong>{{ filteredResumes.length }}</strong> 份符合条件的简历
-          </span>
-        </div>
-        <div class="sort-options">
-          <el-select v-model="sortBy" placeholder="排序方式" class="sort-select">
-            <el-option label="匹配度优先" value="match" />
-            <el-option label="更新时间" value="update_time" />
-            <el-option label="工作经验" value="experience" />
-          </el-select>
-        </div>
-      </div>
-
-      <!-- 简历卡片列表 -->
       <div class="resume-cards" v-loading="loading" element-loading-text="正在加载简历数据...">
-        <div v-if="!loading && filteredResumes.length === 0" class="empty-state">
+        <div v-if="!loading && filteredPosts.length === 0" class="empty-state">
           <el-empty description="暂无符合条件的简历" />
         </div>
         <el-card
-          v-for="resume in displayResumes"
-          :key="resume.id"
+          v-for="post in displayPosts"
+          :key="post.id"
           class="resume-card"
           shadow="hover"
         >
           <div class="card-content">
             <!-- 左侧头像 -->
             <div class="avatar-section">
-              <el-avatar :src="resume.avatar" :size="60" />
+              <el-avatar :src="userInfoMap[post.userId]?.avatar || post.resume?.avatar" :size="60" />
             </div>
-            
             <!-- 主体内容 -->
             <div class="main-content">
-              <!-- 顶部：姓名和期望职位 -->
               <div class="header-info">
-                <h3 class="name">{{ resume.name }}</h3>
-                <span class="position">{{ resume.expectedPosition }}</span>
+                <h3 class="name">{{ userInfoMap[post.userId]?.realname || post.seekerInfo?.realname || '未知用户' }}</h3>
+                <span class="position">{{ post.seekerInfo?.favor || '未填写' }}</span>
               </div>
-              
-              <!-- 中间：核心信息标签 -->
               <div class="info-tags">
-                <el-tag class="info-tag">{{ resume.experience }}</el-tag>
-                <el-tag class="info-tag">{{ resume.education }}</el-tag>
-                <el-tag class="info-tag">期望城市：{{ resume.expectedCity }}</el-tag>
+                <el-tag class="info-tag">学历：{{ getEducationText(post.seekerInfo?.education) }}</el-tag>
+                <el-tag class="info-tag">毕业院校：{{ post.seekerInfo?.school || '未填写' }}</el-tag>
               </div>
-              
-              <!-- 底部：技能标签 -->
-              <div class="skills-section">
-                <el-tag 
-                  v-for="skill in resume.skills.slice(0, 4)" 
-                  :key="skill" 
-                  class="skill-tag"
-                  type="info"
-                  size="small"
-                >
-                  {{ skill }}
-                </el-tag>
-                <span v-if="resume.skills.length > 4" class="more-skills">
-                  +{{ resume.skills.length - 4 }}
-                </span>
-              </div>
+              <div class="create-time">创建时间：{{ formatDate(post.resume?.createTime) }}</div>
             </div>
-            
-            <!-- 右侧操作区 -->
             <div class="action-section">
-              <el-button type="primary" @click="viewResumeDetail(resume)">
-                查看详情
-              </el-button>
-              <el-button 
-                :icon="resume.isFavorited ? 'StarFilled' : 'Star'" 
-                circle 
-                :type="resume.isFavorited ? 'warning' : 'default'"
-                @click="toggleFavorite(resume)"
-                class="favorite-btn"
-              />
+              <el-button type="primary" @click="viewResumeDetail(post)">查看详情</el-button>
             </div>
           </div>
         </el-card>
       </div>
-
-      <!-- 分页 -->
       <div class="pagination-wrapper">
         <el-pagination
           v-model:current-page="currentPage"
@@ -170,6 +88,7 @@
       <ResumeDetail
         v-if="selectedResume"
         :resume="selectedResume"
+        :tInfo="selectedTInfo"
         @start-chat="handleStartChat"
       />
     </el-dialog>
@@ -182,8 +101,9 @@ import { useRouter, useRoute } from 'vue-router'
 import { Search, Star, StarFilled } from '@element-plus/icons-vue'
 import { ElMessage, ElLoading } from 'element-plus'
 import ResumeDetail from './components/ResumeDetail.vue'
-import { resumeRecommendationApi } from '../../api/hr.js'
 import { useAuthStore } from '../../stores/authStore.js'
+import { getPostsWithDetails, getPostsByFilter } from '../../api/post.js'
+import { getInfoByUserId } from '../../api/info.js'
 
 const router = useRouter()
 const route = useRoute()
@@ -192,18 +112,33 @@ const authStore = useAuthStore()
 // 响应式数据
 const searchKeyword = ref('')
 const filters = ref({
-  experience: '',
-  education: '',
-  industry: '',
-  city: ''
+  education: ''
 })
 const sortBy = ref('match')
 const currentPage = ref(1)
 const pageSize = ref(10)
 const showDetailDialog = ref(false)
 const selectedResume = ref(null)
+const selectedTInfo = ref(null)
 const loading = ref(false)
 const dataLoaded = ref(false)
+
+// 用户信息缓存（userId -> t_info）
+const userInfoMap = ref({})
+
+// 批量拉取所有卡片涉及的userId的t_info
+async function fetchUserInfos(posts) {
+  const userIds = Array.from(new Set(posts.map(p => p.userId)))
+  const promises = userIds.map(async (uid) => {
+    if (!userInfoMap.value[uid]) {
+      try {
+        const res = await getInfoByUserId(uid)
+        if (res.data) userInfoMap.value[uid] = res.data
+      } catch {}
+    }
+  })
+  await Promise.all(promises)
+}
 
 // 计算属性
 const isSearchMode = computed(() => {
@@ -215,152 +150,99 @@ const isSearchMode = computed(() => {
 })
 
 // 简历数据
-const allResumes = ref([])
+const allPosts = ref([])
 const totalCount = ref(0)
 
 // 筛选后的简历列表（现在直接使用API返回的数据）
-const filteredResumes = computed(() => {
-  return allResumes.value
+const filteredPosts = computed(() => {
+  return allPosts.value
 })
 
 // 当前页显示的简历（API已经处理了分页）
-const displayResumes = computed(() => {
-  return allResumes.value
+const displayPosts = computed(() => {
+  return allPosts.value
 })
 
 // 方法
 const loadResumeData = async (isSearch = false) => {
   try {
     loading.value = true
-    const userId = authStore.userId || '1'
-
     let response
-    if (isSearch && (searchKeyword.value || hasActiveFilters())) {
-      // 搜索模式
-      const searchParams = {
+    if (isSearch && (searchKeyword.value || filters.value.education)) {
+      response = await getPostsByFilter({
         keyword: searchKeyword.value,
-        minEducation: getEducationValue(filters.value.education),
-        position: filters.value.industry,
-        page: currentPage.value - 1, // 后端使用0基索引
-        size: pageSize.value
-      }
-      response = await resumeRecommendationApi.searchResumes(userId, searchParams)
+        education: filters.value.education
+      })
     } else {
-      // 推荐模式
-      response = await resumeRecommendationApi.getRecommendations(
-        userId,
-        currentPage.value - 1,
-        pageSize.value
-      )
+      response = await getPostsWithDetails()
     }
-
-    if (response.data && response.data.data) {
-      // 转换后端数据格式为前端格式
-      allResumes.value = response.data.data.map(item => ({
-        id: item.resumeId,
-        userId: item.userId,
-        name: item.name,
-        avatar: item.avatar || `https://api.dicebear.com/7.x/miniavs/svg?seed=${item.name}`,
-        expectedPosition: item.expectedPosition,
-        experience: getExperienceText(item.age), // 根据年龄推算经验
-        education: getEducationText(item.education),
-        expectedCity: item.expectedCity || '未填写',
-        skills: item.skills || ['技能待完善'],
-        isFavorited: false, // 后续可以从收藏API获取
-        matchScore: item.matchScore,
-        updateTime: item.createTime,
-        averageScore: item.averageScore
-      }))
-      totalCount.value = response.data.total
+    if (response.data) {
+      allPosts.value = response.data
+      totalCount.value = response.data.length
+      await fetchUserInfos(response.data)
     }
-
     dataLoaded.value = true
   } catch (error) {
     console.error('加载简历数据失败:', error)
     ElMessage.error('加载简历数据失败，请稍后重试')
-    // 使用默认数据作为fallback
-    allResumes.value = []
+    allPosts.value = []
   } finally {
     loading.value = false
   }
 }
 
-// 辅助方法
-const hasActiveFilters = () => {
-  return filters.value.experience ||
-         filters.value.education ||
-         filters.value.industry ||
-         filters.value.city
-}
-
-const getEducationValue = (education) => {
+function getEducationText(educationValue) {
   const educationMap = {
-    'high_school': 1,
-    'college': 2,
-    'bachelor': 3,
-    'master': 4,
-    'doctor': 5
-  }
-  return educationMap[education] || null
-}
-
-const getEducationText = (educationValue) => {
-  const educationMap = {
-    1: '高中',
-    2: '大专',
-    3: '本科',
-    4: '硕士',
-    5: '博士'
+    1: '小学',
+    2: '初中',
+    3: '高中',
+    4: '大专',
+    5: '本科',
+    6: '硕士',
+    7: '博士'
   }
   return educationMap[educationValue] || '未填写'
 }
 
-const getExperienceText = (age) => {
-  if (age <= 22) return '应届毕业生'
-  if (age <= 25) return '1-3年经验'
-  if (age <= 30) return '3-5年经验'
-  if (age <= 35) return '5-10年经验'
-  return '10年以上经验'
+function formatDate(dateStr) {
+  if (!dateStr) return ''
+  const d = new Date(dateStr)
+  if (isNaN(d.getTime())) return dateStr
+  const y = d.getFullYear()
+  const m = String(d.getMonth() + 1).padStart(2, '0')
+  const day = String(d.getDate()).padStart(2, '0')
+  const h = String(d.getHours()).padStart(2, '0')
+  const min = String(d.getMinutes()).padStart(2, '0')
+  return `${y}年${m}月${day}日 ${h}:${min}`
 }
 
 const handleSearch = async () => {
   currentPage.value = 1
   await loadResumeData(true)
-  ElMessage.success(`搜索到 ${allResumes.value.length} 份简历`)
 }
 
-const resetFilters = async () => {
-  searchKeyword.value = ''
-  filters.value = {
-    experience: '',
-    education: '',
-    industry: '',
-    city: ''
-  }
-  currentPage.value = 1
-  await loadResumeData(false) // 重新加载推荐数据
-}
-
-const toggleFavorite = async (resume) => {
+const toggleFavorite = async (post) => {
   try {
     // 这里可以调用收藏API
     // await favoriteApi.toggle(resume.id)
-    resume.isFavorited = !resume.isFavorited
-    ElMessage.success(resume.isFavorited ? '已收藏' : '已取消收藏')
+    post.isFavorited = !post.isFavorited
+    ElMessage.success(post.isFavorited ? '已收藏' : '已取消收藏')
   } catch (error) {
     console.error('收藏操作失败:', error)
     ElMessage.error('操作失败，请稍后重试')
   }
 }
 
-const viewResumeDetail = (resume) => {
-  selectedResume.value = resume
+const viewResumeDetail = (post) => {
+  selectedResume.value = post.resume
+  selectedTInfo.value = post.seekerInfo
   showDetailDialog.value = true
 }
 
 const handleCloseDetail = () => {
   showDetailDialog.value = false
   selectedResume.value = null
+  selectedTInfo.value = null
 }
 
 const handleStartChat = (resume) => {
@@ -371,19 +253,17 @@ const handleStartChat = (resume) => {
 const handleSizeChange = async (val) => {
   pageSize.value = val
   currentPage.value = 1
-  await loadResumeData(isSearchMode.value)
+  await loadResumeData()
 }
 
 const handleCurrentChange = async (val) => {
   currentPage.value = val
-  await loadResumeData(isSearchMode.value)
+  await loadResumeData()
 }
 
 // 监听路由查询参数
 watch(() => route.query, async (newQuery) => {
-  if (newQuery.recommend === 'true') {
-    await resetFilters()
-  } else if (newQuery.searchFocus === 'true') {
+  if (newQuery.searchFocus === 'true') {
     // 聚焦搜索框
     setTimeout(() => {
       const searchInput = document.querySelector('.search-input input')
@@ -487,15 +367,6 @@ onMounted(async () => {
   margin-bottom: 20px;
   padding-bottom: 16px;
   border-bottom: 1px solid #f0f0f0;
-}
-
-.recommend-tag {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  color: #3a36db;
-  font-weight: 600;
-  font-size: 16px;
 }
 
 .search-result {
@@ -674,5 +545,11 @@ onMounted(async () => {
     flex-direction: row;
     justify-content: center;
   }
+}
+
+.create-time {
+  color: #888;
+  font-size: 13px;
+  margin-top: 8px;
 }
 </style>
