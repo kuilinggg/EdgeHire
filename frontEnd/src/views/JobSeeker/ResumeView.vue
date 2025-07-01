@@ -48,7 +48,7 @@
                     </div>
                   </div>
                   <div class="resume-a4-avatar">
-                    <el-avatar v-if="selectedResume.avatar" :src="selectedResume.avatar" size="large" shape="square" class="resume-avatar"/>
+                    <el-avatar v-if="selectedResume.avatar" :src="selectedResume.avatar" size="large" shape="square" fit="fill" class="resume-avatar"/>
                     <span v-else>无</span>
                   </div>
                 </div>
@@ -644,9 +644,18 @@ onMounted(refreshResumeList)
 .resume-avatar {
   width: 120px !important;
   height: 160px !important;
-  object-fit: cover;
+  object-fit: fill !important;
   border: 1px solid #e5e7eb;
   background: #fff;
+}
+
+/* 更具体的选择器来覆盖 Element Plus 的默认样式 */
+.resume-a4-avatar .el-avatar.resume-avatar {
+  object-fit: fill !important;
+}
+
+.resume-a4-avatar .el-avatar img {
+  object-fit: fill !important;
 }
 
 .resume-a4-self-eval {

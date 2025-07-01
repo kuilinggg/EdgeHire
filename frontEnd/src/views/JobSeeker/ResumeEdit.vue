@@ -581,7 +581,7 @@ const onAiOptimize = () => {
   if (!hasLoadedMessages && aiMessages.value.length === 0) {
     aiMessages.value.push({
       type: 'ai',
-      content: '您好！我是AI简历助手。我可以帮助您：\n\n- 优化简历内容\n- 改进自我评价\n- 完善工作经历描述\n- 提供求职建议\n\n请告诉我您需要什么帮助？',
+      content: '您好！我是AI简历助手。我可以帮助您：\n\n- 优化简历内容\n- 改进自我评价\n- 完善工作经历描述\n- 提供求职建议\n请告诉我您需要什么帮助？',
       time: new Date().toLocaleTimeString()
     })
     saveAiMessages() // 保存欢迎消息
