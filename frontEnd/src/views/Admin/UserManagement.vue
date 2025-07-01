@@ -127,7 +127,7 @@
 
 <script setup>
 import { ref, computed, onMounted, onBeforeUnmount } from 'vue'
-import { ElMessage, ElMessageBox } from 'element-plus'
+import { ElMessage, ElMessageBox,ElNotification } from 'element-plus'
 import { getUsers, updateUser, deleteUser } from '../../api/user'
 import { getInfoByUserId } from '../../api/info'
 import { getSeekerByUserId } from '../../api/seeker'
@@ -236,20 +236,8 @@ const handleCheck = async (id,role) => {
     }
   }
 
-  //初始化WebSocket
-  const socket = new WebSocket(`ws://localhost:8080/webSocket?userId=${2}`)
-  
   if(role!==0&&(isEmptyContent(infoList.value) || isEmptyContent(detailInfoList.value))) {
     ElMessage.error('用户详细信息不完整')
-    //发送消息
-    socket.onopen = () => {
-    socket.send(JSON.stringify({
-      from: 2,
-      to: id,
-      content: "您好，请完善您的个人信息",
-      type: 0 // 私聊
-    }))
-  }
     return;
   }
   if(role===0&&isEmptyContent(infoList.value)){
@@ -296,9 +284,139 @@ const handlePageChange = (page) => {
   currentPage.value = page
 }
 
-// 生命周期
-onMounted(() => {
-  loadUsers()
+// WebSocket 封装
+const socket = ref(null)
+const initWebSocket = (userId) => {
+  if (socket.value) return
+  socket.value = new WebSocket(`ws://localhost:8080/webSocket?userId=${userId}`)
+  socket.value.onerror = (e) => console.error('WebSocket 错误:', e)
+  socket.value.onclose = () => console.warn('WebSocket 断开')
+}
+
+// 本地每日提醒记录
+function shouldRemind(userId) {
+  const data = JSON.parse(localStorage.getItem('remindedUsersByDay') || '{}')
+  const today = new Date().toISOString().slice(0, 10)
+  //检查是否今天已经提醒过
+  return !(data[today]?.includes(userId))
+}
+
+//更新提醒记录（按天存）
+function markAsReminded(userId) {
+  const data = JSON.parse(localStorage.getItem('remindedUsersByDay') || '{}')
+  const today = new Date().toISOString().slice(0, 10)
+  if (!data[today]) {
+    data[today] = []
+  }
+  if (!data[today].includes(userId)) {
+    data[today].push(userId)
+  }
+  localStorage.setItem('remindedUsersByDay', JSON.stringify(data))
+}
+
+//localStorage定期清理 3 天前的数据
+function cleanOldRemindRecords() {
+  const data = JSON.parse(localStorage.getItem('remindedUsersByDay') || '{}')
+  const now = new Date()
+  const cutoff = new Date(now.setDate(now.getDate() - 3)).toISOString().slice(0, 10)
+  for (const date in data) {
+    if (date < cutoff) delete data[date]
+  }
+  localStorage.setItem('remindedUsersByDay', JSON.stringify(data))
+}
+
+// 消息发送
+const sendReminder = async (userId, content) => {
+  if (socket.value?.readyState === WebSocket.OPEN) {
+    socket.value.send(JSON.stringify({
+      from: 2, // 系统账号
+      to: userId,
+      content,
+      type: 0
+    }))
+    return true
+  }
+  return false
+}
+
+// 检查单个用户信息完整性
+const checkUserInfoComplete = async (user) => {
+  const { id, role } = user
+
+  try {
+    const infoRes = await getInfoByUserId(id)
+    const info = infoRes.data
+    if (!info.realname?.trim() || !info.phone?.trim() || !info.email?.trim() || info.age == null || info.gender == null) {
+      return false
+    }
+  } catch {
+    return false
+  }
+
+  if (role === 2) {
+    try {
+      const hrRes = await hrApi.getHrInfo(id)
+      const hr = hrRes.data
+      if (!hr.company?.trim() || !hr.position?.trim() || !hr.experience?.trim()) {
+        return false
+      }
+    } catch {
+      return false
+    }
+  }
+
+  if (role === 1) {
+    try {
+      const seekerRes = await getSeekerByUserId(id)
+      const seeker = seekerRes.data
+      if (!seeker.school?.trim() || !seeker.favor?.trim() || seeker.education == null) {
+        return false
+      }
+    } catch {
+      return false
+    }
+  }
+
+  return true
+}
+
+// 主流程
+onMounted(async () => {
+  await loadUsers()
+  
+  initWebSocket(2) // 系统账号 ID = 2
+  cleanOldRemindRecords()
+
+  try {
+    const res = await getUsers()
+    const Users = res.data.filter(u => u.role !== 0)
+    let incompleteCount = 0
+
+    for (const user of Users) {
+      if (!shouldRemind(user.id)) continue
+
+      const isComplete = await checkUserInfoComplete(user)
+      if (!isComplete) {
+        const success = await sendReminder(
+          user.id,
+          `【系统提醒】您的${user.role === 1 ? '求职者' : 'HR'}信息不完整，请及时完善！`
+        )
+        if (success) {
+          markAsReminded(user.id)
+          incompleteCount++
+          console.log(user.id)
+        }
+      }
+    }
+
+    ElNotification({
+      title: '信息完整度检测完成',
+      message: `已发送 ${incompleteCount} 条提醒`,
+      type: 'success'
+    })
+  } catch (error) {
+    console.error('自动提醒流程异常:', error)
+  }
 })
 
 onBeforeUnmount(() => {
