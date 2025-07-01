@@ -42,7 +42,6 @@
           </span>
           <template #dropdown>
             <el-dropdown-menu>
-              <el-dropdown-item @click="profile">个人中心</el-dropdown-item>
               <el-dropdown-item divided @click="logout">退出登录</el-dropdown-item>
             </el-dropdown-menu>
           </template>
@@ -66,9 +65,6 @@ import { User, Briefcase, DataAnalysis, Monitor } from '@element-plus/icons-vue'
 const avatarUrl = ref('https://api.dicebear.com/7.x/miniavs/svg?seed=jobseeker')
 const router=useRouter()
 const avatar = ref(null)
-const profile = () => {
-  ElMessage.info('个人中心功能待实现')
-}
 const logout = () => {
     authApi.logout();
   }

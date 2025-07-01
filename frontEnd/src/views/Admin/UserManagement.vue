@@ -3,7 +3,7 @@
     <h2>用户信息管理</h2>
     <div class="card">
       <div class="search-bar">
-        <el-input v-model="searchKeyword" placeholder="搜索用户..." style="width: 300px" />
+        <el-input v-model="searchKeyword" placeholder="搜索用户...(用户名)" style="width: 300px" />
         <el-button type="primary" @click="loadUsers">搜索</el-button>
         <el-select v-model="filterRole" placeholder="筛选角色" style="width: 150px; margin-left: 10px;" @change="loadUsers">
         <el-option
@@ -26,16 +26,16 @@
         </el-table-column>
         <el-table-column label="操作" width="380">
           <template #default="scope">
-            <el-button size="mini" @click="
-              infoList=[],detailInfoList=[],
-              handleCheck(scope.row.id,scope.row.role)"
-              >查看</el-button>
             <el-button 
             v-if="scope.row.role !== 0"
             size="mini" 
             @click="handleEdit(scope.row)"
             type="warning"
             >编辑</el-button>
+            <el-button size="mini" @click="
+              infoList=[],detailInfoList=[],
+              handleCheck(scope.row.id,scope.row.role)"
+              >查看</el-button>
             <el-button 
             v-if="scope.row.role !== 0"
             size="mini" 
@@ -85,14 +85,14 @@
       </el-table>
       
       <el-table v-if="userrole === 1" :data="detailInfoList" style="width: 100%" >
-        <el-table-column prop="education" label="学历" width="225">
+        <el-table-column prop="education" label="学历" width="200">
        <template #default="scope">
        <span>{{ scope.row?.education ? educationMap[scope.row.education] : '未知学历' }}</span>
       </template>
        </el-table-column> 
-        <el-table-column prop="school" label="毕业院校" width="225"/> 
-        <el-table-column prop="favor" label="理想岗位" width="225"/>
-        <el-table-column prop="membership" label="会员等级" width="225">
+        <el-table-column prop="school" label="毕业院校" width="200"/> 
+        <el-table-column prop="favor" label="理想岗位" width="200"/>
+        <el-table-column prop="membership" label="会员等级" width="200">
        <template #default="scope">
        <span>{{ scope.row?.membership === undefined || scope.row?.membership === null
       ? '  '
@@ -101,9 +101,9 @@
        </el-table-column>
       </el-table>
         <el-table v-else-if="userrole === 2" :data="detailInfoList" style="width: 100%">
-                <el-table-column prop="company" label="所属公司" width="300" />
-        <el-table-column prop="position" label="招聘岗位" width="300" />
-        <el-table-column prop="experience" label="资历" width="300" />
+                <el-table-column prop="company" label="所属公司" width="266.7" />
+        <el-table-column prop="position" label="招聘岗位" width="266.7" />
+        <el-table-column prop="experience" label="资历" width="266.7" />
       </el-table>
         <template #footer>
           <el-button @click="checkDialogVisible = false">返回</el-button>
@@ -235,14 +235,28 @@ const handleCheck = async (id,role) => {
       }
     }
   }
+
+  //初始化WebSocket
+  const socket = new WebSocket(`ws://localhost:8080/webSocket?userId=${2}`)
+  
   if(role!==0&&(isEmptyContent(infoList.value) || isEmptyContent(detailInfoList.value))) {
     ElMessage.error('用户详细信息不完整')
+    //发送消息
+    socket.onopen = () => {
+    socket.send(JSON.stringify({
+      from: 2,
+      to: id,
+      content: "您好，请完善您的个人信息",
+      type: 0 // 私聊
+    }))
+  }
     return;
   }
   if(role===0&&isEmptyContent(infoList.value)){
     ElMessage.error('用户详细信息不完整')
     return;
   }
+  
   userrole.value = role
   checkDialogVisible.value = true
 }
@@ -293,10 +307,45 @@ onBeforeUnmount(() => {
 </script>
  
 <style scoped>
+.user-management{
+  padding: 20px;
+}
+
 .card {
   background: #fff;
   border-radius: 4px;
   padding: 20px;
   box-shadow: 0 1px 4px rgba(0, 0, 0, 0.1);
+}
+
+.el-table {
+  table-layout: fixed; /* 固定表格布局 */
+}
+
+.el-table__body {
+  width: 100% !important;
+}
+
+.el-table .el-table__cell {
+  padding: 12px 16px; /* 增加单元格内边距 */
+}
+
+.el-table-column[prop="id"] {
+  width: 180px;
+}
+
+.el-table-column[prop="operation"] {
+  width: 380px;
+}
+
+/* 其他列自动分配剩余空间 */
+.el-table-column:not([prop="id"]):not([prop="operation"]) {
+  width: auto;
+}
+
+:deep(.el-table th),
+:deep(.el-table td) {
+  text-align: center;
+  vertical-align: middle;
 }
 </style>

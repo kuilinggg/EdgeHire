@@ -18,3 +18,9 @@
     
     </div>
 </template>
+
+<style scoped>
+.algorithm {
+  padding: 20px;
+}
+</style>
