@@ -371,6 +371,11 @@ const beforeAvatarUpload = (file) => {
 }
 
 const handleAvatarChange = (file) => {
+  // 新增：类型校验，防止非图片类型被选中
+  if (!file.raw.type.startsWith('image/')) {
+    ElMessage.error('只能上传图片文件!')
+    return
+  }
   // 这里只做本地预览，实际项目应上传到服务器后返回url
   avatarFile.value = file.raw
   const reader = new FileReader()
@@ -603,7 +608,7 @@ const cleanAccumulatedContent = (content) => {
   
   return content
     .replace(/data:\s*\n/g, '\n') // 移除单独行的data:
-    .replace(/\ndata:\s*\n/g, '\n\n') // 移除换行间的data:
+    .replace(/\ndata:\s*\n/g, '\n\n') // 秘除换行间的data:
     .replace(/^data:\s*/gm, '') // 移除行首的data:前缀
     .replace(/data:\s*$/gm, '') // 移除行尾的data:
     .replace(/data:\s+/g, ' ') // 移除中间的data:并保留空格
