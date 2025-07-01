@@ -20,11 +20,15 @@ public interface PostRepository extends JpaRepository<Post, Integer> {
     List<Post> findAllWithDetails();
 
     // 根据条件筛选投递记录
-    @Query("SELECT p FROM Post p LEFT JOIN FETCH p.user LEFT JOIN FETCH p.seekerInfo LEFT JOIN FETCH p.resume " +
-           "WHERE (:keyword IS NULL OR p.user.username LIKE %:keyword% OR p.seekerInfo.favor LIKE %:keyword%) " +
-           "AND (:education IS NULL OR p.seekerInfo.education = :education) " +
-           "AND (:favor IS NULL OR p.seekerInfo.favor LIKE %:favor%)")
-    List<Post> findByFilter(@Param("keyword") String keyword, 
-                           @Param("education") Integer education, 
-                           @Param("favor") String favor);
+    @Query("SELECT p FROM Post p " +
+            "LEFT JOIN FETCH p.user u " +         // 连接并抓取User，并给它一个别名 u
+            "LEFT JOIN FETCH u.info " +           // 从User(u)出发，连接并抓取Info
+            "LEFT JOIN FETCH p.seekerInfo " +
+            "LEFT JOIN FETCH p.resume " +
+            "WHERE (:keyword IS NULL OR u.info.realname LIKE %:keyword% OR u.info.phone LIKE %:keyword% OR u.info.email LIKE %:keyword% OR p.seekerInfo.school LIKE %:keyword% OR p.seekerInfo.favor LIKE %:keyword%) " +
+            "AND (:education IS NULL OR p.seekerInfo.education = :education) " +
+            "AND (:membership IS NULL OR p.seekerInfo.membership = :membership)")
+    List<Post> findByFilter(@Param("keyword") String keyword,
+                            @Param("education") Integer education,
+                            @Param("membership") Integer membership);
 }
