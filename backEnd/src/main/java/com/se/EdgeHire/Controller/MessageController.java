@@ -1,8 +1,10 @@
 package com.se.EdgeHire.Controller;
 
 import com.se.EdgeHire.Entity.ChatUser;
+import com.se.EdgeHire.Entity.HrInfo;
 import com.se.EdgeHire.Entity.Message;
 import com.se.EdgeHire.Entity.User;
+import com.se.EdgeHire.Repository.HrInfoRepository;
 import com.se.EdgeHire.Repository.MessageRepository;
 import com.se.EdgeHire.Repository.UserRepository;
 import com.se.EdgeHire.Service.MessageService;
@@ -25,6 +27,8 @@ public class MessageController {
 
     MessageService messageService;
 
+    HrInfoRepository hrInfoRepository;
+
     /**
      * 获取聊天用户列表
      * @param id 用户id
@@ -42,6 +46,10 @@ public class MessageController {
             Optional<User> temp = userRepository.findById(i);
             if(temp.isPresent()) {
                 ChatUser chatUser = new ChatUser();
+                if(temp.get().getRole() == 2) {
+                    Optional<HrInfo> hrInfo = hrInfoRepository.findByUserId(i);
+                    hrInfo.ifPresent(info -> chatUser.setCompany(info.getCompany()));
+                }
                 chatUser.setChatUser(temp.get());
                 int unreadCount = unreadCountMap.getOrDefault(i, 0);
                 chatUser.setUnReadCount(unreadCount);

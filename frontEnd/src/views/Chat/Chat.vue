@@ -19,7 +19,10 @@
     <div class="chat-main">
       <div class="chat-header">
         <el-avatar :src="currentUser.avatar" />
-        <span class="chat-user-name">{{ currentUser.username || '请选择联系人' }}</span>
+        <div class="chat-user-info">
+          <span class="chat-user-name">{{ currentUser.username || '请选择联系人' }}</span>
+          <span v-if="currentUser.company" class="chat-user-company">{{ currentUser.company }}</span>
+        </div>
         <div class="chat-header-avatar-menu">
           <el-dropdown trigger="hover">
             <span>
@@ -577,8 +580,25 @@ onMounted(() => {
   position: relative;
   z-index: 2;
 }
-.chat-user-name {
+
+.chat-user-info {
+  display: flex;
+  flex-direction: column;
   margin-left: 16px;
+}
+
+.chat-user-name {
+  font-size: 16px;
+  font-weight: 500;
+  color: #333;
+  line-height: 1.2;
+}
+
+.chat-user-company {
+  font-size: 12px;
+  color: #909399;
+  margin-top: 2px;
+  line-height: 1;
 }
 .chat-messages {
   flex: 1;
