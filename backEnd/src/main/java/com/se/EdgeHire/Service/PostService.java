@@ -39,8 +39,8 @@ public class PostService {
     }
 
     // 根据条件筛选投递记录
-    public List<Post> getPostsByFilter(String keyword, Integer education, String favor) {
-        return postRepository.findByFilter(keyword, education, favor);
+    public List<Post> getPostsByFilter(String keyword, Integer education, Integer membership) {
+        return postRepository.findByFilter(keyword, education, membership);
     }
 
     // 根据userId获取投递记录及其关联信息

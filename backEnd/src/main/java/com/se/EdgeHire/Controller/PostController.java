@@ -50,8 +50,8 @@ public class PostController {
     public List<Post> getPostsByFilter(
             @RequestParam(required = false) String keyword,
             @RequestParam(required = false) Integer education,
-            @RequestParam(required = false) String favor) {
-        return postService.getPostsByFilter(keyword, education, favor);
+            @RequestParam(required = false) Integer membership) {
+        return postService.getPostsByFilter(keyword, education, membership);
     }
 
     // 根据userId获取投递记录及其关联信息
