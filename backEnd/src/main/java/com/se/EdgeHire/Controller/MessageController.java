@@ -45,6 +45,9 @@ public class MessageController {
         for(var i : userIds) {
             Optional<User> temp = userRepository.findById(i);
             if(temp.isPresent()) {
+                if(temp.get().getId() == 0) {
+                    continue;
+                }
                 ChatUser chatUser = new ChatUser();
                 if(temp.get().getRole() == 2) {
                     Optional<HrInfo> hrInfo = hrInfoRepository.findByUserId(i);
@@ -62,16 +65,26 @@ public class MessageController {
                 .comparing(ChatUser::getLatestMessageTime
                         , Comparator.nullsLast(Comparator.reverseOrder())));
 
-        ChatUser systemUser = new ChatUser();
-        systemUser.setUsername("系统消息");
-        systemUser.setId(0);
-        if(latestMessagesMap.get(0) != null) {
-            systemUser.setLatestMessage(latestMessagesMap.get(0).getContent());
-            systemUser.setLatestMessageTime(latestMessagesMap.get(0).getTime());
+        Optional<User> sysUser = userRepository.findById(0);
+
+        if(sysUser.isPresent()) {
+            ChatUser chatUser = new ChatUser();
+            chatUser.setChatUser(sysUser.get());
+            int unreadCount = unreadCountMap.getOrDefault(0, 0);
+            chatUser.setUnReadCount(unreadCount);
+            chatUsers.addFirst(chatUser);
         }
 
-        systemUser.setUnReadCount(unreadCountMap.getOrDefault(0, 0));
-        chatUsers.addFirst(systemUser);
+//        ChatUser systemUser = new ChatUser();
+//        systemUser.setUsername("系统消息");
+//        systemUser.setId(0);
+//        if(latestMessagesMap.get(0) != null) {
+//            systemUser.setLatestMessage(latestMessagesMap.get(0).getContent());
+//            systemUser.setLatestMessageTime(latestMessagesMap.get(0).getTime());
+//        }
+//
+//        systemUser.setUnReadCount(unreadCountMap.getOrDefault(0, 0));
+//        chatUsers.addFirst(systemUser);
 
         log.info("用户: {} 请求获取聊天用户列表", id);
 
