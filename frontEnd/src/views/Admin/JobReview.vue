@@ -72,6 +72,7 @@ import { getUser } from '../../api/user';
 import { getAllResumes , deleteResume } from '../../api/resume';
 import { ElMessage ,ElMessageBox } from 'element-plus';
 import dayjs from 'dayjs'
+import axios from 'axios'
 
 const dialogVisible=ref(false);
 const resumes = ref([]);
@@ -194,6 +195,16 @@ const handlePageChange = (page) => {
   currentPage.value = page
 }
 
+// 消息发送
+const sendReminder = async (userId, content) => {
+  try {
+    var res = await axios.post(`/admin/sysMsg/${userId}/${content}`)
+  } catch (e) {
+    return false
+  }
+  return true
+}
+
 const handleDelete=async(resume)=>{
   try {
     await ElMessageBox.confirm(
@@ -202,6 +213,10 @@ const handleDelete=async(resume)=>{
       { type: 'warning' }
     )
     await deleteResume(resume.id)
+    await sendReminder(
+          resume.userId,
+          `【系统提醒】您创建时间为${ formatDate(resume.createTime)}的简历已被驳回！`
+        )
     ElMessage.success('驳回成功')
     loadResumes()
   } catch (e) {
