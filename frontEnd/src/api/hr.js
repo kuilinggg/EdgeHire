@@ -32,5 +32,10 @@ export const hrApi = {
   // 获取KPI数据
   getKpiData(userId) {
     return axios.get(`${API_BASE}/hr/kpi/${userId}`)
+  },
+
+  // HR发起沟通
+  initiateChat(hrUserId, targetUserId) {
+    return axios.post(`${API_BASE}/hr/initiate-chat/${hrUserId}/${targetUserId}`)
   }
 }

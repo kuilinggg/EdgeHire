@@ -2,6 +2,7 @@ package com.se.EdgeHire.Controller;
 
 import com.se.EdgeHire.Entity.HrInfo;
 import com.se.EdgeHire.Service.HrService;
+import com.se.EdgeHire.WebSocket.WebSocketHandler;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
@@ -87,5 +88,49 @@ public class HrController {
     public ResponseEntity<Map<String, Boolean>> verifyHr(@PathVariable Integer userId) {
         boolean isHr = hrService.isHr(userId);
         return ResponseEntity.ok(Map.of("isHr", isHr));
+    }
+
+    /**
+     * HR发起沟通
+     * @param hrUserId HR用户ID
+     * @param targetUserId 目标求职者用户ID
+     * @return 响应结果
+     */
+    @PostMapping("/initiate-chat/{hrUserId}/{targetUserId}")
+    public ResponseEntity<?> initiateChat(@PathVariable Integer hrUserId, @PathVariable Integer targetUserId) {
+        try {
+            // 验证用户是否为HR
+            if (!hrService.isHr(hrUserId)) {
+                return ResponseEntity.badRequest().body(Map.of("error", "用户不是HR角色"));
+            }
+
+            // 获取HR信息
+            Optional<HrInfo> hrInfoOpt = hrService.getHrInfoByUserId(hrUserId);
+            String companyName = "未知公司";
+            if (hrInfoOpt.isPresent() && hrInfoOpt.get().getCompany() != null && !hrInfoOpt.get().getCompany().trim().isEmpty()) {
+                companyName = hrInfoOpt.get().getCompany();
+            }
+
+            // 构造问候消息
+            String greetingMessage = "你好，我是" + companyName + "的HR，对你的简历很感兴趣，希望能和你聊一聊。";
+
+            // 通过WebSocket发送消息
+            WebSocketHandler webSocketHandler = WebSocketHandler.getInstance();
+            if (webSocketHandler != null) {
+                webSocketHandler.sendMessageToUser(hrUserId, targetUserId, greetingMessage);
+                return ResponseEntity.ok(Map.of(
+                    "success", true,
+                    "message", "沟通已发起",
+                    "greetingMessage", greetingMessage
+                ));
+            } else {
+                return ResponseEntity.status(500).body(Map.of("error", "WebSocket服务不可用"));
+            }
+
+        } catch (Exception e) {
+            System.err.println("发起沟通失败: " + e.getMessage());
+            e.printStackTrace();
+            return ResponseEntity.status(500).body(Map.of("error", "发起沟通失败: " + e.getMessage()));
+        }
     }
 }

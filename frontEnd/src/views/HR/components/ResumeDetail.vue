@@ -84,16 +84,20 @@
 
 <script setup>
 import { ref, computed } from 'vue'
-import { 
-  ChatDotRound, 
-  User, 
-  Aim, 
-  Briefcase, 
-  School, 
-  Monitor, 
+import { useRouter } from 'vue-router'
+import { ElMessage } from 'element-plus'
+import {
+  ChatDotRound,
+  User,
+  Aim,
+  Briefcase,
+  School,
+  Monitor,
   Medal,
   ChatLineRound
 } from '@element-plus/icons-vue'
+import { hrApi } from '../../../api/hr.js'
+import { useAuthStore } from '../../../stores/authStore.js'
 
 const props = defineProps({
   resume: { type: Object, required: true },
@@ -102,6 +106,8 @@ const props = defineProps({
 })
 
 const emit = defineEmits(['start-chat'])
+const router = useRouter()
+const authStore = useAuthStore()
 
 // 解析简历内容（严格仿照JobSeeker/ResumeView.vue）
 const parsedResumeContent = computed(() => {
@@ -126,8 +132,50 @@ const formatDate = (dateStr) => {
   return `${y}年${m}月${day}日 ${h}:${min}`
 }
 
-const startChat = () => {
-  emit('start-chat', props.resume)
+const startChat = async () => {
+  try {
+    // 获取当前HR用户ID
+    const hrUserId = authStore.userId
+    if (!hrUserId) {
+      ElMessage.error('请先登录')
+      return
+    }
+
+    // 获取目标求职者用户ID
+    const targetUserId = props.resume.userId
+    if (!targetUserId) {
+      ElMessage.error('无法获取求职者信息')
+      return
+    }
+
+    // 显示加载状态
+    const loading = ElMessage({
+      message: '正在发起沟通...',
+      type: 'info',
+      duration: 0
+    })
+
+    // 调用发起沟通API
+    const response = await hrApi.initiateChat(hrUserId, targetUserId)
+
+    // 关闭加载状态
+    loading.close()
+
+    if (response.data && response.data.success) {
+      ElMessage.success(`沟通已发起：${response.data.greetingMessage}`)
+
+      // 跳转到聊天窗口
+      router.push(`/chat?userId=${targetUserId}`)
+
+      // 发出事件通知父组件（可选，用于关闭对话框等）
+      emit('start-chat', props.resume)
+    } else {
+      ElMessage.error(response.data?.error || '发起沟通失败')
+    }
+  } catch (error) {
+    console.error('发起沟通失败:', error)
+    ElMessage.error(error.response?.data?.error || '发起沟通失败，请稍后重试')
+  }
 }
 
 // favor解析
