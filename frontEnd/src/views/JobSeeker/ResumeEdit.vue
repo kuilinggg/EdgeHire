@@ -95,14 +95,12 @@
               </el-col>
               <el-col :span="6" style="display:flex;align-items:center;justify-content:center;">
                 <div class="avatar-box">
-                  <el-upload class="avatar-uploader" :auto-upload="false" :show-file-list="false"
-                    :before-upload="beforeAvatarUpload" :on-change="handleAvatarChange">
-                    <el-avatar v-if="form.avatar" :src="form.avatar" size="large" shape="square" class="resume-avatar"/>
-                    <el-icon v-else>
-                      <User />
-                    </el-icon>
-                    <div v-if="!form.avatar" class="el-upload__text">点击上传头像</div>
-                  </el-upload>
+                  <ImgCutter v-on:cutDown="onAvatarCrop" rate="3:4" size-change="false">
+                    <template #open>
+                      <el-avatar v-if="form.avatar" :src="form.avatar" size="large" shape="square" class="resume-avatar"/>
+                      <div v-if="!form.avatar" class="el-upload__text">点击上传头像</div>
+                    </template>
+                  </ImgCutter>
                 </div>
               </el-col>
             </el-row>
@@ -229,6 +227,7 @@ import { resumeOptimizeStream, parseStreamResponse } from '../../api/ai'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { User, Close, Plus, Promotion, Refresh } from '@element-plus/icons-vue'
 import { uploadFile } from '../../util/upload'
+import ImgCutter from 'vue-img-cutter'
 
 // AI侧边栏相关状态
 const showAiSidebar = ref(false)
@@ -362,27 +361,19 @@ const staticRules = {
 const rules = computed(computeRules)
 const formRef = ref()
 
-const beforeAvatarUpload = (file) => {
-  const isImage = file.type.startsWith('image/')
-  if (!isImage) {
-    ElMessage.error('只能上传图片文件!')
+const onAvatarCrop = (result) => {
+  // result.dataURL 是 base64 图片
+  form.value.avatar = result.dataURL
+  // 兼容之前的本地File对象逻辑
+  if (result.file) {
+    avatarFile.value = result.file
+    const reader = new FileReader()
+    reader.onload = (e) => {
+      form.value.avatar = e.target.result
+    }
+    reader.readAsDataURL(result.file)
   }
-  return isImage
-}
-
-const handleAvatarChange = (file) => {
-  // 新增：类型校验，防止非图片类型被选中
-  if (!file.raw.type.startsWith('image/')) {
-    ElMessage.error('只能上传图片文件!')
-    return
-  }
-  // 这里只做本地预览，实际项目应上传到服务器后返回url
-  avatarFile.value = file.raw
-  const reader = new FileReader()
-  reader.onload = (e) => {
-    form.value.avatar = e.target.result
-  }
-  reader.readAsDataURL(file.raw)
+  // 你也可以使用 result.blob 进行上传等操作
 }
 
 const LOCAL_DRAFT_KEY = computed(() => {
