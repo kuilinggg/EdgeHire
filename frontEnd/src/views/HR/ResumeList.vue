@@ -7,7 +7,7 @@
         <div class="search-bar">
           <el-input
             v-model="searchKeyword"
-            placeholder="输入姓名关键词"
+            placeholder="输入姓名/手机号/邮箱/学校/岗位关键词"
             class="search-input"
             clearable
             @keyup.enter="handleSearch"
@@ -23,6 +23,10 @@
             <el-option label="本科" value="5" />
             <el-option label="硕士" value="6" />
             <el-option label="博士" value="7" />
+          </el-select>
+          <el-select v-model="filters.membership" placeholder="会员等级" clearable class="filter-item">
+            <el-option label="普通会员" value="0" />
+            <el-option label="高级会员" value="1" />
           </el-select>
           <el-button type="primary" @click="handleSearch" class="search-btn">筛选</el-button>
         </div>
@@ -49,12 +53,26 @@
             <!-- 主体内容 -->
             <div class="main-content">
               <div class="header-info">
-                <h3 class="name">{{ userInfoMap[post.userId]?.realname || post.seekerInfo?.realname || '未知用户' }}</h3>
-                <span class="position">{{ post.seekerInfo?.favor || '未填写' }}</span>
+                <h3 class="name">
+                  <span v-html="highlight(userInfoMap[post.userId]?.realname || post.seekerInfo?.realname || '未知用户', searchKeyword)"></span>
+                </h3>
+                <div class="favor-tags">
+                  <el-tag v-for="favor in parseFavor(post.seekerInfo?.favor)" :key="favor" class="favor-tag" effect="plain">
+                    <span v-html="highlight(favor, searchKeyword)"></span>
+                  </el-tag>
+                </div>
               </div>
               <div class="info-tags">
                 <el-tag class="info-tag">学历：{{ getEducationText(post.seekerInfo?.education) }}</el-tag>
-                <el-tag class="info-tag">毕业院校：{{ post.seekerInfo?.school || '未填写' }}</el-tag>
+                <el-tag class="info-tag">
+                  毕业院校：<span v-html="highlight(post.seekerInfo?.school || '未填写', searchKeyword)"></span>
+                </el-tag>
+                <el-tag class="info-tag" v-if="userInfoMap[post.userId]?.phone">
+                  手机号：<span v-html="highlight(userInfoMap[post.userId]?.phone, searchKeyword)"></span>
+                </el-tag>
+                <el-tag class="info-tag" v-if="userInfoMap[post.userId]?.email">
+                  邮箱：<span v-html="highlight(userInfoMap[post.userId]?.email, searchKeyword)"></span>
+                </el-tag>
               </div>
               <div class="create-time">创建时间：{{ formatDate(post.resume?.createTime) }}</div>
             </div>
@@ -88,7 +106,8 @@
       <ResumeDetail
         v-if="selectedResume"
         :resume="selectedResume"
-        :tInfo="selectedTInfo"
+        :info="selectedInfo"
+        :seeker-info="selectedSeekerInfo"
         @start-chat="handleStartChat"
       />
     </el-dialog>
@@ -112,14 +131,16 @@ const authStore = useAuthStore()
 // 响应式数据
 const searchKeyword = ref('')
 const filters = ref({
-  education: ''
+  education: '',
+  membership: ''
 })
 const sortBy = ref('match')
 const currentPage = ref(1)
 const pageSize = ref(10)
 const showDetailDialog = ref(false)
 const selectedResume = ref(null)
-const selectedTInfo = ref(null)
+const selectedInfo = ref(null)
+const selectedSeekerInfo = ref(null)
 const loading = ref(false)
 const dataLoaded = ref(false)
 
@@ -168,10 +189,11 @@ const loadResumeData = async (isSearch = false) => {
   try {
     loading.value = true
     let response
-    if (isSearch && (searchKeyword.value || filters.value.education)) {
+    if (isSearch && (searchKeyword.value || filters.value.education || filters.value.membership !== '')) {
       response = await getPostsByFilter({
         keyword: searchKeyword.value,
-        education: filters.value.education
+        education: filters.value.education,
+        membership: filters.value.membership
       })
     } else {
       response = await getPostsWithDetails()
@@ -235,14 +257,16 @@ const toggleFavorite = async (post) => {
 
 const viewResumeDetail = (post) => {
   selectedResume.value = post.resume
-  selectedTInfo.value = post.seekerInfo
+  selectedInfo.value = userInfoMap.value[post.userId] || {}
+  selectedSeekerInfo.value = post.seekerInfo || {}
   showDetailDialog.value = true
 }
 
 const handleCloseDetail = () => {
   showDetailDialog.value = false
   selectedResume.value = null
-  selectedTInfo.value = null
+  selectedInfo.value = null
+  selectedSeekerInfo.value = null
 }
 
 const handleStartChat = (resume) => {
@@ -276,6 +300,24 @@ onMounted(async () => {
   // 初始化数据加载
   await loadResumeData()
 })
+
+// 解析favor为数组
+function parseFavor(favor) {
+  if (!favor) return []
+  try {
+    const arr = JSON.parse(favor)
+    return Array.isArray(arr) ? arr : [favor]
+  } catch {
+    return favor ? [favor] : []
+  }
+}
+
+// 高亮关键词
+function highlight(text, keyword) {
+  if (!keyword) return text
+  const reg = new RegExp(keyword, 'ig')
+  return String(text).replace(reg, m => `<span style='color:#f56c6c;background:rgba(255,230,230,0.7)'>${m}</span>`)
+}
 </script>
 
 <style scoped>
@@ -436,13 +478,30 @@ onMounted(async () => {
   margin: 0;
 }
 
-.position {
+.favor-tags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-top: 2px;
+}
+
+.favor-tag {
+  background: #eaf3ff;
   color: #3a36db;
+  border: 1px solid #e0e7ef;
+  font-size: 12px;
   font-weight: 500;
-  font-size: 14px;
-  background: #f0f0ff;
-  padding: 4px 12px;
-  border-radius: 16px;
+  border-radius: 12px;
+  padding: 2px 12px;
+  transition: background 0.2s, color 0.2s, border 0.2s;
+  box-shadow: none;
+  margin: 0;
+}
+
+.favor-tag:hover {
+  background: #d2e6ff;
+  color: #222;
+  border-color: #b3bff7;
 }
 
 .info-tags {

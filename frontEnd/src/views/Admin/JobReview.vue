@@ -3,7 +3,7 @@
     <h2>求职信息审查</h2>
     <div class="card">
       <div class="search-bar">
-        <el-input v-model="searchKeyword" placeholder="搜索特定用户" style="width: 300px" />
+        <el-input v-model="searchKeyword" placeholder="搜索用户...(用户名)" style="width: 300px" />
         <el-button type="primary" @click="handleSearch">搜索</el-button>
       </div>
 
@@ -229,5 +229,13 @@ onMounted(()=>{
   border-radius: 4px;
   padding: 20px;
   box-shadow: 0 1px 4px rgba(0, 0, 0, 0.1);
+}
+
+.resume-content {
+  white-space: pre-wrap;
+  font-size: 16px;
+  line-height: 1.6; 
+  padding: 0 12px; 
+  color: var(--el-text-color-primary);
 }
 </style>

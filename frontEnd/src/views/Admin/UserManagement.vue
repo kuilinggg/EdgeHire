@@ -3,7 +3,7 @@
     <h2>用户信息管理</h2>
     <div class="card">
       <div class="search-bar">
-        <el-input v-model="searchKeyword" placeholder="搜索用户..." style="width: 300px" />
+        <el-input v-model="searchKeyword" placeholder="搜索用户...(用户名)" style="width: 300px" />
         <el-button type="primary" @click="loadUsers">搜索</el-button>
         <el-select v-model="filterRole" placeholder="筛选角色" style="width: 150px; margin-left: 10px;" @change="loadUsers">
         <el-option
@@ -26,16 +26,16 @@
         </el-table-column>
         <el-table-column label="操作" width="380">
           <template #default="scope">
-            <el-button size="mini" @click="
-              infoList=[],detailInfoList=[],
-              handleCheck(scope.row.id,scope.row.role)"
-              >查看</el-button>
             <el-button 
             v-if="scope.row.role !== 0"
             size="mini" 
             @click="handleEdit(scope.row)"
             type="warning"
             >编辑</el-button>
+            <el-button size="mini" @click="
+              infoList=[],detailInfoList=[],
+              handleCheck(scope.row.id,scope.row.role)"
+              >查看</el-button>
             <el-button 
             v-if="scope.row.role !== 0"
             size="mini" 
@@ -85,14 +85,14 @@
       </el-table>
       
       <el-table v-if="userrole === 1" :data="detailInfoList" style="width: 100%" >
-        <el-table-column prop="education" label="学历" width="225">
+        <el-table-column prop="education" label="学历" width="200">
        <template #default="scope">
        <span>{{ scope.row?.education ? educationMap[scope.row.education] : '未知学历' }}</span>
       </template>
        </el-table-column> 
-        <el-table-column prop="school" label="毕业院校" width="225"/> 
-        <el-table-column prop="favor" label="理想岗位" width="225"/>
-        <el-table-column prop="membership" label="会员等级" width="225">
+        <el-table-column prop="school" label="毕业院校" width="200"/> 
+        <el-table-column prop="favor" label="理想岗位" width="200"/>
+        <el-table-column prop="membership" label="会员等级" width="200">
        <template #default="scope">
        <span>{{ scope.row?.membership === undefined || scope.row?.membership === null
       ? '  '
@@ -101,9 +101,9 @@
        </el-table-column>
       </el-table>
         <el-table v-else-if="userrole === 2" :data="detailInfoList" style="width: 100%">
-                <el-table-column prop="company" label="所属公司" width="300" />
-        <el-table-column prop="position" label="招聘岗位" width="300" />
-        <el-table-column prop="experience" label="资历" width="300" />
+                <el-table-column prop="company" label="所属公司" width="266.7" />
+        <el-table-column prop="position" label="招聘岗位" width="266.7" />
+        <el-table-column prop="experience" label="资历" width="266.7" />
       </el-table>
         <template #footer>
           <el-button @click="checkDialogVisible = false">返回</el-button>
@@ -127,7 +127,7 @@
 
 <script setup>
 import { ref, computed, onMounted, onBeforeUnmount } from 'vue'
-import { ElMessage, ElMessageBox } from 'element-plus'
+import { ElMessage, ElMessageBox,ElNotification } from 'element-plus'
 import { getUsers, updateUser, deleteUser } from '../../api/user'
 import { getInfoByUserId } from '../../api/info'
 import { getSeekerByUserId } from '../../api/seeker'
@@ -235,6 +235,7 @@ const handleCheck = async (id,role) => {
       }
     }
   }
+
   if(role!==0&&(isEmptyContent(infoList.value) || isEmptyContent(detailInfoList.value))) {
     ElMessage.error('用户详细信息不完整')
     return;
@@ -243,6 +244,7 @@ const handleCheck = async (id,role) => {
     ElMessage.error('用户详细信息不完整')
     return;
   }
+  
   userrole.value = role
   checkDialogVisible.value = true
 }
@@ -282,9 +284,139 @@ const handlePageChange = (page) => {
   currentPage.value = page
 }
 
-// 生命周期
-onMounted(() => {
-  loadUsers()
+// WebSocket 封装
+const socket = ref(null)
+const initWebSocket = (userId) => {
+  if (socket.value) return
+  socket.value = new WebSocket(`ws://localhost:8080/webSocket?userId=${userId}`)
+  socket.value.onerror = (e) => console.error('WebSocket 错误:', e)
+  socket.value.onclose = () => console.warn('WebSocket 断开')
+}
+
+// 本地每日提醒记录
+function shouldRemind(userId) {
+  const data = JSON.parse(localStorage.getItem('remindedUsersByDay') || '{}')
+  const today = new Date().toISOString().slice(0, 10)
+  //检查是否今天已经提醒过
+  return !(data[today]?.includes(userId))
+}
+
+//更新提醒记录（按天存）
+function markAsReminded(userId) {
+  const data = JSON.parse(localStorage.getItem('remindedUsersByDay') || '{}')
+  const today = new Date().toISOString().slice(0, 10)
+  if (!data[today]) {
+    data[today] = []
+  }
+  if (!data[today].includes(userId)) {
+    data[today].push(userId)
+  }
+  localStorage.setItem('remindedUsersByDay', JSON.stringify(data))
+}
+
+//localStorage定期清理 3 天前的数据
+function cleanOldRemindRecords() {
+  const data = JSON.parse(localStorage.getItem('remindedUsersByDay') || '{}')
+  const now = new Date()
+  const cutoff = new Date(now.setDate(now.getDate() - 3)).toISOString().slice(0, 10)
+  for (const date in data) {
+    if (date < cutoff) delete data[date]
+  }
+  localStorage.setItem('remindedUsersByDay', JSON.stringify(data))
+}
+
+// 消息发送
+const sendReminder = async (userId, content) => {
+  if (socket.value?.readyState === WebSocket.OPEN) {
+    socket.value.send(JSON.stringify({
+      from: 2, // 系统账号
+      to: userId,
+      content,
+      type: 0
+    }))
+    return true
+  }
+  return false
+}
+
+// 检查单个用户信息完整性
+const checkUserInfoComplete = async (user) => {
+  const { id, role } = user
+
+  try {
+    const infoRes = await getInfoByUserId(id)
+    const info = infoRes.data
+    if (!info.realname?.trim() || !info.phone?.trim() || !info.email?.trim() || info.age == null || info.gender == null) {
+      return false
+    }
+  } catch {
+    return false
+  }
+
+  if (role === 2) {
+    try {
+      const hrRes = await hrApi.getHrInfo(id)
+      const hr = hrRes.data
+      if (!hr.company?.trim() || !hr.position?.trim() || !hr.experience?.trim()) {
+        return false
+      }
+    } catch {
+      return false
+    }
+  }
+
+  if (role === 1) {
+    try {
+      const seekerRes = await getSeekerByUserId(id)
+      const seeker = seekerRes.data
+      if (!seeker.school?.trim() || !seeker.favor?.trim() || seeker.education == null) {
+        return false
+      }
+    } catch {
+      return false
+    }
+  }
+
+  return true
+}
+
+// 主流程
+onMounted(async () => {
+  await loadUsers()
+  
+  initWebSocket(2) // 系统账号 ID = 2
+  cleanOldRemindRecords()
+
+  try {
+    const res = await getUsers()
+    const Users = res.data.filter(u => u.role !== 0)
+    let incompleteCount = 0
+
+    for (const user of Users) {
+      if (!shouldRemind(user.id)) continue
+
+      const isComplete = await checkUserInfoComplete(user)
+      if (!isComplete) {
+        const success = await sendReminder(
+          user.id,
+          `【系统提醒】您的${user.role === 1 ? '求职者' : 'HR'}信息不完整，请及时完善！`
+        )
+        if (success) {
+          markAsReminded(user.id)
+          incompleteCount++
+          console.log(user.id)
+        }
+      }
+    }
+
+    ElNotification({
+      title: '信息完整度检测完成',
+      message: `已发送 ${incompleteCount} 条提醒`,
+      type: 'success'
+    })
+  } catch (error) {
+    console.error('自动提醒流程异常:', error)
+  }
 })
 
 onBeforeUnmount(() => {
@@ -293,10 +425,45 @@ onBeforeUnmount(() => {
 </script>
  
 <style scoped>
+.user-management{
+  padding: 20px;
+}
+
 .card {
   background: #fff;
   border-radius: 4px;
   padding: 20px;
   box-shadow: 0 1px 4px rgba(0, 0, 0, 0.1);
+}
+
+.el-table {
+  table-layout: fixed; /* 固定表格布局 */
+}
+
+.el-table__body {
+  width: 100% !important;
+}
+
+.el-table .el-table__cell {
+  padding: 12px 16px; /* 增加单元格内边距 */
+}
+
+.el-table-column[prop="id"] {
+  width: 180px;
+}
+
+.el-table-column[prop="operation"] {
+  width: 380px;
+}
+
+/* 其他列自动分配剩余空间 */
+.el-table-column:not([prop="id"]):not([prop="operation"]) {
+  width: auto;
+}
+
+:deep(.el-table th),
+:deep(.el-table td) {
+  text-align: center;
+  vertical-align: middle;
 }
 </style>

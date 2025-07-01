@@ -166,6 +166,7 @@ import { useRouter } from 'vue-router'
 import { Document, Delete, Edit, Calendar, Phone, Message, Location, User, InfoFilled, Reading, Briefcase, Suitcase, Star } from '@element-plus/icons-vue'
 import { ElMessage } from 'element-plus'
 import html2pdf from 'html2pdf.js'
+import domtoimage from 'dom-to-image'
 
 const resumeList = ref([])
 const selectedIndex = ref('0')
@@ -242,42 +243,71 @@ const formatDate = (dateStr) => {
   return `${y}年${m}月${day}日 ${h}:${min}`
 }
 
-//导出简历为PDF
-function exportPdf() {
-  const element = document.querySelector('.resume-a4-paper')
-  if (!element) {
-    ElMessage.error('没有可导出的简历内容')
-    return
+async function coverSectionTitlesWithImages() {
+  const nodes = Array.from(document.querySelectorAll('.resume-a4-section-title'));
+  for (const node of nodes) {
+    if (node.querySelector('.section-title-img-cover')) continue;
+    const dataUrl = await domtoimage.toPng(node, {bgcolor: null});
+    const img = document.createElement('img');
+    img.src = dataUrl;
+    img.className = 'section-title-img-cover';
+    img.style.position = 'absolute';
+    img.style.left = '0';
+    img.style.top = '0';
+    img.style.width = node.offsetWidth + 'px';
+    img.style.height = node.offsetHeight + 'px';
+    img.style.zIndex = '10';
+    img.style.pointerEvents = 'none';
+    node.style.position = 'relative';
+    node.appendChild(img);
   }
-  html2pdf()
-    .from(element)
-    .set({
-      margin: 0,
-      filename: (parsedResumeContent.value.姓名 || '简历') + '.pdf',
-      html2canvas: { scale: 2, useCORS: true },
-      jsPDF: {
-        unit: 'mm', format: 'a4', orientation: 'portrait',
-      },
-      pagebreak: { mode: ['avoid-all'] },
-      pagesplit: false
-    })
-    .toPdf()
-    .get('pdf')
-    .then(function(pdf){
-      // 删除多余的页面
-      while (pdf.internal.getNumberOfPages() > 1) {
-        pdf.deletePage(2)
-      }
-      return pdf
-    })
-    .save()
-    .then(() => {
-      ElMessage.success('导出成功')
-    })
-    .catch((err) => {
-      console.error('导出失败:', err)
-      ElMessage.error('导出失败，请稍后重试')
-    })
+}
+function removeSectionTitleImageCovers() {
+  document.querySelectorAll('.section-title-img-cover').forEach(img => img.remove());
+}
+
+//导出简历为PDF
+async function exportPdf() {
+  await coverSectionTitlesWithImages();
+  setTimeout(() => {
+    const element = document.querySelector('.resume-a4-paper')
+    if (!element) {
+      ElMessage.error('没有可导出的简历内容')
+      removeSectionTitleImageCovers();
+      return
+    }
+    html2pdf()
+      .from(element)
+      .set({
+        margin: 0,
+        filename: (parsedResumeContent.value.姓名 || '简历') + '.pdf',
+        html2canvas: { scale: 2, useCORS: true },
+        jsPDF: {
+          unit: 'mm', format: 'a4', orientation: 'portrait',
+        },
+        pagebreak: { mode: ['avoid-all'] },
+        pagesplit: false
+      })
+      .toPdf()
+      .get('pdf')
+      .then(function(pdf){
+        // 删除多余的页面
+        while (pdf.internal.getNumberOfPages() > 1) {
+          pdf.deletePage(2)
+        }
+        return pdf
+      })
+      .save()
+      .then(() => {
+        ElMessage.success('导出成功')
+        removeSectionTitleImageCovers();
+      })
+      .catch((err) => {
+        console.error('导出失败:', err)
+        ElMessage.error('导出失败，请稍后重试')
+        removeSectionTitleImageCovers();
+      })
+  }, 100)
 }
 
 onMounted(refreshResumeList)
