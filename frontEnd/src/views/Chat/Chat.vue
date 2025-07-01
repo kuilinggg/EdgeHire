@@ -207,10 +207,13 @@ function selectUser(user) {
   // 清除选中用户的未读消息数量
   const selectedUser = users.value.find(u => u.id === user.id)
   if (selectedUser && selectedUser.unReadCount) {
+    if (selectedUser.unReadCount > 0) {
+      var res = axios.post(`/chat/messages/read/${user.id}/${speaker}`)
+      console.log('已标记消息为已读:', res.data)
+    } 
     selectedUser.unReadCount = 0
   }
-  var res = axios.post(`/chat/messages/read/${user.id}/${speaker}`)
-  console.log('已标记消息为已读:', res.data)
+  
   // 切换联系人时可加载历史消息
   if (!messageMap.data) {
     return

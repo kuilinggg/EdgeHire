@@ -75,17 +75,6 @@ public class MessageController {
             chatUsers.addFirst(chatUser);
         }
 
-//        ChatUser systemUser = new ChatUser();
-//        systemUser.setUsername("系统消息");
-//        systemUser.setId(0);
-//        if(latestMessagesMap.get(0) != null) {
-//            systemUser.setLatestMessage(latestMessagesMap.get(0).getContent());
-//            systemUser.setLatestMessageTime(latestMessagesMap.get(0).getTime());
-//        }
-//
-//        systemUser.setUnReadCount(unreadCountMap.getOrDefault(0, 0));
-//        chatUsers.addFirst(systemUser);
-
         log.info("用户: {} 请求获取聊天用户列表", id);
 
         return ResponseEntity.ok(chatUsers);

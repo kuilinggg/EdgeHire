@@ -31,50 +31,10 @@
 
     <!-- 简历A4纸风格内容区 -->
     <div class="resume-a4-wrapper">
-      <div class="resume-a4-paper">
-        <div class="resume-a4-header">
-          <div class="resume-a4-title">
-            <div class="resume-a4-name">{{ parsedResumeContent.姓名 || '姓名' }}</div>
-            <div class="resume-a4-job">{{ parsedResumeContent.求职意向 || '求职意向' }}</div>
-          </div>
-          <div class="resume-a4-avatar">
-            <el-avatar v-if="resume.avatar" :src="resume.avatar" size="large" />
-            <span v-else>无</span>
-          </div>
-        </div>
-        <div class="resume-a4-section" v-if="parsedResumeContent['个人信息']">
-          <div class="resume-a4-section-title">个人信息</div>
-          <div class="resume-a4-section-content">
-            <span v-for="(v, k) in parsedResumeContent['个人信息']" :key="k" class="resume-a4-field">{{ k }}：{{ v }}</span>
-          </div>
-        </div>
-        <div class="resume-a4-section" v-if="parsedResumeContent['教育背景']">
-          <div class="resume-a4-section-title">教育背景</div>
-          <div class="resume-a4-section-content">
-            <span v-for="(v, k) in parsedResumeContent['教育背景']" :key="k" class="resume-a4-field">{{ k }}：<template v-if="Array.isArray(v)">{{ v.join('，') }}</template><template v-else>{{ v }}</template></span>
-          </div>
-        </div>
-        <div class="resume-a4-section" v-if="parsedResumeContent['任职情况'] && parsedResumeContent['任职情况'].length">
-          <div class="resume-a4-section-title">任职情况</div>
-          <div class="resume-a4-section-content">
-            <div v-for="(job, idx) in parsedResumeContent['任职情况']" :key="idx" class="resume-a4-job-block">
-              <span v-for="(v, k) in job" :key="k">{{ k }}：{{ v }}</span>
-            </div>
-          </div>
-        </div>
-        <div class="resume-a4-section" v-if="parsedResumeContent['实习_兼职'] && parsedResumeContent['实习_兼职'].length">
-          <div class="resume-a4-section-title">实习/兼职</div>
-          <div class="resume-a4-section-content">
-            <div v-for="(exp, idx) in parsedResumeContent['实习_兼职']" :key="idx" class="resume-a4-job-block">
-              <span v-for="(v, k) in exp" :key="k">{{ k }}：{{ v }}</span>
-            </div>
-          </div>
-        </div>
-        <div class="resume-a4-section" v-if="parsedResumeContent['自我评价']">
-          <div class="resume-a4-section-title">自我评价</div>
-          <div class="resume-a4-section-content">{{ parsedResumeContent['自我评价'] }}</div>
-        </div>
-      </div>
+      <ResumeA4Paper
+        :content="parsedResumeContent"
+        :avatar="resume.avatar"
+      />
       <div class="resume-create-time-a4">
         创建时间：<span class="resume-label">{{ formatDate(resume.createTime) }}</span>
       </div>
@@ -83,17 +43,13 @@
 </template>
 
 <script setup>
-import { ref, computed } from 'vue'
-import { 
-  ChatDotRound, 
-  User, 
-  Aim, 
-  Briefcase, 
-  School, 
-  Monitor, 
-  Medal,
-  ChatLineRound
-} from '@element-plus/icons-vue'
+import { computed } from 'vue'
+import { useRouter } from 'vue-router'
+import { ElMessage } from 'element-plus'
+import { ChatDotRound } from '@element-plus/icons-vue'
+import { hrApi } from '../../../api/hr.js'
+import { useAuthStore } from '../../../stores/authStore.js'
+import ResumeA4Paper from '../../../components/ResumeA4Paper.vue'
 
 const props = defineProps({
   resume: { type: Object, required: true },
@@ -102,6 +58,8 @@ const props = defineProps({
 })
 
 const emit = defineEmits(['start-chat'])
+const router = useRouter()
+const authStore = useAuthStore()
 
 // 解析简历内容（严格仿照JobSeeker/ResumeView.vue）
 const parsedResumeContent = computed(() => {
@@ -126,8 +84,50 @@ const formatDate = (dateStr) => {
   return `${y}年${m}月${day}日 ${h}:${min}`
 }
 
-const startChat = () => {
-  emit('start-chat', props.resume)
+const startChat = async () => {
+  try {
+    // 获取当前HR用户ID
+    const hrUserId = authStore.userId
+    if (!hrUserId) {
+      ElMessage.error('请先登录')
+      return
+    }
+
+    // 获取目标求职者用户ID
+    const targetUserId = props.resume.userId
+    if (!targetUserId) {
+      ElMessage.error('无法获取求职者信息')
+      return
+    }
+
+    // 显示加载状态
+    const loading = ElMessage({
+      message: '正在发起沟通...',
+      type: 'info',
+      duration: 0
+    })
+
+    // 调用发起沟通API
+    const response = await hrApi.initiateChat(hrUserId, targetUserId)
+
+    // 关闭加载状态
+    loading.close()
+
+    if (response.data && response.data.success) {
+      ElMessage.success(`沟通已发起：${response.data.greetingMessage}`)
+
+      // 跳转到聊天窗口
+      router.push(`/chat?userId=${targetUserId}`)
+
+      // 发出事件通知父组件（可选，用于关闭对话框等）
+      emit('start-chat', props.resume)
+    } else {
+      ElMessage.error(response.data?.error || '发起沟通失败')
+    }
+  } catch (error) {
+    console.error('发起沟通失败:', error)
+    ElMessage.error(error.response?.data?.error || '发起沟通失败，请稍后重试')
+  }
 }
 
 // favor解析
@@ -235,73 +235,9 @@ function getEducationText(educationValue) {
 
 .resume-a4-wrapper {
   padding: 24px;
-}
-
-.resume-a4-paper {
-  background: #fff;
-  border-radius: 8px;
-  padding: 24px;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
-}
-
-.resume-a4-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  margin-bottom: 24px;
-}
-
-.resume-a4-title {
   display: flex;
   flex-direction: column;
-  gap: 8px;
-}
-
-.resume-a4-name {
-  font-size: 24px;
-  font-weight: 600;
-  color: #333;
-}
-
-.resume-a4-job {
-  font-size: 16px;
-  color: #666;
-}
-
-.resume-a4-avatar {
-  display: flex;
   align-items: center;
-  gap: 12px;
-}
-
-.resume-a4-section {
-  margin-bottom: 24px;
-}
-
-.resume-a4-section-title {
-  font-size: 18px;
-  font-weight: 600;
-  color: #3a36db;
-  margin-bottom: 16px;
-  padding-bottom: 8px;
-  border-bottom: 2px solid #f0f0ff;
-}
-
-.resume-a4-section-content {
-  display: flex;
-  flex-direction: column;
-  gap: 12px;
-}
-
-.resume-a4-field {
-  display: flex;
-  align-items: center;
-}
-
-.resume-a4-job-block {
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
 }
 
 .resume-create-time-a4 {
@@ -330,16 +266,6 @@ function getEducationText(educationValue) {
   .action-buttons {
     width: 100%;
     justify-content: center;
-  }
-
-  .resume-a4-header {
-    flex-direction: column;
-    gap: 20px;
-  }
-
-  .resume-a4-avatar {
-    flex-direction: column;
-    text-align: center;
   }
 }
 </style>
