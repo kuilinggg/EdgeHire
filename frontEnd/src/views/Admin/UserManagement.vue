@@ -132,6 +132,7 @@ import { getUsers, updateUser, deleteUser } from '../../api/user'
 import { getInfoByUserId } from '../../api/info'
 import { getSeekerByUserId } from '../../api/seeker'
 import { hrApi } from '../../api/hr'
+import axios from 'axios'
 
 // 响应式数据
 const users = ref([])
@@ -284,15 +285,6 @@ const handlePageChange = (page) => {
   currentPage.value = page
 }
 
-// WebSocket 封装
-const socket = ref(null)
-const initWebSocket = (userId) => {
-  if (socket.value) return
-  socket.value = new WebSocket(`ws://localhost:8080/webSocket?userId=${userId}`)
-  socket.value.onerror = (e) => console.error('WebSocket 错误:', e)
-  socket.value.onclose = () => console.warn('WebSocket 断开')
-}
-
 // 本地每日提醒记录
 function shouldRemind(userId) {
   const data = JSON.parse(localStorage.getItem('remindedUsersByDay') || '{}')
@@ -327,16 +319,12 @@ function cleanOldRemindRecords() {
 
 // 消息发送
 const sendReminder = async (userId, content) => {
-  if (socket.value?.readyState === WebSocket.OPEN) {
-    socket.value.send(JSON.stringify({
-      from: 2, // 系统账号
-      to: userId,
-      content,
-      type: 0
-    }))
-    return true
+  try {
+    var res = await axios.post(`/admin/sysMsg/${userId}/${content}`)
+  } catch (e) {
+    return false
   }
-  return false
+  return true
 }
 
 // 检查单个用户信息完整性
@@ -383,8 +371,6 @@ const checkUserInfoComplete = async (user) => {
 // 主流程
 onMounted(async () => {
   await loadUsers()
-  
-  initWebSocket(2) // 系统账号 ID = 2
   cleanOldRemindRecords()
 
   try {
