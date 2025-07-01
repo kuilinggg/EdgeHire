@@ -83,6 +83,14 @@
         @change="autoSave">
         <el-row :gutter="24">
           <el-col :span="24">
+            <!-- 模板选择下拉框 -->
+            <el-form-item label="模板选择" prop="template">
+              <el-select v-model="form.Resume.template" placeholder="请选择简历模板" style="width: 220px;">
+                <el-option label="模板一" value="1" />
+                <el-option label="模板二" value="2" />
+                <el-option label="模板三" value="3" />
+              </el-select>
+            </el-form-item>
             <el-row>
               <el-col :span="18">
                 <el-divider>基本信息</el-divider>
@@ -215,7 +223,7 @@
         </el-row>
       </el-form>
     </el-card>
-  </div>
+</div>
 </template>
 
 <script setup>
@@ -238,6 +246,7 @@ const messagesContainer = ref(null)
 
 const defaultForm = {
   Resume: {
+    template: '1', // 默认值改为字符串
     姓名: '',
     求职意向: '',
     个人信息: {
@@ -678,7 +687,7 @@ const sendMessage = async () => {
       stream,
       // onChunk: 接收到数据块时
       (chunk) => {
-        // 清理chunk中可能残留的data:前缀，但保留换行
+        // 清理chunk中可能残留的data:前缀，但保留内容和换行
         let cleanChunk = chunk
         if (typeof cleanChunk === 'string') {
           // 移除可能的data:前缀，但保留内容和换行
