@@ -90,7 +90,11 @@
                 <el-option label="模板二" value="2" />
                 <el-option label="模板三" value="3" />
               </el-select>
+              <el-button size="small" style="margin-left:12px;" @click="previewDialogVisible = true">预览</el-button>
             </el-form-item>
+            <el-dialog v-model="previewDialogVisible" title="简历预览" width="850px" top="40px" :close-on-click-modal="false">
+              <component :is="currentPreviewComponent" :content="form.Resume" :avatar="form.avatar" />
+            </el-dialog>
             <el-row>
               <el-col :span="18">
                 <el-divider>基本信息</el-divider>
@@ -236,6 +240,9 @@ import { ElMessage, ElMessageBox } from 'element-plus'
 import { User, Close, Plus, Promotion, Refresh } from '@element-plus/icons-vue'
 import { uploadFile } from '../../util/upload'
 import ImgCutter from 'vue-img-cutter'
+import ResumeA4PaperBlueTopBar from '../../components/ResumeA4PaperBlueTopBar.vue'
+import ResumeA4Paper from '../../components/ResumeA4Paper.vue'
+import ResumeA4PaperBlueLeft from '../../components/ResumeA4PaperBlueLeft.vue'
 
 // AI侧边栏相关状态
 const showAiSidebar = ref(false)
@@ -243,6 +250,7 @@ const aiMessages = ref([])
 const userInput = ref('')
 const isAiTyping = ref(false)
 const messagesContainer = ref(null)
+const previewDialogVisible = ref(false)
 
 const defaultForm = {
   Resume: {
@@ -887,9 +895,13 @@ const onClearAll = () => {
   })
 }
 
-// 页面加载时仅加载后端简历
-// loadResume()
-// 已移除草稿相关函数、变量、事件监听、合并逻辑等
+// 动态预览组件选择，参考ResumeView.vue
+const currentPreviewComponent = computed(() => {
+  const template = form.value.Resume.template || '1'
+  if (template === '2') return ResumeA4PaperBlueLeft
+  else if (template === '3') return ResumeA4PaperBlueTopBar
+  return ResumeA4Paper
+})
 </script>
 
 <style scoped>
