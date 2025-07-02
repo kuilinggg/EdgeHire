@@ -118,7 +118,6 @@ const props = defineProps({
   background: #fff;
   box-shadow: 0 8px 32px rgba(0, 0, 0, 0.13);
   border: 1.5px solid #e5e7eb;
-  border-radius: 10px;
   padding: 0;
   margin-bottom: 18px;
   box-sizing: border-box;
@@ -148,7 +147,6 @@ const props = defineProps({
   font-weight: bold;
   letter-spacing: 1px;
   position: relative;
-  border-radius: 10px 10px 0 0;
 }
 .resume-a4-paper::after {
   content: "";
