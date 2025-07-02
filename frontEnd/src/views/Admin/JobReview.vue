@@ -5,68 +5,83 @@
       <div class="search-bar">
         <el-input v-model="searchKeyword" placeholder="搜索用户...(用户名)" style="width: 300px" />
         <el-button type="primary" @click="handleSearch">搜索</el-button>
+        <el-button 
+          type="info" 
+          @click="filterRecentResumes"
+          :class="{ 'active-filter': isRecentFilterActive }"
+          :disabled="isRecentFilterActive"
+        >
+          近三日简历
+        </el-button>
+        <el-button 
+          type="warning" 
+          @click="resetFilters"
+          :disabled="!isFilterActive"
+        >
+          重置筛选
+        </el-button>
       </div>
 
-          <el-table :data="paginatedResumes" style="width: 100%">
-            <el-table-column prop="id" label="ID" width="180"/>
-            <el-table-column prop="userId" label="用户ID" />
-            <el-table-column label="用户名">
-                <template #default="scope">
-               {{ scope.row.username || '加载中...' }}
-           </template>
-            </el-table-column>
-            <el-table-column label="头像">
-             <template #default="scope">
-             <el-image
-             style="width: 50px; height: 50px"
-             :src="scope.row.avatar"
-             :preview-src-list="[scope.row.avatar]"
-              >
-            <template #error>
-            <div class="image-placeholder"></div>
-            </template>
-            </el-image>
-             </template>
-             </el-table-column>
-            <el-table-column prop="createTime" label="创建时间">
-               <template #default="scope">
-             {{ formatDate(scope.row.createTime) }}
-             </template>
-          </el-table-column>
-            <el-table-column label="操作" width="300">
-             <template #default="scope">
-                <el-button type="success" @click="selectedResumeContent='',contentCheck(scope.row)">查看简历内容</el-button>
-                <el-button type="danger" @click="handleDelete(scope.row)">驳回</el-button>
+      <el-table :data="paginatedResumes" style="width: 100%">
+        <el-table-column prop="id" label="ID" width="180"/>
+        <el-table-column prop="userId" label="用户ID" />
+        <el-table-column label="用户名">
+          <template #default="scope">
+            {{ scope.row.username || '加载中...' }}
+          </template>
+        </el-table-column>
+        <el-table-column label="头像">
+          <template #default="scope">
+            <el-image
+              style="width: 50px; height: 50px"
+              :src="scope.row.avatar"
+              :preview-src-list="[scope.row.avatar]"
+            >
+              <template #error>
+                <div class="image-placeholder"></div>
               </template>
-            </el-table-column>
-          </el-table>
+            </el-image>
+          </template>
+        </el-table-column>
+        <el-table-column prop="createTime" label="创建时间">
+          <template #default="scope">
+            {{ formatDate(scope.row.createTime) }}
+          </template>
+        </el-table-column>
+        <el-table-column label="操作" width="300">
+          <template #default="scope">
+            <el-button type="success" @click="selectedResumeContent='',contentCheck(scope.row)">查看简历内容</el-button>
+            <el-button type="danger" @click="handleDelete(scope.row)">驳回</el-button>
+          </template>
+        </el-table-column>
+      </el-table>
 
-    <!-- 弹窗 -->
-    <el-dialog
-      title="简历详情"
-      v-model="dialogVisible"
-      width="50%"
-      center
-    >
-      <el-scrollbar height="300px">
-        <p style="white-space: pre-wrap">{{ selectedResumeContent }}</p>
-      </el-scrollbar>
+      <!-- 弹窗 -->
+      <el-dialog
+        title="简历详情"
+        v-model="dialogVisible"
+        width="50%"
+        center
+      >
+        <el-scrollbar height="300px">
+          <p style="white-space: pre-wrap">{{ selectedResumeContent }}</p>
+        </el-scrollbar>
 
-      <template #footer>
-        <el-button @click="dialogVisible = false">返回</el-button>
-      </template>
-    </el-dialog>
+        <template #footer>
+          <el-button @click="dialogVisible = false">返回</el-button>
+        </template>
+      </el-dialog>
 
-    <el-pagination
-      style="margin-top: 20px; text-align: center"
-      background
-      layout="prev, pager, next"
-      :current-page="currentPage"
-      :page-size="pageSize"
-      :total="resumes.length"
-      @current-change="handlePageChange"
+      <el-pagination
+        style="margin-top: 20px; text-align: center"
+        background
+        layout="prev, pager, next"
+        :current-page="currentPage"
+        :page-size="pageSize"
+        :total="filteredResumes.length"
+        @current-change="handlePageChange"
       />
-   </div>
+    </div>
   </div>
 </template>
 
@@ -85,7 +100,7 @@ const selectedResumeContent = ref('')
 const currentPage = ref(1)
 const pageSize = ref(10)
 const searchKeyword = ref('')
-
+const isRecentFilterActive = ref(false) // 近三日筛选状态
 
 // 计算属性
 const paginatedResumes = computed(() => {
@@ -94,10 +109,34 @@ const paginatedResumes = computed(() => {
   return filteredResumes.value.slice(start, end)
 })
 
+// 新增：是否有筛选条件激活
+const isFilterActive = computed(() => {
+  return searchKeyword.value || isRecentFilterActive.value
+})
+
 // 搜索函数
 const handleSearch = () => {
   currentPage.value = 1 // 搜索时重置到第一页
   filterResumes()
+}
+
+//近三日筛选功能
+const filterRecentResumes = () => {
+  if (!isRecentFilterActive.value) {
+    isRecentFilterActive.value = true
+    currentPage.value = 1
+    filterResumes()
+    ElMessage.success('已筛选近三日简历')
+  }
+}
+
+// 重置筛选条件
+const resetFilters = () => {
+  searchKeyword.value = ''
+  isRecentFilterActive.value = false
+  currentPage.value = 1
+  filterResumes()
+  ElMessage.success('筛选条件已重置')
 }
 
 const isStrictJSON=(str)=> {
@@ -165,14 +204,22 @@ const enhanceResumesWithUserInfo = async (resumesData) => {
 
 // 过滤函数
 const filterResumes = () => {
-  if (!searchKeyword.value) {
-    filteredResumes.value = [...resumes.value]
-    return
+  let result = [...resumes.value]
+  
+  // 应用搜索关键词筛选
+  if (searchKeyword.value) {
+    result = result.filter(resume => 
+      String(resume.username).includes(searchKeyword.value))
   }
   
-  filteredResumes.value = resumes.value.filter(resume => 
-    String(resume.username).includes(searchKeyword.value)
-  )
+  // 应用近三日筛选
+  if (isRecentFilterActive.value) {
+    const threeDaysAgo = dayjs().subtract(3, 'day').startOf('day')
+    result = result.filter(resume => 
+      dayjs(resume.createTime).isAfter(threeDaysAgo))
+  }
+  
+  filteredResumes.value = result
 }
 
 const loadResumes = async () => {
@@ -199,7 +246,7 @@ const contentCheck = async (row) => {
     return
   }
   
-    // 尝试解析JSON
+  // 尝试解析JSON
   if(isStrictJSON(row.content))
   { 
     const parsedData = JSON.parse(row.content);
@@ -300,5 +347,19 @@ onMounted(()=>{
   display: flex;
   align-items: center;
   justify-content: center;
+}
+
+/* 筛选按钮激活状态的样式 */
+.active-filter {
+  background-color: #409eff;
+  color: white;
+  border-color: #409eff;
+}
+
+.search-bar {
+  display: flex;
+  gap: 10px;
+  margin-bottom: 20px;
+  flex-wrap: wrap;
 }
 </style>

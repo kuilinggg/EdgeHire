@@ -325,6 +325,10 @@ onMounted(async () => {
   background: #fff;
   border-radius: 4px;
   box-shadow: 0 4px 24px 0 rgba(64,158,255,0.08), 0 1.5px 6px 0 rgba(0,0,0,0.04);
+  width: 794px;
+  max-width: 100%;
+  margin-left: auto;
+  margin-right: auto;
 }
 .profile-view {
   display: flex;
@@ -418,10 +422,14 @@ onMounted(async () => {
   margin: 0 auto;
 }
 .resume-a4-paper {
-  width: 100%;
+  width: 794px;
+  min-height: 1123px;
+  margin: 0 auto;
   display: flex;
   flex-direction: column;
   align-items: center;
+  background: #fff;
+  box-shadow: 0 2px 12px #eee;
 }
 .button-area {
   text-align: right;

@@ -31,25 +31,39 @@
 
     <!-- 简历A4纸风格内容区 -->
     <div class="resume-a4-wrapper">
-      <ResumeA4Paper
-        :content="parsedResumeContent"
-        :avatar="resume.avatar"
-      />
-      <div class="resume-create-time-a4">
-        创建时间：<span class="resume-label">{{ formatDate(resume.createTime) }}</span>
-      </div>
+      <template v-if="isImportedResume">
+        <div class="pdf-a4-fixed-wrapper">
+          <canvas ref="pdfCanvasRef" class="pdf-a4-canvas"></canvas>
+          <div v-if="pdfLoading" class="pdf-loading-mask">PDF加载中...</div>
+        </div>
+        <div class="resume-create-time-a4">
+          上传时间：<span class="resume-label">{{ formatDate(resume.createTime) }}</span>
+        </div>
+      </template>
+      <template v-else>
+        <component
+          :is="resumeA4Component"
+          :content="parsedResumeContent"
+          :avatar="resume.avatar"
+        />
+        <div class="resume-create-time-a4">
+          创建时间：<span class="resume-label">{{ formatDate(resume.createTime) }}</span>
+        </div>
+      </template>
     </div>
   </div>
 </template>
 
 <script setup>
-import { computed } from 'vue'
+import { computed, ref, watch, onMounted, nextTick } from 'vue'
 import { useRouter } from 'vue-router'
 import { ElMessage } from 'element-plus'
 import { ChatDotRound } from '@element-plus/icons-vue'
 import { hrApi } from '../../../api/hr.js'
 import { useAuthStore } from '../../../stores/authStore.js'
 import ResumeA4Paper from '../../../components/ResumeA4Paper.vue'
+import ResumeA4PaperBlueLeft from '../../../components/ResumeA4PaperBlueLeft.vue'
+import ResumeA4PaperBlueTopBar from '../../../components/ResumeA4PaperBlueTopBar.vue'
 
 const props = defineProps({
   resume: { type: Object, required: true },
@@ -69,6 +83,80 @@ const parsedResumeContent = computed(() => {
     return obj && typeof obj === 'object' ? obj : {}
   } catch {
     return { 内容: props.resume.content }
+  }
+})
+
+const isImportedResume = computed(() => {
+  return parsedResumeContent.value && parsedResumeContent.value.importType === 'pdf' && parsedResumeContent.value.pdfUrl
+})
+const importedPdfUrl = computed(() => {
+  return isImportedResume.value ? parsedResumeContent.value.pdfUrl : ''
+})
+
+const resumeA4Component = computed(() => {
+  const template = parsedResumeContent.value.template || '1'
+  if (template === '2') return ResumeA4PaperBlueLeft
+  else if (template === '3') return ResumeA4PaperBlueTopBar
+  return ResumeA4Paper
+})
+
+// PDF.js渲染相关
+const pdfCanvasRef = ref(null)
+const pdfLoading = ref(false)
+const pdfDocCache = new Map()
+function loadPdfJsScript() {
+  return new Promise((resolve, reject) => {
+    if (window.pdfjsLib) return resolve(window.pdfjsLib)
+    const script = document.createElement('script')
+    script.src = 'https://cdn.jsdelivr.net/npm/pdfjs-dist@3.11.174/build/pdf.min.js'
+    script.onload = () => {
+      window.pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdn.jsdelivr.net/npm/pdfjs-dist@3.11.174/build/pdf.worker.min.js'
+      resolve(window.pdfjsLib)
+    }
+    script.onerror = reject
+    document.head.appendChild(script)
+  })
+}
+loadPdfJsScript()
+async function renderPdfToCanvas(url) {
+  pdfLoading.value = true
+  await loadPdfJsScript()
+  const pdfjsLib = window.pdfjsLib
+  try {
+    let pdf
+    if (pdfDocCache.has(url)) {
+      pdf = pdfDocCache.get(url)
+    } else {
+      const loadingTask = pdfjsLib.getDocument(url)
+      pdf = await loadingTask.promise
+      pdfDocCache.set(url, pdf)
+    }
+    const page = await pdf.getPage(1)
+    const viewport = page.getViewport({ scale: 1 })
+    const targetWidth = 794
+    const targetHeight = 1123
+    const scale = Math.min(targetWidth / viewport.width, targetHeight / viewport.height)
+    const scaledViewport = page.getViewport({ scale })
+    const canvas = pdfCanvasRef.value
+    const context = canvas.getContext('2d')
+    canvas.width = scaledViewport.width
+    canvas.height = scaledViewport.height
+    context.clearRect(0, 0, canvas.width, canvas.height)
+    await page.render({ canvasContext: context, viewport: scaledViewport }).promise
+  } catch (e) {
+    console.error('PDF渲染失败', e)
+  } finally {
+    pdfLoading.value = false
+  }
+}
+watch(importedPdfUrl, (url) => {
+  if (isImportedResume.value && url) {
+    setTimeout(() => renderPdfToCanvas(url), 0)
+  }
+})
+onMounted(() => {
+  if (isImportedResume.value && importedPdfUrl.value) {
+    setTimeout(() => renderPdfToCanvas(importedPdfUrl.value), 0)
   }
 })
 
@@ -238,6 +326,42 @@ function getEducationText(educationValue) {
   display: flex;
   flex-direction: column;
   align-items: center;
+}
+
+.pdf-a4-fixed-wrapper {
+  width: 794px;
+  height: 1123px;
+  max-width: 100%;
+  max-height: 100%;
+  background: #fff;
+  box-shadow: 0 2px 12px #eee;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+  position: relative;
+}
+
+.pdf-a4-canvas {
+  width: 794px;
+  height: 1123px;
+  background: #fff;
+  display: block;
+}
+
+.pdf-loading-mask {
+  position: absolute;
+  left: 0;
+  top: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(255, 255, 255, 0.7);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 20px;
+  color: #409eff;
+  z-index: 10;
 }
 
 .resume-create-time-a4 {

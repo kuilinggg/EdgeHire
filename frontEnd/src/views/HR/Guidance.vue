@@ -4,7 +4,7 @@
     <div class="top-section">
       <div class="page-title">求职指导请求</div>
       <el-tabs v-model="activeTab" class="status-tabs" @tab-change="handleTabChange">
-        <el-tab-pane :label="`待处理 (${pendingCount})`" name="pending" />
+        <el-tab-pane :label="`待分配 (${pendingCount})`" name="pending" />
         <el-tab-pane :label="`指导中 (${processingCount})`" name="processing" />
         <el-tab-pane label="已完成" name="completed" />
       </el-tabs>
@@ -39,9 +39,9 @@
       >
         <div class="card-header">
           <div class="user-info">
-            <el-avatar :src="request.avatar" :size="60" />
+            <el-avatar :src="userInfoMap[request.userId]?.avatar || request.userAvatar || 'https://api.dicebear.com/7.x/miniavs/svg?seed=' + (userInfoMap[request.userId]?.realname || request.userName)" :size="60" />
             <div class="user-details">
-              <h3 class="user-name">{{ request.userName }}</h3>
+              <h3 class="user-name">{{ userInfoMap[request.userId]?.realname || request.userName }}</h3>
               <div class="job-intention">
                 <span class="label">求职意向：</span>
                 <span class="value">{{ request.targetPosition }}</span>
@@ -103,13 +103,13 @@
 
             <!-- 基本信息 -->
             <div class="user-profile">
-              <el-avatar :src="selectedRequest.avatar" :size="80" />
+              <el-avatar :src="userInfoMap[selectedRequest.userId]?.avatar || selectedRequest.userAvatar || 'https://api.dicebear.com/7.x/miniavs/svg?seed=' + (userInfoMap[selectedRequest.userId]?.realname || selectedRequest.userName)" :size="80" />
               <div class="profile-info">
-                <h2>{{ selectedRequest.userName }}</h2>
+                <h2>{{ userInfoMap[selectedRequest.userId]?.realname || selectedRequest.userName }}</h2>
                 <p class="target-position">{{ selectedRequest.targetPosition }}</p>
                 <div class="contact-info">
-                  <p><el-icon><Phone /></el-icon> {{ selectedRequest.phone || '138****8888' }}</p>
-                  <p><el-icon><Message /></el-icon> {{ selectedRequest.email || 'user@example.com' }}</p>
+                  <p><el-icon><Phone /></el-icon> {{ userInfoMap[selectedRequest.userId]?.phone || selectedRequest.phone }}</p>
+                  <p><el-icon><Message /></el-icon> {{ userInfoMap[selectedRequest.userId]?.email || selectedRequest.email }}</p>
                 </div>
               </div>
             </div>
@@ -131,12 +131,12 @@
             <div class="resume-section">
               <h3>简历信息</h3>
               <div class="resume-summary">
-                <p><strong>工作经验：</strong>{{ selectedRequest.experience || '3年' }}</p>
-                <p><strong>教育背景：</strong>{{ selectedRequest.education || '本科' }}</p>
+                <p><strong>工作经验：</strong>{{ selectedRequest.experience }}</p>
+                <p><strong>教育背景：</strong>{{ selectedRequest.education }}</p>
                 <p><strong>核心技能：</strong></p>
                 <div class="skills-tags">
                   <el-tag
-                    v-for="skill in (selectedRequest.skills || ['Vue.js', 'JavaScript', 'Node.js'])"
+                    v-for="skill in getSkillsArray(selectedRequest.skills)"
                     :key="skill"
                     size="small"
                     type="info"
@@ -151,66 +151,124 @@
 
           <!-- 右侧：操作与决策区 -->
           <div class="right-section">
-            <div class="section-title">
-              <el-icon><Tools /></el-icon>
-              处理请求
+            <!-- 待分配状态 -->
+            <div v-if="selectedRequest.status === 'pending'">
+              <div class="section-title">
+                <el-icon><Tools /></el-icon>
+                处理请求
+              </div>
+
+              <div class="action-area">
+                <div class="action-buttons">
+                  <el-button
+                    type="primary"
+                    size="large"
+                    @click="acceptRequest"
+                    :loading="processing"
+                    class="accept-btn"
+                  >
+                    <el-icon><Check /></el-icon>
+                    开始指导
+                  </el-button>
+
+                  <el-button
+                    size="large"
+                    @click="handleCloseDrawer"
+                    class="reject-btn"
+                  >
+                    <el-icon><Close /></el-icon>
+                    取消
+                  </el-button>
+                </div>
+
+                <div class="tips-info">
+                  <el-alert
+                    title="提示信息"
+                    type="info"
+                    :closable="false"
+                    show-icon
+                  >
+                    <p>接受后将与该求职者建立联系，您可以开始提供指导服务。</p>
+                    <p>服务完成后平台将为您结算收益。</p>
+                  </el-alert>
+                </div>
+              </div>
             </div>
 
-            <div class="action-area">
-              <div class="action-buttons">
-                <el-button
-                  type="primary"
-                  size="large"
-                  @click="acceptRequest"
-                  :loading="processing"
-                  class="accept-btn"
-                >
-                  <el-icon><Check /></el-icon>
-                  接受指导
-                </el-button>
-
-                <el-button
-                  size="large"
-                  @click="showRejectDialog = true"
-                  class="reject-btn"
-                >
-                  <el-icon><Close /></el-icon>
-                  婉拒请求
-                </el-button>
+            <!-- 指导中状态 -->
+            <div v-else-if="selectedRequest.status === 'processing'">
+              <div class="section-title">
+                <el-icon><Tools /></el-icon>
+                联系求职者
               </div>
 
-              <div class="tips-info">
-                <el-alert
-                  title="提示信息"
-                  type="info"
-                  :closable="false"
-                  show-icon
-                >
-                  <p>接受后将与该求职者建立联系，您可以开始提供指导服务。</p>
-                  <p>服务完成后平台将为您结算收益。</p>
-                </el-alert>
+              <div class="action-area">
+                <div class="action-buttons">
+                  <el-button
+                    type="primary"
+                    size="large"
+                    @click="contactJobSeeker"
+                    class="contact-btn"
+                  >
+                    <el-icon><Message /></el-icon>
+                    联系求职者
+                  </el-button>
+                </div>
+
+                <div class="complete-section">
+                  <el-divider />
+                  <h4>完成指导</h4>
+                  <el-input
+                    v-model="completionNote"
+                    type="textarea"
+                    :rows="4"
+                    placeholder="请输入指导总结或备注（可选）"
+                    class="completion-input"
+                  />
+                  <el-button
+                    type="success"
+                    size="large"
+                    @click="completeGuidance"
+                    class="complete-btn"
+                  >
+                    <el-icon><CircleCheck /></el-icon>
+                    完成指导
+                  </el-button>
+                </div>
+              </div>
+            </div>
+
+            <!-- 已完成状态 -->
+            <div v-else-if="selectedRequest.status === 'completed'">
+              <div class="section-title">
+                <el-icon><Tools /></el-icon>
+                求职者评价
               </div>
 
-              <!-- 如果是处理中状态，显示完成按钮 -->
-              <div v-if="selectedRequest.status === 'processing'" class="complete-section">
-                <el-divider />
-                <h4>完成指导</h4>
-                <el-input
-                  v-model="completionNote"
-                  type="textarea"
-                  :rows="4"
-                  placeholder="请输入指导总结或备注（可选）"
-                  class="completion-input"
-                />
-                <el-button
-                  type="success"
-                  size="large"
-                  @click="completeGuidance"
-                  class="complete-btn"
-                >
-                  <el-icon><CircleCheck /></el-icon>
-                  完成指导
-                </el-button>
+              <div class="action-area">
+                <div class="rating-section">
+                  <div v-if="selectedRequest.rating" class="user-rating">
+                    <h4>用户评分</h4>
+                    <el-rate
+                      v-model="selectedRequest.rating"
+                      disabled
+                      show-score
+                      text-color="#ff9900"
+                      score-template="{value} 分"
+                    />
+                  </div>
+
+                  <div v-if="selectedRequest.userComment" class="user-comment">
+                    <h4>用户评价</h4>
+                    <div class="comment-content">
+                      {{ selectedRequest.userComment }}
+                    </div>
+                  </div>
+
+                  <div v-if="!selectedRequest.rating && !selectedRequest.userComment" class="no-rating">
+                    <el-empty description="用户暂未评价" />
+                  </div>
+                </div>
               </div>
             </div>
           </div>
@@ -218,39 +276,7 @@
       </div>
     </el-drawer>
 
-    <!-- 拒绝请求对话框 -->
-    <el-dialog
-      v-model="showRejectDialog"
-      title="婉拒请求"
-      width="500px"
-      :before-close="handleCloseRejectDialog"
-    >
-      <div class="reject-content">
-        <p>请选择拒绝原因或自定义输入：</p>
-        <el-radio-group v-model="rejectReason" class="reject-reasons">
-          <el-radio label="时间安排冲突">时间安排冲突</el-radio>
-          <el-radio label="专业领域不匹配">专业领域不匹配</el-radio>
-          <el-radio label="当前指导名额已满">当前指导名额已满</el-radio>
-          <el-radio label="custom">自定义原因</el-radio>
-        </el-radio-group>
 
-        <el-input
-          v-if="rejectReason === 'custom'"
-          v-model="customRejectReason"
-          type="textarea"
-          :rows="3"
-          placeholder="请输入拒绝原因"
-          class="custom-reason-input"
-        />
-      </div>
-
-      <template #footer>
-        <span class="dialog-footer">
-          <el-button @click="showRejectDialog = false">取消</el-button>
-          <el-button type="primary" @click="confirmReject">确认拒绝</el-button>
-        </span>
-      </template>
-    </el-dialog>
   </div>
 </template>
 
@@ -268,6 +294,14 @@ import {
   CircleCheck
 } from '@element-plus/icons-vue'
 import { ElMessage } from 'element-plus'
+import {
+  getPendingGuidanceRequests,
+  getHRGuidanceList,
+  assignHR,
+  submitGuidanceFeedback,
+  getGuidanceRequestDetail
+} from '@/api/guidance'
+import { getInfoByUserId } from '@/api/info'
 
 const router = useRouter()
 
@@ -280,86 +314,55 @@ const loading = ref(false)
 const showDetailDrawer = ref(false)
 const selectedRequest = ref(null)
 const processing = ref(false)
-const showRejectDialog = ref(false)
-const rejectReason = ref('')
-const customRejectReason = ref('')
 const completionNote = ref('')
 
-// 模拟数据
-const guidanceRequests = ref([
-  {
-    id: 1,
-    userName: '李小明',
-    avatar: 'https://api.dicebear.com/7.x/miniavs/svg?seed=li',
-    targetPosition: '前端开发工程师',
-    status: 'pending',
-    requestTime: '2024-01-15T14:30:00',
-    guidanceType: '简历优化',
-    detailedDescription: '希望能够对我的简历进行优化，特别是项目经历部分，感觉描述不够突出。我是一名有3年工作经验的前端开发，主要使用Vue.js和React，但是投递简历后回复率不高，希望能得到专业的指导建议。',
-    phone: '138****1234',
-    email: 'lixiaoming@example.com',
-    experience: '3年经验',
-    education: '本科',
-    skills: ['Vue.js', 'React', 'JavaScript', 'TypeScript', 'Node.js']
-  },
-  {
-    id: 2,
-    userName: '王小红',
-    avatar: 'https://api.dicebear.com/7.x/miniavs/svg?seed=wang',
-    targetPosition: '产品经理',
-    status: 'processing',
-    requestTime: '2024-01-14T16:20:00',
-    guidanceType: '转行指导',
-    detailedDescription: '我目前是一名UI设计师，工作2年了，想要转行做产品经理。虽然在工作中有接触过产品相关的内容，但是没有正式的产品经理经验，希望能指导如何包装简历，突出我的产品思维和相关能力。',
-    phone: '139****5678',
-    email: 'wangxiaohong@example.com',
-    experience: '2年经验',
-    education: '本科',
-    skills: ['UI设计', 'Figma', 'Axure', '用户研究', '数据分析']
-  },
-  {
-    id: 3,
-    userName: '张三',
-    avatar: 'https://api.dicebear.com/7.x/miniavs/svg?seed=zhang',
-    targetPosition: 'Java开发工程师',
-    status: 'completed',
-    requestTime: '2024-01-13T10:15:00',
-    guidanceType: '面试技巧',
-    detailedDescription: '简历投递后能收到面试邀请，但是面试通过率很低。希望能得到面试技巧方面的指导，特别是技术面试和HR面试的注意事项。',
-    phone: '137****9012',
-    email: 'zhangsan@example.com',
-    experience: '5年经验',
-    education: '硕士',
-    skills: ['Java', 'Spring Boot', 'MySQL', 'Redis', 'Docker']
-  },
-  {
-    id: 4,
-    userName: '刘小美',
-    avatar: 'https://api.dicebear.com/7.x/miniavs/svg?seed=liu',
-    targetPosition: '数据分析师',
-    status: 'pending',
-    requestTime: '2024-01-16T09:45:00',
-    guidanceType: '职业规划',
-    detailedDescription: '刚毕业的应届生，学的是统计学专业，对数据分析很感兴趣，但是不知道如何规划职业发展路径，希望能得到专业的建议。',
-    phone: '136****3456',
-    email: 'liuxiaomei@example.com',
-    experience: '应届毕业生',
-    education: '本科',
-    skills: ['Python', 'SQL', 'Excel', 'SPSS', 'Tableau']
-  }
-])
+// 数据存储
+const pendingRequests = ref([])
+const processingRequests = ref([])
+const completedRequests = ref([])
+
+// 用户信息缓存（userId -> t_info）
+const userInfoMap = ref({})
+
+// 获取当前HR用户ID（从localStorage或其他地方获取）
+const getCurrentHRId = () => {
+  const userInfo = JSON.parse(localStorage.getItem('userInfo') || '{}')
+  return userInfo.id || 1 // 默认值，实际应该从登录信息获取
+}
+
+// 批量拉取所有请求涉及的userId的t_info
+const fetchUserInfos = async (requests) => {
+  const userIds = Array.from(new Set(requests.map(r => r.userId)))
+  const promises = userIds.map(async (uid) => {
+    if (!userInfoMap.value[uid]) {
+      try {
+        const res = await getInfoByUserId(uid)
+        if (res.data) userInfoMap.value[uid] = res.data
+      } catch {}
+    }
+  })
+  await Promise.all(promises)
+}
 
 // 计算属性
-const pendingCount = computed(() =>
-  guidanceRequests.value.filter(req => req.status === 'pending').length
-)
+const pendingCount = computed(() => pendingRequests.value.length)
+const processingCount = computed(() => processingRequests.value.length)
 
-const processingCount = computed(() =>
-  guidanceRequests.value.filter(req => req.status === 'processing').length
-)
+const currentRequestList = computed(() => {
+  switch (activeTab.value) {
+    case 'pending':
+      return pendingRequests.value
+    case 'processing':
+      return processingRequests.value
+    case 'completed':
+      return completedRequests.value
+    default:
+      return []
+  }
+})
 
 const filteredRequests = computed(() => {
-  let result = guidanceRequests.value.filter(req => req.status === activeTab.value)
+  let result = currentRequestList.value
 
   if (searchKeyword.value) {
     const keyword = searchKeyword.value.toLowerCase()
@@ -379,6 +382,55 @@ const currentRequests = computed(() => {
   return filteredRequests.value.slice(start, end)
 })
 
+// 数据获取方法
+const loadPendingRequests = async () => {
+  try {
+    loading.value = true
+    const response = await getPendingGuidanceRequests()
+    if (response.data.success) {
+      pendingRequests.value = response.data.data || []
+      // 获取用户信息
+      await fetchUserInfos(pendingRequests.value)
+    } else {
+      ElMessage.error(response.data.message || '获取待分配请求失败')
+    }
+  } catch (error) {
+    console.error('获取待分配请求失败:', error)
+    ElMessage.error('获取待分配请求失败')
+  } finally {
+    loading.value = false
+  }
+}
+
+const loadHRGuidanceList = async () => {
+  try {
+    loading.value = true
+    const hrId = getCurrentHRId()
+    const response = await getHRGuidanceList(hrId)
+    if (response.data.success) {
+      const allRequests = response.data.data || []
+      processingRequests.value = allRequests.filter(req => req.status === 'processing')
+      completedRequests.value = allRequests.filter(req => req.status === 'completed')
+      // 获取用户信息
+      await fetchUserInfos(allRequests)
+    } else {
+      ElMessage.error(response.data.message || '获取指导列表失败')
+    }
+  } catch (error) {
+    console.error('获取指导列表失败:', error)
+    ElMessage.error('获取指导列表失败')
+  } finally {
+    loading.value = false
+  }
+}
+
+const loadAllData = async () => {
+  await Promise.all([
+    loadPendingRequests(),
+    loadHRGuidanceList()
+  ])
+}
+
 // 方法
 const handleTabChange = (tabName) => {
   activeTab.value = tabName
@@ -391,7 +443,7 @@ const handleSearch = () => {
 
 const getTabText = (tab) => {
   const textMap = {
-    'pending': '待处理',
+    'pending': '待分配',
     'processing': '指导中',
     'completed': '已完成'
   }
@@ -407,9 +459,33 @@ const formatDate = (dateString) => {
   })
 }
 
-const viewAndHandle = (request) => {
-  selectedRequest.value = request
-  showDetailDrawer.value = true
+const getSkillsArray = (skills) => {
+  if (!skills) return []
+  if (Array.isArray(skills)) return skills
+  try {
+    return JSON.parse(skills)
+  } catch {
+    return skills.split(',').map(s => s.trim())
+  }
+}
+
+const viewAndHandle = async (request) => {
+  try {
+    loading.value = true
+    // 获取详细信息
+    const response = await getGuidanceRequestDetail(request.id)
+    if (response.data.success) {
+      selectedRequest.value = response.data.data
+      showDetailDrawer.value = true
+    } else {
+      ElMessage.error(response.data.message || '获取详情失败')
+    }
+  } catch (error) {
+    console.error('获取详情失败:', error)
+    ElMessage.error('获取详情失败')
+  } finally {
+    loading.value = false
+  }
 }
 
 const handleCloseDrawer = () => {
@@ -421,59 +497,52 @@ const handleCloseDrawer = () => {
 const acceptRequest = async () => {
   try {
     processing.value = true
-    // 模拟API调用
-    await new Promise(resolve => setTimeout(resolve, 1000))
+    const hrId = getCurrentHRId()
+    const response = await assignHR(selectedRequest.value.id, hrId)
 
-    selectedRequest.value.status = 'processing'
-    ElMessage.success('已接受指导请求，可以开始与求职者沟通了')
-    handleCloseDrawer()
+    if (response.data.success) {
+      ElMessage.success('已接受指导请求，可以开始与求职者沟通了')
+      // 更新本地数据
+      const requestIndex = pendingRequests.value.findIndex(req => req.id === selectedRequest.value.id)
+      if (requestIndex > -1) {
+        const updatedRequest = { ...selectedRequest.value, status: 'processing', hrUserId: hrId }
+        pendingRequests.value.splice(requestIndex, 1)
+        processingRequests.value.push(updatedRequest)
+      }
+      handleCloseDrawer()
+    } else {
+      ElMessage.error(response.data.message || '操作失败')
+    }
   } catch (error) {
+    console.error('接受请求失败:', error)
     ElMessage.error('操作失败，请稍后重试')
   } finally {
     processing.value = false
   }
 }
 
-const confirmReject = async () => {
-  const reason = rejectReason.value === 'custom' ? customRejectReason.value : rejectReason.value
-  if (!reason) {
-    ElMessage.warning('请选择或输入拒绝原因')
-    return
-  }
 
-  try {
-    // 模拟API调用
-    await new Promise(resolve => setTimeout(resolve, 500))
-
-    // 从列表中移除该请求
-    const index = guidanceRequests.value.findIndex(req => req.id === selectedRequest.value.id)
-    if (index > -1) {
-      guidanceRequests.value.splice(index, 1)
-    }
-
-    ElMessage.success('已婉拒该指导请求')
-    handleCloseDrawer()
-    handleCloseRejectDialog()
-  } catch (error) {
-    ElMessage.error('操作失败，请稍后重试')
-  }
-}
-
-const handleCloseRejectDialog = () => {
-  showRejectDialog.value = false
-  rejectReason.value = ''
-  customRejectReason.value = ''
-}
 
 const completeGuidance = async () => {
   try {
-    // 模拟API调用
-    await new Promise(resolve => setTimeout(resolve, 500))
+    const feedback = completionNote.value || '指导已完成'
+    const response = await submitGuidanceFeedback(selectedRequest.value.id, feedback)
 
-    selectedRequest.value.status = 'completed'
-    ElMessage.success('指导已完成')
-    handleCloseDrawer()
+    if (response.data.success) {
+      ElMessage.success('指导已完成')
+      // 更新本地数据
+      const requestIndex = processingRequests.value.findIndex(req => req.id === selectedRequest.value.id)
+      if (requestIndex > -1) {
+        const updatedRequest = { ...selectedRequest.value, status: 'completed', feedback }
+        processingRequests.value.splice(requestIndex, 1)
+        completedRequests.value.push(updatedRequest)
+      }
+      handleCloseDrawer()
+    } else {
+      ElMessage.error(response.data.message || '操作失败')
+    }
   } catch (error) {
+    console.error('完成指导失败:', error)
     ElMessage.error('操作失败，请稍后重试')
   }
 }
@@ -481,6 +550,12 @@ const completeGuidance = async () => {
 const viewFullResume = () => {
   ElMessage.info('跳转到完整简历页面...')
   // 这里可以跳转到简历详情页面
+}
+
+const contactJobSeeker = () => {
+  // 这里可以跳转到聊天页面或打开联系方式
+  ElMessage.info('正在跳转到聊天页面...')
+  // router.push(`/hr/chat/${selectedRequest.value.userId}`)
 }
 
 const handleSizeChange = (val) => {
@@ -491,6 +566,11 @@ const handleSizeChange = (val) => {
 const handleCurrentChange = (val) => {
   currentPage.value = val
 }
+
+// 生命周期
+onMounted(() => {
+  loadAllData()
+})
 </script>
 
 <style scoped>
@@ -806,21 +886,45 @@ const handleCurrentChange = (val) => {
   width: 100%;
 }
 
-/* 拒绝对话框样式 */
-.reject-content p {
-  margin-bottom: 16px;
-  color: #666;
+.contact-btn {
+  width: 100%;
+  background: #409eff;
+  border-color: #409eff;
 }
 
-.reject-reasons {
+.contact-btn:hover {
+  background: #337ecc;
+  border-color: #337ecc;
+}
+
+/* 评价相关样式 */
+.rating-section {
   display: flex;
   flex-direction: column;
-  gap: 12px;
-  margin-bottom: 16px;
+  gap: 20px;
 }
 
-.custom-reason-input {
-  margin-top: 12px;
+.user-rating h4,
+.user-comment h4 {
+  font-size: 16px;
+  font-weight: 600;
+  color: #333;
+  margin-bottom: 12px;
+}
+
+.comment-content {
+  background: #f8f9fa;
+  padding: 16px;
+  border-radius: 8px;
+  line-height: 1.6;
+  color: #333;
+}
+
+.no-rating {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  min-height: 200px;
 }
 
 /* 响应式设计 */
