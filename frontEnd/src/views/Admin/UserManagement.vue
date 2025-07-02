@@ -199,6 +199,7 @@ const resetFilters = () => {
   searchKeyword.value = '';
   filterRole.value = '';
   loadUsers();
+  ElMessage.success('筛选条件已重置')
 };
 
 const handleCheck = async (id,role) => {
