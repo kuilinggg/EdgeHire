@@ -6,9 +6,10 @@ import { useAuthStore } from '../stores/authStore'
  * @param {string} conversationId 对话ID
  * @param {object} resumeContent 简历内容
  * @param {string} prompt 用户提示
+ * @param {AbortSignal} signal 中止信号
  * @returns {Promise<ReadableStream>} 流式响应
  */
-export async function resumeOptimizeStream(conversationId, resumeContent, prompt) {
+export async function resumeOptimizeStream(conversationId, resumeContent, prompt, signal = null) {
     try {
         const authStore = useAuthStore()
         const headers = {
@@ -20,7 +21,7 @@ export async function resumeOptimizeStream(conversationId, resumeContent, prompt
             headers['Authorization'] = `Bearer ${authStore.token}`
         }
 
-        const response = await fetch(`${API_BASE_URL}/ai/resumeOptimizeStream`, {
+        const fetchOptions = {
             method: 'POST',
             headers,
             body: JSON.stringify({
@@ -28,7 +29,14 @@ export async function resumeOptimizeStream(conversationId, resumeContent, prompt
                 resume: JSON.stringify(resumeContent),
                 prompt: prompt
             })
-        })
+        }
+
+        // 如果提供了中止信号，添加到请求选项中
+        if (signal) {
+            fetchOptions.signal = signal
+        }
+
+        const response = await fetch(`${API_BASE_URL}/ai/resumeOptimizeStream`, fetchOptions)
 
         if (!response.ok) {
             throw new Error(`HTTP error! status: ${response.status}`)
