@@ -153,8 +153,15 @@ const refreshResumeList = async () => {
     const res = await getResumesByUserId(userId)
     if (res.data && res.data.length > 0) {
       resumeList.value = res.data
-      selectedResume.value = res.data[0]
-      selectedIndex.value = '0'
+      // 新增：根据路由 query.id 精准定位
+      const routeId = router.currentRoute.value.query.id
+      let idx = 0
+      if (routeId) {
+        idx = res.data.findIndex(item => String(item.id) === String(routeId))
+        if (idx === -1) idx = 0
+      }
+      selectedResume.value = res.data[idx]
+      selectedIndex.value = String(idx)
     } else {
       resumeList.value = []
       selectedResume.value = null

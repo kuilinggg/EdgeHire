@@ -30,22 +30,26 @@
           </el-col>
           <el-col :span="19" class="resume-a4-col">
             <div v-if="selectedResume" class="resume-a4-wrapper">
-              <div class="resume-a4-paper">
-                <!-- 求职者信息卡片，放在简历上方 -->
-                <el-card class="seekerinfo-card" style="margin-bottom: 18px;">
-                  <div class="profile-view">
-                    <p><strong>学历：</strong>{{ educationText }}</p>
-                    <p><strong>学校：</strong>{{ seekerInfo.school || '-' }}</p>
-                    <p><strong>理想岗位：</strong>
-                      <template v-if="favorList.length > 0">
-                        <el-tag v-for="(item, idx) in favorList" :key="idx" type="info" style="margin-right: 8px;">{{ item }}</el-tag>
-                      </template>
-                      <template v-else>-</template>
-                    </p>
-                    <p><strong>会员类型：</strong>{{ seekerInfo.membership == 0 ? '普通会员': '高级会员' }}</p>
-                  </div>
-                </el-card>
-                <!-- 简历内容 -->
+              <!-- 求职者信息卡片，始终显示 -->
+              <el-card class="seekerinfo-card" style="margin-bottom: 18px;">
+                <div class="profile-view">
+                  <p><strong>学历：</strong>{{ educationText }}</p>
+                  <p><strong>学校：</strong>{{ seekerInfo.school || '-' }}</p>
+                  <p><strong>理想岗位：</strong>
+                    <template v-if="favorList.length > 0">
+                      <el-tag v-for="(item, idx) in favorList" :key="idx" type="info" style="margin-right: 8px;">{{ item }}</el-tag>
+                    </template>
+                    <template v-else>-</template>
+                  </p>
+                  <p><strong>会员类型：</strong>{{ seekerInfo.membership == 0 ? '普通会员': '高级会员' }}</p>
+                </div>
+              </el-card>
+              <!-- 简历内容区分类型显示 -->
+              <div v-if="isImportedResume" class="pdf-a4-fixed-wrapper">
+                <canvas ref="pdfCanvasRef" class="pdf-a4-canvas"></canvas>
+                <div v-if="pdfLoading" class="pdf-loading-mask">PDF加载中...</div>
+              </div>
+              <div v-else class="resume-a4-paper">
                 <component
                   :is="resumeA4Component"
                   :content="parsedResumeContent"
@@ -70,13 +74,14 @@
 </template>
 
 <script setup>
-import { ref, onMounted, computed } from 'vue'
+import { ref, onMounted, computed, watch } from 'vue'
 import { Document } from '@element-plus/icons-vue'
 import { ElMessage } from 'element-plus'
 import { getPostsByUserIdWithDetails, deletePost } from '../../api/post'
 import { useAuthStore } from '../../stores/authStore'
 import ResumeA4Paper from '../../components/ResumeA4Paper.vue'
 import ResumeA4PaperBlueLeft from '../../components/ResumeA4PaperBlueLeft.vue'
+import ResumeA4PaperBlueTopBar from '../../components/ResumeA4PaperBlueTopBar.vue'
 
 const matchList = ref([]) // 历史匹配列表
 const selectedIndex = ref('0')
@@ -169,7 +174,8 @@ const parsedResumeContent = computed(() => {
 const resumeA4Component = computed(() => {
   const template = parsedResumeContent.value.template || '1'
   if (template === '2') return ResumeA4PaperBlueLeft
-  // 未来可扩展更多模板
+  if (template === '3') return ResumeA4PaperBlueTopBar
+  // 默认模板 1
   return ResumeA4Paper
 })
 
@@ -196,8 +202,88 @@ const onDeleteMatch = async () => {
   }
 }
 
+// PDF.js渲染相关
+const pdfCanvasRef = ref(null)
+const pdfLoading = ref(false)
+const pdfDocCache = new Map() // url => pdf对象
+
+function loadPdfJsScript() {
+  return new Promise((resolve, reject) => {
+    if (window.pdfjsLib) return resolve(window.pdfjsLib)
+    const script = document.createElement('script')
+    script.src = 'https://cdn.jsdelivr.net/npm/pdfjs-dist@3.11.174/build/pdf.min.js'
+    script.onload = () => {
+      window.pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdn.jsdelivr.net/npm/pdfjs-dist@3.11.174/build/pdf.worker.min.js'
+      resolve(window.pdfjsLib)
+    }
+    script.onerror = reject
+    document.head.appendChild(script)
+  })
+}
+loadPdfJsScript()
+
+async function renderPdfToCanvas(url) {
+  pdfLoading.value = true
+  await loadPdfJsScript()
+  const pdfjsLib = window.pdfjsLib
+  try {
+    let pdf
+    if (pdfDocCache.has(url)) {
+      pdf = pdfDocCache.get(url)
+    } else {
+      const loadingTask = pdfjsLib.getDocument(url)
+      pdf = await loadingTask.promise
+      pdfDocCache.set(url, pdf)
+    }
+    const page = await pdf.getPage(1)
+    const viewport = page.getViewport({ scale: 1 })
+    const targetWidth = 794
+    const targetHeight = 1123
+    const scale = Math.min(targetWidth / viewport.width, targetHeight / viewport.height)
+    const scaledViewport = page.getViewport({ scale })
+    const canvas = pdfCanvasRef.value
+    const context = canvas.getContext('2d')
+    canvas.width = scaledViewport.width
+    canvas.height = scaledViewport.height
+    context.clearRect(0, 0, canvas.width, canvas.height)
+    await page.render({ canvasContext: context, viewport: scaledViewport }).promise
+  } catch (e) {
+    console.error('PDF渲染失败', e)
+  } finally {
+    pdfLoading.value = false
+  }
+}
+
+const isImportedResume = computed(() => {
+  if (!selectedResume.value || !selectedResume.value.content) return false
+  try {
+    const obj = JSON.parse(selectedResume.value.content)
+    return obj && obj.importType === 'pdf' && obj.pdfUrl
+  } catch {
+    return false
+  }
+})
+const importedPdfUrl = computed(() => {
+  if (!isImportedResume.value) return ''
+  try {
+    const obj = JSON.parse(selectedResume.value.content)
+    return obj.pdfUrl || ''
+  } catch {
+    return ''
+  }
+})
+
+watch(importedPdfUrl, (url) => {
+  if (isImportedResume.value && url) {
+    setTimeout(() => renderPdfToCanvas(url), 0)
+  }
+})
+
 onMounted(async () => {
   await refreshMatchList()
+  if (isImportedResume.value && importedPdfUrl.value) {
+    setTimeout(() => renderPdfToCanvas(importedPdfUrl.value), 0)
+  }
 })
 </script>
 
@@ -340,6 +426,57 @@ onMounted(async () => {
 .button-area {
   text-align: right;
   padding: 16px 0;
+}
+
+.pdf-viewer {
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  margin-top: 16px;
+}
+
+.pdf-canvas {
+  width: 100%;
+  border: 1px solid #e0e0e0;
+  border-radius: 4px;
+}
+
+.pdf-loading {
+  margin: 16px 0;
+  font-size: 16px;
+  color: #666;
+}
+
+.pdf-a4-fixed-wrapper {
+  width: 794px;
+  height: 1123px;
+  max-width: 100%;
+  max-height: 100%;
+  background: #fff;
+  box-shadow: 0 2px 12px #eee;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+  position: relative;
+}
+.pdf-a4-canvas {
+  width: 794px;
+  height: 1123px;
+  background: #fff;
+  display: block;
+}
+.pdf-loading-mask {
+  position: absolute;
+  left: 0; top: 0; right: 0; bottom: 0;
+  background: rgba(255,255,255,0.7);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 20px;
+  color: #409eff;
+  z-index: 10;
 }
 
 @media (max-width: 1200px) {
