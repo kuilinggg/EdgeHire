@@ -126,10 +126,12 @@ const props = defineProps({
   font-weight: bold;
   letter-spacing: 2px;
   margin-bottom: 8px;
+  color: #fff;
 }
 .job-intention {
   font-size: 16px;
   margin-bottom: 12px;
+  color: #fff;
 }
 .block {
   margin-bottom: 22px;
