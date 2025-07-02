@@ -2,6 +2,7 @@ package com.se.EdgeHire.Controller;
 
 import com.se.EdgeHire.Entity.HrInfo;
 import com.se.EdgeHire.Service.HrService;
+import com.se.EdgeHire.Service.MessageService;
 import com.se.EdgeHire.WebSocket.WebSocketHandler;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
@@ -17,6 +18,8 @@ public class HrController {
     
     @Autowired
     private HrService hrService;
+    @Autowired
+    private MessageService messageService;
 
     /**
      * 处理预检请求
@@ -102,6 +105,13 @@ public class HrController {
             // 验证用户是否为HR
             if (!hrService.isHr(hrUserId)) {
                 return ResponseEntity.badRequest().body(Map.of("error", "用户不是HR角色"));
+            }
+
+            if(messageService.doesConversationExist(hrUserId, targetUserId)) {
+                return ResponseEntity.ok(Map.of(
+                    "success", true,
+                    "message", "已存在与该求职者的沟通"
+                ));
             }
 
             // 获取HR信息

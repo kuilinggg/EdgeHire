@@ -114,7 +114,7 @@ const startChat = async () => {
     loading.close()
 
     if (response.data && response.data.success) {
-      ElMessage.success(`沟通已发起：${response.data.greetingMessage}`)
+      ElMessage.success(`沟通已发起`)
 
       // 跳转到聊天窗口
       router.push(`/chat?userId=${targetUserId}`)
