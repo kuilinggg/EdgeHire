@@ -24,7 +24,12 @@
           </el-col>
           <el-col :span="19" class="resume-a4-col">
             <div v-if="selectedResume" class="resume-a4-wrapper">
-              <ResumeA4Paper :content="parsedResumeContent" :avatar="selectedResume.avatar" />
+              <component
+                :is="resumeA4Component"
+                :content="parsedResumeContent"
+                :avatar="selectedResume.avatar"
+                class="resume-a4-paper"
+              />
               <div class="resume-a4-ops-bar">
                 <div class="resume-create-time-a4">
                   创建时间：<span class="resume-label">{{ formatDate(selectedResume.createTime) }}</span>
@@ -69,6 +74,7 @@ import { ElMessage } from 'element-plus'
 import html2pdf from 'html2pdf.js'
 import domtoimage from 'dom-to-image'
 import ResumeA4Paper from '../../components/ResumeA4Paper.vue'
+import ResumeA4PaperBlueLeft from '../../components/ResumeA4PaperBlueLeft.vue'
 
 const resumeList = ref([])
 const selectedIndex = ref('0')
@@ -211,6 +217,13 @@ async function exportPdf() {
       })
   }, 100)
 }
+
+const resumeA4Component = computed(() => {
+  const template = parsedResumeContent.value.template || '1'
+  if (template === '2') return ResumeA4PaperBlueLeft
+  // 未来可扩展更多模板
+  return ResumeA4Paper
+})
 
 onMounted(refreshResumeList)
 </script>
