@@ -347,7 +347,7 @@ function getCourseRules() {
 function computeRules() {
   return {
     ...staticRules,
-    ...getDynamicRules('任职情况', ['单位', '职位', '时间', '职责'], { 单位: '单位', 职位: '职位', 时间: '时间', 职责: '职责' }),
+    ...getDynamicRules('任职情况', ['单位', '职位', '时间', '职责'], { 单位: '单位', 职位: '职位', 时间: '时间', 聪责: '职责' }),
     ...getDynamicRules('实习_兼职', ['单位', '职位', '时间', '职责'], { 单位: '单位', 职位: '职位', 时间: '时间', 聪责: '职责' }),
     ...getCourseRules()
   }
@@ -576,7 +576,7 @@ const onSubmit = async () => {
         }
         ElMessage.success('简历保存成功')
         // 可选：跳转或刷新
-        // router.push({ name: 'ResumeView', query: { id: res.data.id } })
+        router.push({ path: '/jobseeker/resume-view', query: { id: res.data.id } })
       }
     } catch (e) {
       ElMessage.error('保存简历失败')
