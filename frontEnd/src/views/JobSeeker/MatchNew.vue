@@ -97,6 +97,7 @@ import { getSeekerByUserId } from '../../api/seeker'
 import { getResumesByUserId } from '../../api/resume'
 import ResumeA4Paper from '../../components/ResumeA4Paper.vue'
 import ResumeA4PaperBlueLeft from '../../components/ResumeA4PaperBlueLeft.vue'
+import ResumeA4PaperBlueTopBar from '../../components/ResumeA4PaperBlueTopBar.vue'
 
 const resumeList = ref([])
 const selectedIndex = ref('0')
@@ -176,7 +177,8 @@ const parsedResumeContent = computed(() => {
 const resumeA4Component = computed(() => {
   const template = parsedResumeContent.value.template || '1'
   if (template === '2') return ResumeA4PaperBlueLeft
-  // 未来可扩展更多模板
+  if (template === '3') return ResumeA4PaperBlueTopBar
+  // 默认模板 1
   return ResumeA4Paper
 })
 
