@@ -41,6 +41,16 @@
               <el-icon><Plus /></el-icon>
               新建对话
             </el-button>
+            <!-- 中止按钮 -->
+            <el-button 
+              v-if="isAiTyping" 
+              size="small" 
+              @click="stopAiResponse" 
+              class="stop-btn"
+              circle
+            >
+              <div class="stop-icon"></div>
+            </el-button>
           </div>
           <div class="input-wrapper">
             <div class="input-container">
@@ -251,6 +261,7 @@ const userInput = ref('')
 const isAiTyping = ref(false)
 const messagesContainer = ref(null)
 const previewDialogVisible = ref(false)
+const abortController = ref(null) // 用于中止AI请求
 
 const defaultForm = {
   Resume: {
@@ -607,6 +618,10 @@ const onAiOptimize = () => {
 
 // AI相关功能函数
 const closeAiSidebar = () => {
+  // 如果有正在进行的AI响应，先中止它
+  if (isAiTyping.value) {
+    stopAiResponse()
+  }
   showAiSidebar.value = false
 }
 
@@ -622,6 +637,36 @@ const cleanAccumulatedContent = (content) => {
     .replace(/data:\s+/g, ' ') // 移除中间的data:并保留空格
     .replace(/\n{4,}/g, '\n\n\n') // 保留适当的换行，但限制过多的连续换行
     .trim()
+}
+
+// 中止AI响应
+const stopAiResponse = () => {
+  if (abortController.value) {
+    abortController.value.abort()
+    abortController.value = null
+  }
+  isAiTyping.value = false
+  
+  // 如果有正在输出的AI消息，添加中止提示
+  if (aiMessages.value.length > 0) {
+    const lastMessage = aiMessages.value[aiMessages.value.length - 1]
+    if (lastMessage.type === 'ai' && lastMessage.content === '') {
+      // 如果最后一条AI消息为空，说明刚开始输出就被中止了
+      lastMessage.content = '<div class="abort-notice">⚠️ 输出已中止</div>'
+    } else if (lastMessage.type === 'ai') {
+      // 如果有部分内容，在末尾添加中止标记
+      lastMessage.content += '\n\n<div class="abort-notice">⚠️ 输出已中止</div>'
+    }
+  }
+  
+  // 保存状态到缓存
+  saveAiMessages()
+  
+  ElMessage.info('已中止AI输出')
+  
+  nextTick(() => {
+    scrollToBottom()
+  })
 }
 
 const newConversation = () => {
@@ -667,6 +712,9 @@ const sendMessage = async () => {
   userInput.value = ''
   isAiTyping.value = true
   
+  // 创建新的AbortController用于控制请求中止
+  abortController.value = new AbortController()
+  
   // 创建AI消息占位符
   const aiMessageIndex = aiMessages.value.length
   const aiMessage = {
@@ -685,7 +733,8 @@ const sendMessage = async () => {
     const stream = await resumeOptimizeStream(
       conversationId,
       form.value.Resume,
-      currentInput
+      currentInput,
+      abortController.value.signal // 传递中止信号
     )
     
     let accumulatedContent = ''
@@ -695,6 +744,11 @@ const sendMessage = async () => {
       stream,
       // onChunk: 接收到数据块时
       (chunk) => {
+        // 检查是否已被中止
+        if (!isAiTyping.value || abortController.value?.signal.aborted) {
+          return
+        }
+        
         // 清理chunk中可能残留的data:前缀，但保留内容和换行
         let cleanChunk = chunk
         if (typeof cleanChunk === 'string') {
@@ -728,6 +782,8 @@ const sendMessage = async () => {
       // onComplete: 完成时
       () => {
         isAiTyping.value = false
+        abortController.value = null // 清理AbortController
+        
         // 最终清理并确保内容正确显示
         const finalContent = cleanAccumulatedContent(accumulatedContent)
         
@@ -744,6 +800,12 @@ const sendMessage = async () => {
       (error) => {
         console.error('AI流式响应错误:', error)
         isAiTyping.value = false
+        abortController.value = null // 清理AbortController
+        
+        // 检查是否是用户主动中止
+        if (error.name === 'AbortError') {
+          return // 用户主动中止，不显示错误消息
+        }
         
         let errorMessage = '抱歉，AI服务暂时不可用，请稍后再试。'
         
@@ -773,6 +835,12 @@ const sendMessage = async () => {
   } catch (error) {
     console.error('发送消息失败:', error)
     isAiTyping.value = false
+    abortController.value = null // 清理AbortController
+    
+    // 检查是否是用户主动中止
+    if (error.name === 'AbortError') {
+      return // 用户主动中止，不显示错误消息
+    }
     
     let errorMessage = '抱歉，发送消息失败，请检查网络连接后重试。'
     
@@ -1133,6 +1201,57 @@ const currentPreviewComponent = computed(() => {
   animation: highlightPulse 0.6s ease-in-out;
 }
 
+/* 中止提示样式 */
+.ai-content .abort-notice {
+  display: inline-block !important;
+  background: linear-gradient(135deg, #ff6b6b, #ff4757) !important;
+  color: white !important;
+  font-weight: bold !important;
+  padding: 8px 16px !important;
+  border-radius: 20px !important;
+  font-size: 13px !important;
+  margin: 8px 0 !important;
+  box-shadow: 0 3px 12px rgba(255, 107, 107, 0.4) !important;
+  border: 2px solid rgba(255, 255, 255, 0.3) !important;
+  animation: abortNotice 0.8s ease-out !important;
+  position: relative !important;
+  overflow: hidden !important;
+}
+
+.ai-content .abort-notice::before {
+  content: '' !important;
+  position: absolute !important;
+  top: 0 !important;
+  left: -100% !important;
+  width: 100% !important;
+  height: 100% !important;
+  background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.4), transparent) !important;
+  animation: shimmer 2s ease-in-out infinite !important;
+}
+
+@keyframes abortNotice {
+  0% {
+    transform: scale(0.8) translateY(10px);
+    opacity: 0;
+  }
+  50% {
+    transform: scale(1.05) translateY(-2px);
+  }
+  100% {
+    transform: scale(1) translateY(0);
+    opacity: 1;
+  }
+}
+
+@keyframes shimmer {
+  0% {
+    left: -100%;
+  }
+  100% {
+    left: 100%;
+  }
+}
+
 @keyframes highlightPulse {
   0% {
     transform: scale(0.8);
@@ -1222,12 +1341,106 @@ const currentPreviewComponent = computed(() => {
 
 .input-controls {
   margin-bottom: 12px;
+  display: flex;
+  gap: 8px;
+  align-items: center;
 }
 
 .new-chat-btn {
   font-size: 12px;
   padding: 6px 12px;
   height: auto;
+}
+
+.stop-btn {
+  width: 32px !important;
+  height: 32px !important;
+  min-width: 32px !important;
+  padding: 0 !important;
+  background: linear-gradient(135deg, #ff6b6b, #ee5a24);
+  border: none;
+  color: white;
+  border-radius: 50%;
+  box-shadow: 0 2px 8px rgba(255, 107, 107, 0.3);
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  position: relative;
+  overflow: hidden;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+}
+
+.stop-btn:hover {
+  background: linear-gradient(135deg, #ff5252, #d63031);
+  transform: scale(1.1);
+  box-shadow: 0 4px 12px rgba(255, 107, 107, 0.4);
+}
+
+.stop-btn:active {
+  transform: scale(0.95);
+}
+
+.stop-btn::before {
+  content: '';
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 100%;
+  height: 100%;
+  background: radial-gradient(circle, rgba(255, 255, 255, 0.3) 0%, transparent 70%);
+  transform: translate(-50%, -50%) scale(0);
+  border-radius: 50%;
+  transition: transform 0.6s ease;
+}
+
+.stop-btn:hover::before {
+  transform: translate(-50%, -50%) scale(1);
+  animation: ripple 1.2s infinite;
+}
+
+/* 自定义停止图标 */
+.stop-icon {
+  width: 10px;
+  height: 10px;
+  background: white;
+  border-radius: 2px;
+  position: relative;
+  z-index: 1;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.2);
+}
+
+.stop-icon::before {
+  content: '';
+  position: absolute;
+  top: -3px;
+  left: -3px;
+  right: -3px;
+  bottom: -3px;
+  border: 2px solid rgba(255, 255, 255, 0.6);
+  border-radius: 50%;
+  animation: stopIconPulse 2s ease-in-out infinite;
+}
+
+@keyframes stopIconPulse {
+  0%, 100% {
+    transform: scale(1);
+    opacity: 0.6;
+  }
+  50% {
+    transform: scale(1.2);
+    opacity: 0.3;
+  }
+}
+
+@keyframes ripple {
+  0% {
+    transform: translate(-50%, -50%) scale(0.8);
+    opacity: 1;
+  }
+  100% {
+    transform: translate(-50%, -50%) scale(1.4);
+    opacity: 0;
+  }
 }
 
 .input-wrapper {
