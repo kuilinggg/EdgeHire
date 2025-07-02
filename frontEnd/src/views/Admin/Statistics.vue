@@ -33,7 +33,7 @@
     <el-row :gutter="20" class="chart-container">
       <el-col :span="12">
         <el-card class="chart-card">
-          <h3>近12个月月简历投递数</h3>
+          <h3>近12个月月简历成功投递数</h3>
           <div ref="resumeChartRef" style="height: 300px;"></div>
         </el-card>
       </el-col>
