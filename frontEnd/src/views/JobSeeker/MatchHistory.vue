@@ -45,49 +45,12 @@
                     <p><strong>会员类型：</strong>{{ seekerInfo.membership == 0 ? '普通会员': '高级会员' }}</p>
                   </div>
                 </el-card>
-                <!-- 简历内容卡片 -->
-                <div class="resume-a4-header">
-                  <div class="resume-a4-title">
-                    <div class="resume-a4-name">{{ parsedResumeContent.姓名 || '姓名' }}</div>
-                    <div class="resume-a4-job">{{ parsedResumeContent.求职意向 || '求职意向' }}</div>
-                  </div>
-                  <div class="resume-a4-avatar">
-                    <el-avatar v-if="selectedResume.avatar" :src="selectedResume.avatar" size="large" />
-                    <span v-else>无</span>
-                  </div>
-                </div>
-                <div class="resume-a4-section" v-if="parsedResumeContent['个人信息']">
-                  <div class="resume-a4-section-title">个人信息</div>
-                  <div class="resume-a4-section-content">
-                    <span v-for="(v, k) in parsedResumeContent['个人信息']" :key="k" class="resume-a4-field">{{ k }}：{{ v }}</span>
-                  </div>
-                </div>
-                <div class="resume-a4-section" v-if="parsedResumeContent['教育背景']">
-                  <div class="resume-a4-section-title">教育背景</div>
-                  <div class="resume-a4-section-content">
-                    <span v-for="(v, k) in parsedResumeContent['教育背景']" :key="k" class="resume-a4-field">{{ k }}：<template v-if="Array.isArray(v)">{{ v.join('，') }}</template><template v-else>{{ v }}</template></span>
-                  </div>
-                </div>
-                <div class="resume-a4-section" v-if="parsedResumeContent['任职情况'] && parsedResumeContent['任职情况'].length">
-                  <div class="resume-a4-section-title">任职情况</div>
-                  <div class="resume-a4-section-content">
-                    <div v-for="(job, idx) in parsedResumeContent['任职情况']" :key="idx" class="resume-a4-job-block">
-                      <span v-for="(v, k) in job" :key="k">{{ k }}：{{ v }}</span>
-                    </div>
-                  </div>
-                </div>
-                <div class="resume-a4-section" v-if="parsedResumeContent['实习_兼职'] && parsedResumeContent['实习_兼职'].length">
-                  <div class="resume-a4-section-title">实习/兼职</div>
-                  <div class="resume-a4-section-content">
-                    <div v-for="(exp, idx) in parsedResumeContent['实习_兼职']" :key="idx" class="resume-a4-job-block">
-                      <span v-for="(v, k) in exp" :key="k">{{ k }}：{{ v }}</span>
-                    </div>
-                  </div>
-                </div>
-                <div class="resume-a4-section" v-if="parsedResumeContent['自我评价']">
-                  <div class="resume-a4-section-title">自我评价</div>
-                  <div class="resume-a4-section-content">{{ parsedResumeContent['自我评价'] }}</div>
-                </div>
+                <!-- 简历内容 -->
+                <component
+                  :is="resumeA4Component"
+                  :content="parsedResumeContent"
+                  :avatar="selectedResume.avatar"
+                />
               </div>
             </div>
             <el-empty v-else description="请选择左侧历史匹配" />
@@ -112,6 +75,8 @@ import { Document } from '@element-plus/icons-vue'
 import { ElMessage } from 'element-plus'
 import { getPostsByUserIdWithDetails, deletePost } from '../../api/post'
 import { useAuthStore } from '../../stores/authStore'
+import ResumeA4Paper from '../../components/ResumeA4Paper.vue'
+import ResumeA4PaperBlueLeft from '../../components/ResumeA4PaperBlueLeft.vue'
 
 const matchList = ref([]) // 历史匹配列表
 const selectedIndex = ref('0')
@@ -201,6 +166,13 @@ const parsedResumeContent = computed(() => {
   }
 })
 
+const resumeA4Component = computed(() => {
+  const template = parsedResumeContent.value.template || '1'
+  if (template === '2') return ResumeA4PaperBlueLeft
+  // 未来可扩展更多模板
+  return ResumeA4Paper
+})
+
 const formatDate = (dateStr) => {
   if (!dateStr) return ''
   const d = new Date(dateStr)
@@ -231,13 +203,23 @@ onMounted(async () => {
 
 <style scoped>
 .resume-view-container {
-  padding: 32px;
-  max-width: 900px;
-  min-width: 700px;
-  margin: 0 auto;
-  font-family: 'Microsoft YaHei', Arial, sans-serif;
-  background: #f8f9fa;
+  padding: 32px 0;
+  min-height: 100vh;
+  background: #f4f6fa;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
 }
+
+.el-card {
+  box-shadow: 0 4px 32px rgba(64, 158, 255, 0.10), 0 1.5px 6px 0 rgba(0, 0, 0, 0.04);
+  border-radius: 18px;
+  width: 1100px;
+  max-width: 98vw;
+  margin: 0 auto;
+  background: #f9fafb;
+}
+
 .header-bar {
   display: flex;
   justify-content: space-between;
@@ -274,17 +256,73 @@ onMounted(async () => {
   width: 100%;
 }
 .resume-main-row {
-  min-height: 800px;
+  min-height: 900px;
+  align-items: flex-start;
 }
 .resume-list-col {
   min-width: 180px;
   max-width: 260px;
+  height: 900px;
+  background: transparent;
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
 }
+
+.resume-list-menu {
+  border-radius: 14px;
+  background: #f7f8fa;
+  box-shadow: 0 1px 4px rgba(99,102,241,0.03);
+  padding: 0;
+  height: 100%;
+  border: none;
+  transition: background 0.2s, box-shadow 0.2s;
+}
+
+.resume-menu-item {
+  border-radius: 0 8px 8px 0;
+  margin: 2px 0;
+  font-size: 16px;
+  transition: background 0.2s, color 0.2s;
+  padding: 8px 12px 8px 0;
+  color: #333;
+  position: relative;
+  overflow: visible;
+}
+
+.resume-menu-item.is-active,
+.resume-menu-item:hover {
+  background: linear-gradient(90deg, #e6eaff 0%, #f4f6fb 100%);
+  color: #4f46e5;
+  font-weight: 600;
+  box-shadow: 0 2px 8px rgba(99,102,241,0.06);
+}
+
+.resume-menu-item.is-active::before,
+.resume-menu-item:hover::before {
+  content: '';
+  position: absolute;
+  left: 0;
+  top: 8px;
+  bottom: 8px;
+  width: 4px;
+  border-radius: 4px;
+  background: #6366f1;
+  z-index: 1;
+}
+
+.menu-item-flex {
+  padding-left: 16px;
+  display: flex;
+  align-items: center;
+}
+
 .resume-a4-col {
-  min-width: 700px;
+  min-width: 740px;
   display: flex;
   flex-direction: column;
   align-items: center;
+  justify-content: flex-start;
 }
 .resume-a4-wrapper {
   width: 100%;
@@ -294,79 +332,31 @@ onMounted(async () => {
   margin: 0 auto;
 }
 .resume-a4-paper {
-  width: 210mm;
-  max-width: 100%;
-  min-height: 297mm;
-  background: #fff;
-  box-shadow: 0 4px 24px rgba(0,0,0,0.12);
-  border-radius: 8px;
-  padding: 32px 36px 24px 36px;
-  margin-bottom: 18px;
-  box-sizing: border-box;
-  position: relative;
-  overflow: hidden;
-}
-.resume-a4-header {
-  display: flex;
-  align-items: center;
-  margin-bottom: 24px;
-  justify-content: space-between;
-}
-.resume-a4-title {
+  width: 100%;
   display: flex;
   flex-direction: column;
-  justify-content: center;
-  flex: 1;
-}
-.resume-a4-avatar {
-  margin-left: 32px;
-  margin-right: 0;
-  display: flex;
   align-items: center;
-  justify-content: center;
-  width: 90px;
-  height: 90px;
-}
-.resume-a4-name {
-  font-size: 28px;
-  font-weight: bold;
-  color: #222;
-  margin-bottom: 8px;
-}
-.resume-a4-job {
-  font-size: 18px;
-  color: #666;
-}
-.resume-a4-section {
-  margin-bottom: 18px;
-}
-.resume-a4-section-title {
-  font-size: 18px;
-  font-weight: 600;
-  color: #2d3a4b;
-  margin-bottom: 8px;
-  border-left: 4px solid #409EFF;
-  padding-left: 8px;
-}
-.resume-a4-section-content {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 16px 32px;
-  font-size: 15px;
-  color: #333;
-  line-height: 1.8;
-}
-.resume-a4-field {
-  min-width: 120px;
-}
-.resume-a4-job-block {
-  margin-bottom: 8px;
-  display: flex;
-  flex-wrap: wrap;
-  gap: 12px 24px;
 }
 .button-area {
   text-align: right;
   padding: 16px 0;
+}
+
+@media (max-width: 1200px) {
+  .el-card {
+    width: 100vw;
+    min-width: unset;
+    max-width: 100vw;
+    border-radius: 0;
+  }
+}
+
+@media (max-width: 900px) {
+  .resume-view-container {
+    padding: 8px 0;
+  }
+  .resume-a4-col {
+    min-width: unset;
+  }
 }
 </style>
