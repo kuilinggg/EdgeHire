@@ -75,6 +75,7 @@ import html2pdf from 'html2pdf.js'
 import domtoimage from 'dom-to-image'
 import ResumeA4Paper from '../../components/ResumeA4Paper.vue'
 import ResumeA4PaperBlueLeft from '../../components/ResumeA4PaperBlueLeft.vue'
+import ResumeA4PaperBlueTopBar from '../../components/ResumeA4PaperBlueTopBar.vue'
 
 const resumeList = ref([])
 const selectedIndex = ref('0')
@@ -221,6 +222,7 @@ async function exportPdf() {
 const resumeA4Component = computed(() => {
   const template = parsedResumeContent.value.template || '1'
   if (template === '2') return ResumeA4PaperBlueLeft
+  else if (template === '3') return ResumeA4PaperBlueTopBar
   // 未来可扩展更多模板
   return ResumeA4Paper
 })
