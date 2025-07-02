@@ -9,7 +9,7 @@
           <div class="user-info">
             <div class="user-texts">
               <div class="user-name">{{ user.username }}</div>
-              <div class="user-latest-message">{{ user.latestMessage }}</div>
+              <div class="user-latest-message">{{ formatLatestMessage(user.latestMessage) }}</div>
             </div>
             <span v-if="user.unReadCount && user.unReadCount > 0" class="user-unread-count">{{ user.unReadCount }}</span>
           </div>
@@ -42,7 +42,18 @@
           <el-avatar :src="msg.avatar" size="small" />
           <div class="msg-content-wrapper">
             <div class="msg-time">{{ formatTime(msg.time) }}</div>
-            <div class="msg-content">{{ msg.content }}</div>
+            <!-- 图片消息 -->
+            <div v-if="msg.content.startsWith('image:')" class="msg-image">
+              <img 
+                :src="msg.content.substring(6)" 
+                @click="previewImage(msg.content.substring(6))"
+                @error="handleImageError"
+                loading="lazy"
+                alt="聊天图片"
+              />
+            </div>
+            <!-- 文字消息 -->
+            <div v-else class="msg-content">{{ msg.content }}</div>
           </div>
         </div>
       </div>
@@ -60,6 +71,20 @@
             class="message-input"
           />
           <div class="input-actions">
+            <!-- 图片上传按钮 -->
+            <el-upload
+              ref="uploadRef"
+              :show-file-list="false"
+              :before-upload="beforeImageUpload"
+              :http-request="customUpload"
+              accept="image/*"
+              class="image-upload"
+            >
+              <el-button type="info" circle size="large" class="upload-button" :loading="uploading">
+                <el-icon><Picture /></el-icon>
+              </el-button>
+            </el-upload>
+            
             <el-button 
               type="primary" 
               @click="sendMsg" 
@@ -75,6 +100,11 @@
       </div>
     </div>
   </div>
+
+  <!-- 图片预览弹窗 -->
+  <el-dialog v-model="imagePreviewVisible" width="80%" center>
+    <img :src="previewImageUrl" style="width: 100%; max-height: 70vh; object-fit: contain;" />
+  </el-dialog>
 </template>
 
 
@@ -84,6 +114,7 @@ import { ref, computed, nextTick, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import axios from 'axios'
 import { ElMessage } from 'element-plus'
+import { Picture } from '@element-plus/icons-vue'
 import { getAvatarUrl } from '../../api/info'
 import { authApi } from "../../api/auth"
 
@@ -91,7 +122,10 @@ import { authApi } from "../../api/auth"
 const router = useRouter()
 const search = ref('')
 const inputMsg = ref('')
-const activeUser = ref('0') 
+const activeUser = ref('0')
+const uploading = ref(false)
+const imagePreviewVisible = ref(false)
+const previewImageUrl = ref('') 
 
 const speaker = localStorage.getItem('userId')
 const users = ref([
@@ -246,18 +280,130 @@ function sendMsg() {
     ElMessage.warning('消息不能为空')
     return
   }
+  sendTextMessage()
+}
+
+// 图片上传前验证
+function beforeImageUpload(file) {
+  const isImage = file.type.startsWith('image/')
+  const isLt5M = file.size / 1024 / 1024 < 5
+
+  if (!isImage) {
+    ElMessage.error('只能上传图片文件!')
+    return false
+  }
+  if (!isLt5M) {
+    ElMessage.error('图片大小不能超过 5MB!')
+    return false
+  }
+  return true
+}
+
+// 自定义上传处理
+async function customUpload(options) {
   if (activeUser.value === '0') {
     ElMessage.warning('不能向管理员发送消息')
     return
   }
 
-  var userId = parseInt(localStorage.getItem('userId'))
+  uploading.value = true
+  
+  try {
+    const formData = new FormData()
+    formData.append('file', options.file)
+
+    const response = await axios.post('/files/upload', formData, {
+      headers: {
+        'Content-Type': 'multipart/form-data'
+      }
+    })
+
+    console.log(response.data)
+
+    if (response.data) {
+      await sendImageMessage(response.data)
+      ElMessage.success('图片发送成功')
+    } else {
+      ElMessage.error('图片上传失败')
+    }
+  } catch (error) {
+    console.error('图片上传失败:', error)
+    ElMessage.error('图片上传失败')
+  } finally {
+    uploading.value = false
+  }
+}
+
+// 发送图片消息
+async function sendImageMessage(imageUrl) {
+  const userId = parseInt(localStorage.getItem('userId'))
+  
+  // 构建图片消息对象（添加 image: 前缀）
+  const imageContent = `image:${imageUrl}`
+  const imageMsg = {
+    fromMe: true,
+    avatar: myAvatar.value,
+    content: imageContent,
+    time: Date.now()
+  }
+  
+  // 添加到本地消息列表
+  messages.value.push(imageMsg)
+
+  // 添加到消息映射
+  messageMap.data[activeUser.value].push({
+    senderId: userId,
+    receiverId: activeUser.value,
+    content: imageContent,
+    time: Date.now()
+  })
+
+  // 更新最新消息显示
+  users.value.forEach(u => {
+    if (u.id == parseInt(activeUser.value)) {
+      u.latestMessage = imageContent
+    }
+  })
+
+  // 发送文字消息（如果有输入文字）
+  if (inputMsg.value.trim()) {
+    await sendTextMessage()
+  }
+
+  // 通过WebSocket发送图片消息
+  socket.value.send(JSON.stringify({
+    from: userId,
+    to: activeUser.value,
+    content: imageContent,
+    type: 0
+  }))
+
+  nextTick(() => {
+    if (messagesRef.value) messagesRef.value.scrollTop = messagesRef.value.scrollHeight
+  })
+}
+
+// 发送文字消息（分离出来的函数）
+async function sendTextMessage() {
+  if (activeUser.value === '0') {
+    ElMessage.warning('不能向管理员发送消息')
+    return
+  }
+
+  const userId = parseInt(localStorage.getItem('userId'))
   if (userId != speaker) {
     ElMessage.warning("请先登录！")  //防止用户在同一浏览器中登录两个账号
     return
   }
-
-  messages.value.push({ fromMe: true, avatar: myAvatar.value, content: inputMsg.value, time: Date.now() })
+  
+  const textMsg = {
+    fromMe: true,
+    avatar: myAvatar.value,
+    content: inputMsg.value,
+    time: Date.now()
+  }
+  
+  messages.value.push(textMsg)
 
   messageMap.data[activeUser.value].push({
     senderId: userId,
@@ -272,18 +418,30 @@ function sendMsg() {
     }
   })
 
-  // 发送消息到服务器
+  // 通过WebSocket发送文字消息
   socket.value.send(JSON.stringify({
     from: userId,
     to: activeUser.value,
     content: inputMsg.value,
-    type: 0 // 0表示私聊
+    type: 0
   }))
 
   inputMsg.value = ''
+
   nextTick(() => {
     if (messagesRef.value) messagesRef.value.scrollTop = messagesRef.value.scrollHeight
   })
+}
+
+// 图片预览
+function previewImage(imageUrl) {
+  previewImageUrl.value = imageUrl
+  imagePreviewVisible.value = true
+}
+
+// 图片加载错误处理
+function handleImageError(event) {
+  event.target.src = 'data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMjAwIiBoZWlnaHQ9IjIwMCIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj4KICA8cmVjdCB3aWR0aD0iMjAwIiBoZWlnaHQ9IjIwMCIgZmlsbD0iI2Y1ZjVmNSIvPgogIDx0ZXh0IHg9IjEwMCIgeT0iMTAwIiBmb250LWZhbWlseT0iQXJpYWwiIGZvbnQtc2l6ZT0iMTQiIGZpbGw9IiM5OTkiIHRleHQtYW5jaG9yPSJtaWRkbGUiPuWbvueJh+WKoOi9veWksei0pTwvdGV4dD4KPC9zdmc+'
 }
 
 // 处理Shift+Enter换行
@@ -315,6 +473,15 @@ function formatTime(time) {
   const h = String(date.getHours()).padStart(2, '0')
   const min = String(date.getMinutes()).padStart(2, '0')
   return `${y}-${m}-${d} ${h}:${min}`
+}
+
+// 格式化最新消息显示
+function formatLatestMessage(message) {
+  if (!message) return ''
+  if (message.startsWith('image:')) {
+    return '[图片]'
+  }
+  return message
 }
 
 function logout() {
@@ -400,7 +567,7 @@ onMounted(() => {
           }
           users.value.forEach(u => {
             if (u.id === msg.senderId) {
-              u.latestMessage = msg.content
+              u.latestMessage = msg.content.startsWith('image:') ? '[图片]' : msg.content
             }
           })
         }
@@ -729,6 +896,7 @@ onMounted(() => {
 .input-actions {
   display: flex;
   align-items: center;
+  gap: 8px;
   margin-bottom: 2px;
 }
 
@@ -787,5 +955,69 @@ onMounted(() => {
   color: #999;
   margin-bottom: 2px;
   margin-left: 10px; /* 向右移动时间显示 */
+}
+
+/* 图片上传按钮样式 */
+.input-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 2px;
+}
+
+.image-upload {
+  display: flex;
+  align-items: center;
+}
+
+.upload-button {
+  width: 40px !important;
+  height: 40px !important;
+  border-radius: 50% !important;
+  background: #409eff !important;
+  border: none !important;
+  color: white !important;
+  font-size: 16px !important;
+  transition: all 0.3s ease !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+}
+
+.upload-button:hover:not(.is-loading) {
+  background: #337ecc !important;
+  transform: translateY(-2px) !important;
+  box-shadow: 0 4px 12px rgba(64, 158, 255, 0.3) !important;
+}
+
+.upload-button .el-icon {
+  font-size: 18px !important;
+}
+
+/* 图片消息样式 */
+.msg-image {
+  margin: 0 12px;
+  max-width: 280px;
+}
+
+.msg-image img {
+  width: 100%;
+  max-width: 280px;
+  height: auto;
+  max-height: 200px;
+  object-fit: cover;
+  border-radius: 12px;
+  cursor: pointer;
+  transition: transform 0.3s ease;
+  box-shadow: 0 2px 12px rgba(0,0,0,0.1);
+}
+
+.msg-image img:hover {
+  transform: scale(1.02);
+}
+
+/* 我发送的图片消息样式 */
+.chat-message.from-me .msg-image {
+  margin: 0 12px;
 }
 </style>

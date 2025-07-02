@@ -48,4 +48,9 @@ public class MessageService {
                 m -> m
         ));
     }
+
+    public boolean doesConversationExist(int user1, int user2) {
+        List<Message> messages = messageRepository.findConversation(user1, user2);
+        return !messages.isEmpty();
+    }
 }
