@@ -155,9 +155,10 @@ const avatarPreview = ref('')
 
 // 从 localStorage 初始化表单数据
 const getStoredFormData = () => {
-  const storedUserForm = localStorage.getItem('hrUserForm')
-  const storedHrForm = localStorage.getItem('hrHrForm')
-  
+  const userId = authStore.userId
+  const storedUserForm = localStorage.getItem(`hrUserForm_${userId}`)
+  const storedHrForm = localStorage.getItem(`hrHrForm_${userId}`)
+
   return {
     userForm: storedUserForm ? JSON.parse(storedUserForm) : {
       realname: '',
@@ -177,15 +178,23 @@ const getStoredFormData = () => {
 
 // 保存表单数据到 localStorage
 const saveFormDataToStorage = () => {
-  localStorage.setItem('hrUserForm', JSON.stringify(userForm))
-  localStorage.setItem('hrHrForm', JSON.stringify(hrForm))
+  const userId = authStore.userId
+  if (userId) {
+    localStorage.setItem(`hrUserForm_${userId}`, JSON.stringify(userForm))
+    localStorage.setItem(`hrHrForm_${userId}`, JSON.stringify(hrForm))
+  }
 }
 
 // 清除 localStorage 中的表单数据
 const clearStoredFormData = () => {
-  localStorage.removeItem('hrUserForm')
-  localStorage.removeItem('hrHrForm')
+  const userId = authStore.userId
+  if (userId) {
+    localStorage.removeItem(`hrUserForm_${userId}`)
+    localStorage.removeItem(`hrHrForm_${userId}`)
+  }
 }
+
+
 
 // 用户基本信息表单
 const userForm = reactive({
@@ -205,6 +214,16 @@ watch(userForm, () => {
 watch(hrForm, () => {
   saveFormDataToStorage()
 }, { deep: true })
+
+// 监听用户ID变化，当用户切换时重置表单数据
+watch(() => authStore.userId, (newUserId, oldUserId) => {
+  if (newUserId !== oldUserId && newUserId) {
+    // 用户切换了，重置表单数据
+    resetFormsToEmpty()
+    // 重新加载新用户的信息
+    loadUserInfo()
+  }
+}, { immediate: false })
 
 // 表单验证规则
 const userRules = {
@@ -261,8 +280,8 @@ const loadUserInfo = async () => {
       const userResponse = await getInfoByUserId(userId)
       if (userResponse.data) {
         Object.assign(userForm, userResponse.data)
-        // 服务器数据加载成功，清除 localStorage 中的临时数据
-        localStorage.removeItem('hrUserForm')
+        // 服务器数据加载成功，清除当前用户的 localStorage 临时数据
+        localStorage.removeItem(`hrUserForm_${userId}`)
       }
     } catch (error) {
       if (error.response?.status !== 404) {
@@ -275,8 +294,8 @@ const loadUserInfo = async () => {
       const hrResponse = await hrApi.getHrInfo(userId)
       if (hrResponse.data) {
         Object.assign(hrForm, hrResponse.data)
-        // 服务器数据加载成功，清除 localStorage 中的临时数据
-        localStorage.removeItem('hrHrForm')
+        // 服务器数据加载成功，清除当前用户的 localStorage 临时数据
+        localStorage.removeItem(`hrHrForm_${userId}`)
       }
     } catch (error) {
       if (error.response?.status !== 404) {
@@ -404,6 +423,34 @@ const saveProfile = async () => {
   } finally {
     saving.value = false
   }
+}
+
+// 重置表单为空（用于用户切换）
+const resetFormsToEmpty = () => {
+  // 重置用户表单为空
+  Object.assign(userForm, {
+    realname: '',
+    avatar: '',
+    age: null,
+    gender: 0,
+    phone: '',
+    email: ''
+  })
+
+  // 重置HR表单为空
+  Object.assign(hrForm, {
+    company: '',
+    position: '',
+    experience: ''
+  })
+
+  // 清除头像预览
+  avatarFile.value = null
+  avatarPreview.value = ''
+
+  // 清除表单验证状态
+  userFormRef.value?.clearValidate()
+  hrFormRef.value?.clearValidate()
 }
 
 const resetForms = () => {

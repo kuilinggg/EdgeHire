@@ -16,14 +16,18 @@
            </template>
             </el-table-column>
             <el-table-column label="头像">
-           <template #default="scope">
+             <template #default="scope">
              <el-image
-            style="width: 50px; height: 50px"
-            :src="scope.row.avatar"
-            :preview-src-list="[scope.row.avatar]"
-          />
-          </template>
-          </el-table-column>
+             style="width: 50px; height: 50px"
+             :src="scope.row.avatar"
+             :preview-src-list="[scope.row.avatar]"
+              >
+            <template #error>
+            <div class="image-placeholder"></div>
+            </template>
+            </el-image>
+             </template>
+             </el-table-column>
             <el-table-column prop="createTime" label="创建时间">
                <template #default="scope">
              {{ formatDate(scope.row.createTime) }}
@@ -105,17 +109,34 @@ const isStrictJSON=(str)=> {
   }
 }
 
-const jsonToTxt= (obj, indent = "")=> {
+const jsonToTxt = (obj, indent = "") => {
   let result = "";
+  
   for (const key in obj) {
     if (Array.isArray(obj[key])) {
-      result += `${indent}${key}：${obj[key].join(", ")}\n`;
-    } else if (typeof obj[key] === "object") {
+      // 处理数组类型的值
+      result += `${indent}${key}：\n`;
+      
+      obj[key].forEach((item, index) => {
+        // 如果是对象，递归处理
+        if (typeof item === "object") {
+          result += `${indent}  ${index + 1}.\n${jsonToTxt(item, indent + "    ")}`;
+        } 
+        // 如果是基本类型，直接显示
+        else {
+          result += `${indent}  ${index + 1}. ${item}\n`;
+        }
+      });
+      
+    } else if (typeof obj[key] === "object" && obj[key] !== null) {
+      // 处理普通对象
       result += `${indent}${key}：\n${jsonToTxt(obj[key], indent + "  ")}`;
     } else {
+      // 处理基本类型值
       result += `${indent}${key}：${obj[key]}\n`;
     }
   }
+  
   return result;
 }
 
@@ -205,22 +226,40 @@ const sendReminder = async (userId, content) => {
   return true
 }
 
-const handleDelete=async(resume)=>{
+const handleDelete = async (resume) => {
   try {
-    await ElMessageBox.confirm(
-      `确定驳回该简历吗？`,
-      '提示',
-      { type: 'warning' }
+    // 使用 prompt 获取驳回原因
+    const { value: rejectReason } = await ElMessageBox.prompt(
+      '请输入驳回原因',
+      '驳回确认',
+      {
+        type: 'warning',
+        confirmButtonText: '确认驳回',
+        cancelButtonText: '取消',
+        inputPattern: /\S+/,  // 非空校验
+        inputErrorMessage: '驳回原因不能为空'
+      }
     )
+
+    // 执行删除操作
     await deleteResume(resume.id)
+    
+    // 发送包含驳回原因的通知
     await sendReminder(
-          resume.userId,
-          `【系统提醒】您创建时间为${ formatDate(resume.createTime)}的简历已被驳回！`
-        )
+      resume.userId,
+      `【系统提醒】您创建时间为 ${formatDate(resume.createTime)} 的简历已被驳回！\n驳回原因: ${rejectReason}`
+    )
+
     ElMessage.success('驳回成功')
     loadResumes()
   } catch (e) {
-    if (e !== 'cancel') ElMessage.error('驳回失败')
+    if (e === 'cancel' || e === 'close') {
+      ElMessage.info('已取消驳回操作')
+    } 
+    // 网络错误或其他异常
+    else {
+      ElMessage.error('驳回失败: ' + (e.message || '未知错误'))
+    }
   }
 }
 
@@ -252,5 +291,14 @@ onMounted(()=>{
   line-height: 1.6; 
   padding: 0 12px; 
   color: var(--el-text-color-primary);
+}
+
+.image-placeholder {
+  width: 50px;
+  height: 50px;
+  background: #f5f7fa; /* 浅灰色背景 */
+  display: flex;
+  align-items: center;
+  justify-content: center;
 }
 </style>
