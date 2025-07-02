@@ -214,7 +214,7 @@
               <li>提交申请后，我们会在1-2个工作日内为您匹配合适的HR顾问</li>
               <li>请确保联系方式准确，以便顾问能够及时与您联系</li>
               <li>详细的需求描述有助于我们提供更精准的指导服务</li>
-              <li>每位高级会员每月可申请3次免费指导服务</li>
+              <li>每位高级会员每月可申请无限次指导服务</li>
               <li>指导服务通过平台内聊天系统进行，保护您的隐私安全</li>
             </ul>
           </div>
@@ -304,12 +304,30 @@
                         联系顾问
                       </el-button>
                       <el-button 
+                        v-if="record.status === 'pending'"
+                        type="link" 
+                        size="small"
+                        @click="cancelRequest(record)"
+                        style="color: #f56c6c;"
+                      >
+                        取消申请
+                      </el-button>
+                      <el-button 
                         v-if="record.status === 'completed' && record.feedback"
                         type="link" 
                         size="small"
                         @click="viewFeedback(record)"
                       >
                         查看反馈
+                      </el-button>
+                      <el-button 
+                        v-if="record.status === 'completed' && !record.rating"
+                        type="link" 
+                        size="small"
+                        @click="rateService(record)"
+                        style="color: #e6a23c;"
+                      >
+                        评价服务
                       </el-button>
                     </div>
                   </div>
@@ -395,6 +413,26 @@
             {{ selectedRecord.feedback }}
           </div>
         </div>
+
+        <div v-if="selectedRecord.rating" class="detail-section">
+          <h4>服务评价</h4>
+          <div class="rating-box">
+            <div class="rating-stars">
+              <span>评分：</span>
+              <el-rate
+                v-model="selectedRecord.rating"
+                disabled
+                show-score
+                text-color="#ff9900"
+                score-template="{value} 分"
+              />
+            </div>
+            <div v-if="selectedRecord.userComment" class="rating-comment">
+              <span>评价：</span>
+              <span>{{ selectedRecord.userComment }}</span>
+            </div>
+          </div>
+        </div>
       </div>
 
       <template #footer>
@@ -416,9 +454,17 @@
 <script setup>
 import { ref, onMounted } from 'vue'
 import { getSeekerByUserId } from '../../api/seeker'
+import {
+  submitGuidanceRequest,
+  getUserGuidanceHistory,
+  getGuidanceRequestDetail,
+  checkCanSubmit,
+  cancelGuidanceRequest,
+  rateGuidanceService
+} from '../../api/guidance'
 import { useAuthStore } from '../../stores/authStore'
 import { useRouter } from 'vue-router'
-import { ElMessage } from 'element-plus'
+import { ElMessage, ElMessageBox } from 'element-plus'
 import {
   Star,
   Compass,
@@ -503,11 +549,14 @@ onMounted(async () => {
     const { data } = await getSeekerByUserId(userId)
     seekerInfo.value = data || { membership: 0 }
     
-    // 如果是高级会员，并行加载历史记录（不阻塞主界面）
+    // 如果是高级会员，检查是否可以提交申请
     if (seekerInfo.value.membership > 0) {
       // 先显示界面，历史记录异步加载
       loading.value = false
       loadHistoryRecords()
+      
+      // 检查申请权限（不阻塞界面）
+      checkSubmitPermission()
     } else {
       loading.value = false
     }
@@ -516,6 +565,21 @@ onMounted(async () => {
     loading.value = false
   }
 })
+
+// 检查提交权限
+async function checkSubmitPermission() {
+  try {
+    const userId = authStore.userId || authStore.user?.id
+    const { data } = await checkCanSubmit(userId)
+    
+    if (!data.canSubmit) {
+      ElMessage.warning(data.message || '当前无法提交申请')
+    }
+  } catch (error) {
+    console.error('检查提交权限失败:', error)
+    // 权限检查失败不影响正常使用
+  }
+}
 
 function goToVip() {
   router.push('/jobseeker/vip')
@@ -553,8 +617,6 @@ async function submitRequest() {
     // 构造请求数据
     const requestData = {
       userId: authStore.userId || authStore.user?.id,
-      userName: authStore.user?.username || '用户',
-      avatar: authStore.user?.avatar || '',
       targetPosition: requestForm.value.targetPosition,
       guidanceType: requestForm.value.guidanceType,
       phone: requestForm.value.phone,
@@ -562,22 +624,25 @@ async function submitRequest() {
       detailedDescription: requestForm.value.detailedDescription,
       experience: requestForm.value.experience,
       education: requestForm.value.education,
-      skills: requestForm.value.skills,
-      requestTime: new Date().toISOString(),
-      status: 'pending'
+      skills: requestForm.value.skills
     }
 
-    // 模拟API调用
-    await new Promise(resolve => setTimeout(resolve, 500))
+    // 调用API提交申请
+    const { data } = await submitGuidanceRequest(requestData)
     
-    ElMessage.success('申请提交成功！我们会在1-2个工作日内为您匹配合适的HR顾问')
-    resetForm()
-    
-    // 提交成功后刷新历史记录
-    await loadHistoryRecords(true) // 强制重新加载以显示新提交的记录
+    if (data.success) {
+      ElMessage.success(data.message || '申请提交成功！我们会在1-2个工作日内为您匹配合适的HR顾问')
+      resetForm()
+      
+      // 提交成功后刷新历史记录
+      await loadHistoryRecords(true)
+    } else {
+      ElMessage.error(data.message || '提交失败，请稍后重试')
+    }
     
   } catch (error) {
-    ElMessage.error('提交失败，请稍后重试')
+    console.error('提交申请失败:', error)
+    ElMessage.error(error.response?.data?.message || '提交失败，请稍后重试')
   } finally {
     submitting.value = false
   }
@@ -594,67 +659,27 @@ async function loadHistoryRecords(forceReload = false) {
   try {
     const userId = authStore.userId || authStore.user?.id
     
-    // 模拟API调用获取历史记录（减少延迟）
-    await new Promise(resolve => setTimeout(resolve, 300))
+    // 调用API获取历史记录
+    const { data } = await getUserGuidanceHistory(userId, historyPage.value, historyPageSize.value)
     
-    // 模拟历史记录数据
-    const mockHistoryData = [
-      {
-        id: 1,
-        targetPosition: '前端开发工程师',
-        guidanceType: '简历优化',
-        detailedDescription: '希望能够对我的前端开发简历进行优化，突出技术栈和项目经验，提高面试通过率。',
-        phone: '138****8888',
-        email: 'user@example.com',
-        experience: '3-5年',
-        education: '本科',
-        skills: ['Vue.js', 'JavaScript', 'CSS3', 'Node.js'],
-        requestTime: new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString(),
-        status: 'completed',
-        hrName: '李顾问',
-        hrAvatar: '',
-        feedback: '您的简历整体结构不错，建议在项目经验部分更详细地描述技术难点和解决方案，同时添加一些量化的成果数据。'
-      },
-      {
-        id: 2,
-        targetPosition: 'React开发工程师',
-        guidanceType: '面试技巧',
-        detailedDescription: '想了解React开发岗位的面试重点和常见技术问题，提升面试表现。',
-        phone: '138****8888',
-        email: 'user@example.com',
-        experience: '3-5年',
-        education: '本科',
-        skills: ['React', 'TypeScript', 'Redux', 'Webpack'],
-        requestTime: new Date(Date.now() - 3 * 24 * 60 * 60 * 1000).toISOString(),
-        status: 'processing',
-        hrName: '王顾问',
-        hrAvatar: '',
-        feedback: null
-      },
-      {
-        id: 3,
-        targetPosition: '全栈开发工程师',
-        guidanceType: '职业规划',
-        detailedDescription: '目前在做前端开发，想转向全栈方向发展，希望得到职业规划建议。',
-        phone: '138****8888',
-        email: 'user@example.com',
-        experience: '3-5年',
-        education: '本科',
-        skills: ['Vue.js', 'Python', 'MySQL', 'Docker'],
-        requestTime: new Date(Date.now() - 1 * 24 * 60 * 60 * 1000).toISOString(),
-        status: 'pending',
-        hrName: null,
-        hrAvatar: null,
-        feedback: null
-      }
-    ]
-    
-    historyList.value = mockHistoryData
-    historyTotal.value = mockHistoryData.length
-    historyLoaded.value = true // 标记已加载
+    if (data.success) {
+      // 处理历史记录数据，确保格式正确
+      const records = Array.isArray(data.data) ? data.data : []
+      historyList.value = records.map(record => ({
+        ...record,
+        // 确保技能字段是数组格式
+        skills: Array.isArray(record.skills) ? record.skills : 
+                (typeof record.skills === 'string' ? JSON.parse(record.skills || '[]') : [])
+      }))
+      historyTotal.value = data.total || records.length
+      historyLoaded.value = true
+    } else {
+      throw new Error(data.message || '获取历史记录失败')
+    }
     
   } catch (error) {
-    ElMessage.error('加载历史记录失败')
+    console.error('加载历史记录失败:', error)
+    ElMessage.error(error.response?.data?.message || '加载历史记录失败')
     historyList.value = []
     historyTotal.value = 0
   } finally {
@@ -715,9 +740,29 @@ function formatDate(dateStr) {
 }
 
 // 查看详情
-function viewDetails(record) {
-  selectedRecord.value = record
-  showDetailDialog.value = true
+async function viewDetails(record) {
+  try {
+    // 调用API获取详细信息
+    const { data } = await getGuidanceRequestDetail(record.id)
+    
+    if (data.success) {
+      selectedRecord.value = {
+        ...data.data,
+        // 确保技能字段是数组格式
+        skills: Array.isArray(data.data.skills) ? data.data.skills : 
+                (typeof data.data.skills === 'string' ? JSON.parse(data.data.skills || '[]') : [])
+      }
+      showDetailDialog.value = true
+    } else {
+      throw new Error(data.message || '获取详情失败')
+    }
+  } catch (error) {
+    console.error('获取详情失败:', error)
+    ElMessage.error(error.response?.data?.message || '获取详情失败')
+    // 如果API失败，使用列表中的数据作为备选
+    selectedRecord.value = record
+    showDetailDialog.value = true
+  }
 }
 
 // 关闭详情对话框
@@ -765,6 +810,76 @@ function handleHistorySizeChange(size) {
 function handleHistoryPageChange(page) {
   historyPage.value = page
   loadHistoryRecords(true) // 重新加载数据
+}
+
+// 取消申请
+async function cancelRequest(record) {
+  try {
+    await ElMessageBox.confirm(
+      '确定要取消这个申请吗？取消后无法恢复。',
+      '确认取消',
+      {
+        confirmButtonText: '确定',
+        cancelButtonText: '取消',
+        type: 'warning',
+      }
+    )
+
+    const { data } = await cancelGuidanceRequest(record.id, authStore.userId || authStore.user?.id)
+    
+    if (data.success) {
+      ElMessage.success('申请已取消')
+      await loadHistoryRecords(true) // 刷新列表
+    } else {
+      throw new Error(data.message || '取消失败')
+    }
+  } catch (error) {
+    if (error !== 'cancel') {
+      console.error('取消申请失败:', error)
+      ElMessage.error(error.response?.data?.message || '取消失败，请稍后重试')
+    }
+  }
+}
+
+// 评价服务
+async function rateService(record) {
+  try {
+    const { value } = await ElMessageBox.prompt(
+      '请为本次指导服务打分并留下评价（1-5分）',
+      '服务评价',
+      {
+        confirmButtonText: '提交',
+        cancelButtonText: '取消',
+        inputPattern: /^[1-5]$/,
+        inputErrorMessage: '请输入1-5的评分',
+        inputPlaceholder: '请输入评分(1-5)和评价内容，用空格分隔'
+      }
+    )
+
+    // 解析评分和评价内容
+    const parts = value.trim().split(' ')
+    const rating = parseInt(parts[0])
+    const comment = parts.slice(1).join(' ') || '用户未留下评价'
+
+    if (rating < 1 || rating > 5) {
+      ElMessage.error('评分必须在1-5之间')
+      return
+    }
+
+    const { data } = await rateGuidanceService(record.id, rating, comment)
+    
+    if (data.success) {
+      ElMessage.success('评价提交成功，感谢您的反馈！')
+      await loadHistoryRecords(true) // 刷新列表
+    } else {
+      throw new Error(data.message || '评价提交失败')
+    }
+  } catch (error) {
+    if (error !== 'cancel') {
+      console.error('评价失败:', error)
+      ElMessage.error(error.response?.data?.message || '评价失败，请稍后重试')
+    }
+  }
 }
 
 // 滚动到表单
@@ -1230,6 +1345,32 @@ function scrollToForm() {
   padding: 16px;
   line-height: 1.6;
   color: #333;
+}
+
+.rating-box {
+  background: #f8f9fa;
+  border: 1px solid #e9ecef;
+  border-radius: 8px;
+  padding: 16px;
+}
+
+.rating-stars {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 12px;
+}
+
+.rating-comment {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  line-height: 1.6;
+}
+
+.rating-comment span:first-child {
+  font-weight: 500;
+  flex-shrink: 0;
 }
 
 .hr-info {
