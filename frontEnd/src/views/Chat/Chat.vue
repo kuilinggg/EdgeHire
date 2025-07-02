@@ -100,11 +100,6 @@
       </div>
     </div>
   </div>
-
-  <!-- 图片预览弹窗 -->
-  <el-dialog v-model="imagePreviewVisible" width="80%" center>
-    <img :src="previewImageUrl" style="width: 100%; max-height: 70vh; object-fit: contain;" />
-  </el-dialog>
 </template>
 
 
@@ -123,9 +118,7 @@ const router = useRouter()
 const search = ref('')
 const inputMsg = ref('')
 const activeUser = ref('0')
-const uploading = ref(false)
-const imagePreviewVisible = ref(false)
-const previewImageUrl = ref('') 
+const uploading = ref(false) 
 
 const speaker = localStorage.getItem('userId')
 const users = ref([
@@ -433,10 +426,9 @@ async function sendTextMessage() {
   })
 }
 
-// 图片预览
+// 图片预览 - 在新标签页中打开
 function previewImage(imageUrl) {
-  previewImageUrl.value = imageUrl
-  imagePreviewVisible.value = true
+  window.open(imageUrl, '_blank')
 }
 
 // 图片加载错误处理
@@ -816,10 +808,7 @@ onMounted(() => {
   border-left: 3px solid #ebeef5;
 }
 
-.chat-message .msg-content:hover {
-  box-shadow: 0 4px 16px rgba(60,60,60,0.08);
-  transform: translateY(-1px);
-}
+
 
 .chat-message.from-me .msg-content {
   background: linear-gradient(135deg, #e6f0ff 0%, #f0f7ff 100%);
@@ -1012,9 +1001,7 @@ onMounted(() => {
   box-shadow: 0 2px 12px rgba(0,0,0,0.1);
 }
 
-.msg-image img:hover {
-  transform: scale(1.02);
-}
+
 
 /* 我发送的图片消息样式 */
 .chat-message.from-me .msg-image {
