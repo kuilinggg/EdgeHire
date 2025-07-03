@@ -188,6 +188,13 @@ const startChat = async () => {
       return
     }
 
+    // 获取当前简历ID
+    const resumeId = props.resume.id
+    if (!resumeId) {
+      ElMessage.error('无法获取简历信息')
+      return
+    }
+
     // 显示加载状态
     const loading = ElMessage({
       message: '正在发起沟通...',
@@ -195,8 +202,11 @@ const startChat = async () => {
       duration: 3000
     })
 
-    // 调用发起沟通API
-    const response = await hrApi.initiateChat(hrUserId, targetUserId)
+    // 构建自定义消息，包含简历ID
+    const customMessage = `你好，我是腾讯的HR，对你的这份简历很感兴趣，希望能和你聊一聊。resume:${resumeId}`
+
+    // 调用发起沟通API，传递自定义消息
+    const response = await hrApi.initiateChat(hrUserId, targetUserId, customMessage)
 
     // 关闭加载状态
     loading.close()
