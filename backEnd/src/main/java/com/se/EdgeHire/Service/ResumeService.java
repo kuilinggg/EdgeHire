@@ -4,6 +4,7 @@ import com.se.EdgeHire.Entity.Resume;
 import com.se.EdgeHire.Repository.ResumeRepository;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
 import java.util.Optional;
@@ -12,6 +13,9 @@ import java.util.Optional;
 public class ResumeService {
     @Autowired
     private ResumeRepository resumeRepository;
+
+    @Autowired
+    private PostService postService;
 
     public List<Resume> getAllResumes() {
         return resumeRepository.findAll();
@@ -33,6 +37,12 @@ public class ResumeService {
     }
 
     public void deleteResume(Integer id) {
+        resumeRepository.deleteById(id);
+    }
+
+    @Transactional
+    public void deleteResumeAndPosts(Integer id) {
+        postService.deletePostsByResumeId(id);
         resumeRepository.deleteById(id);
     }
 }

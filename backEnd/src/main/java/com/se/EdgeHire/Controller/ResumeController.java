@@ -53,7 +53,7 @@ public class ResumeController {
         if (!resumeService.getResumeById(id).isPresent()) {
             return ResponseEntity.notFound().build();
         }
-        resumeService.deleteResume(id);
+        resumeService.deleteResumeAndPosts(id);
         return ResponseEntity.noContent().build();
     }
 }
