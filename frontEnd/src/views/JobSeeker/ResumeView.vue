@@ -46,7 +46,7 @@
                     上传时间：<span class="resume-label">{{ formatDate(selectedResume.createTime) }}</span>
                   </div>
                   <div style="margin-top: 32px; text-align: center; display: flex; justify-content: center; gap: 16px;">
-                    <el-button type="success" size="large" icon="Document" :href="importedPdfUrl" target="_blank">下载PDF</el-button>
+                    <el-button type="success" size="large" icon="Document" @click="downloadImportedPdf">下载PDF</el-button>
                     <el-popconfirm title="确定删除该简历？" @confirm="onDeleteSelected">
                       <template #reference>
                         <el-button type="danger" size="large" icon="Delete" class="delete-btn-main">删除当前简历</el-button>
@@ -396,6 +396,30 @@ vueOnMounted(() => {
     setTimeout(() => renderPdfToCanvas(importedPdfUrl.value), 0)
   }
 })
+
+async function downloadImportedPdf() {
+  if (!importedPdfUrl.value) {
+    ElMessage.error('未找到PDF文件');
+    return;
+  }
+  try {
+    const response = await fetch(importedPdfUrl.value, {mode: 'cors'});
+    if (!response.ok) throw new Error('下载失败');
+    const blob = await response.blob();
+    const url = window.URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = (parsedResumeContent.value.姓名 || '简历') + '.pdf';
+    document.body.appendChild(a);
+    a.click();
+    setTimeout(() => {
+      window.URL.revokeObjectURL(url);
+      document.body.removeChild(a);
+    }, 100);
+  } catch (e) {
+    ElMessage.error('PDF下载失败');
+  }
+}
 </script>
 
 <style scoped>
