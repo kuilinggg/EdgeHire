@@ -75,7 +75,7 @@
           <div style="width:100%;height:80vh;">
             <iframe
               v-if="pdfUrl"
-              :src="pdfUrl"
+              :src="encodeURI(pdfUrl)"
               width="100%"
               height="100%"
               style="border:none;"

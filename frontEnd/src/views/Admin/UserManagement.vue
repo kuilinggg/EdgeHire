@@ -194,11 +194,11 @@ const loadUsers = async () => {
     const res = await getUsers()
     //搜索和筛选
     if(isMounted.value) {
-      users.value = res.data.filter(user => {
-        const matchKeyword = user.username.includes(searchKeyword.value);
-        const matchRole = filterRole.value === '' || user.role === filterRole.value;
-        return matchKeyword && matchRole;
-      });
+      users.value = res.data.filter(user =>
+        user.role !== 0 &&
+        user.username.includes(searchKeyword.value) &&
+        (filterRole.value === '' || user.role === filterRole.value)
+      );
     }
   } catch (e) {
     if(isMounted.value) ElMessage.error('加载用户失败')
