@@ -295,7 +295,7 @@ function beforeImageUpload(file) {
 // 自定义上传处理
 async function customUpload(options) {
   if (activeUser.value === '0') {
-    ElMessage.warning('不能向管理员发送消息')
+    ElMessage.warning('不能向系统发送消息')
     return
   }
 
@@ -379,7 +379,7 @@ async function sendImageMessage(imageUrl) {
 // 发送文字消息（分离出来的函数）
 async function sendTextMessage() {
   if (activeUser.value === '0') {
-    ElMessage.warning('不能向管理员发送消息')
+    ElMessage.warning('不能向系统发送消息')
     return
   }
 
@@ -890,8 +890,8 @@ onMounted(() => {
 }
 
 .send-button {
-  width: 48px !important;
-  height: 48px !important;
+  width: 40px !important;
+  height: 40px !important;
   border-radius: 50% !important;
   background: linear-gradient(135deg, #3a36db 0%, #5b57e8 100%) !important;
   border: none !important;
@@ -899,7 +899,7 @@ onMounted(() => {
   transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1) !important;
   position: relative;
   overflow: hidden;
-  font-size: 18px !important;
+  font-size: 16px !important;
   font-weight: bold !important;
   display: flex !important;
   align-items: center !important;

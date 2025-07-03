@@ -1,14 +1,30 @@
 <template>
   <div class="resume-view-container">
+    <!-- 页面头部 -->
+    <div class="page-header">
+      <div class="header-content">
+        <h1 class="page-title">
+          <el-icon><Document /></el-icon>
+          简历管理中心
+        </h1>
+        <p class="page-subtitle">查看、编辑和管理您的专业简历</p>
+      </div>
+    </div>
+
     <el-card>
       <template #header>
         <div class="header-bar">
-          <span class="resume-title">查看简历</span>
-          <div class="header-bar-spacer"></div>
-          <el-button type="primary" class="import-btn" size="medium" @click="handleImportClick">
-            <el-icon style="margin-right:4px;"><Upload /></el-icon>
-            导入简历（PDF）
-          </el-button>
+          <span class="resume-title">我的简历列表</span>
+          <div class="header-buttons">
+            <el-button type="primary" class="import-btn" size="medium" @click="handleImportClick">
+              <el-icon style="margin-right:4px;"><Upload /></el-icon>
+              导入简历（PDF）
+            </el-button>
+            <el-button type="success" size="medium" @click="() => router.push('/jobseeker/resume-edit')" class="create-btn">
+              <el-icon style="margin-right:4px;"><Plus /></el-icon>
+              创建简历
+            </el-button>
+          </div>
         </div>
       </template>
       <el-dialog v-model="importDialogVisible" title="导入PDF简历" width="400px" :close-on-click-modal="false">
@@ -46,7 +62,7 @@
                     上传时间：<span class="resume-label">{{ formatDate(selectedResume.createTime) }}</span>
                   </div>
                   <div style="margin-top: 32px; text-align: center; display: flex; justify-content: center; gap: 16px;">
-                    <el-button type="success" size="large" icon="Document" :href="importedPdfUrl" target="_blank">下载PDF</el-button>
+                    <el-button type="success" size="large" icon="Document" @click="downloadImportedPdf">下载PDF</el-button>
                     <el-popconfirm title="确定删除该简历？" @confirm="onDeleteSelected">
                       <template #reference>
                         <el-button type="danger" size="large" icon="Delete" class="delete-btn-main">删除当前简历</el-button>
@@ -102,7 +118,7 @@ import { onMounted as vueOnMounted, ref, computed, watch } from 'vue'
 import { getResumesByUserId, deleteResume, createResume } from '../../api/resume'
 import { useAuthStore } from '../../stores/authStore'
 import { useRouter } from 'vue-router'
-import { Document, Delete, Edit, Calendar, Phone, Message, Location, User, InfoFilled, Reading, Briefcase, Suitcase, Star, Upload } from '@element-plus/icons-vue'
+import { Document, Delete, Edit, Calendar, Phone, Message, Location, User, InfoFilled, Reading, Briefcase, Suitcase, Star, Upload, Plus } from '@element-plus/icons-vue'
 import { ElMessage } from 'element-plus'
 import html2pdf from 'html2pdf.js'
 import domtoimage from 'dom-to-image'
@@ -335,9 +351,9 @@ function loadPdfJsScript() {
   return new Promise((resolve, reject) => {
     if (window.pdfjsLib) return resolve(window.pdfjsLib)
     const script = document.createElement('script')
-    script.src = 'https://cdn.jsdelivr.net/npm/pdfjs-dist@3.11.174/build/pdf.min.js'
+    script.src = '/libs/pdf.min.js' // 本地部署pdfjs主脚本
     script.onload = () => {
-      window.pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdn.jsdelivr.net/npm/pdfjs-dist@3.11.174/build/pdf.worker.min.js'
+      window.pdfjsLib.GlobalWorkerOptions.workerSrc = '/libs/pdf.worker.min.js' // 本地部署worker脚本
       resolve(window.pdfjsLib)
     }
     script.onerror = reject
@@ -396,16 +412,69 @@ vueOnMounted(() => {
     setTimeout(() => renderPdfToCanvas(importedPdfUrl.value), 0)
   }
 })
+
+async function downloadImportedPdf() {
+  if (!importedPdfUrl.value) {
+    ElMessage.error('未找到PDF文件');
+    return;
+  }
+  try {
+    const response = await fetch(importedPdfUrl.value, {mode: 'cors'});
+    if (!response.ok) throw new Error('下载失败');
+    const blob = await response.blob();
+    const url = window.URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = (parsedResumeContent.value.姓名 || '简历') + '.pdf';
+    document.body.appendChild(a);
+    a.click();
+    setTimeout(() => {
+      window.URL.revokeObjectURL(url);
+      document.body.removeChild(a);
+    }, 100);
+  } catch (e) {
+    ElMessage.error('PDF下载失败');
+  }
+}
 </script>
 
 <style scoped>
 .resume-view-container {
-  padding: 32px 0;
   min-height: 100vh;
-  background: #f4f6fa;
+  background: #f8fafe;
   display: flex;
   flex-direction: column;
   align-items: center;
+  gap: 24px;
+  padding: 24px 0;
+}
+
+/* 页面头部样式 */
+.page-header {
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  border-radius: 16px;
+  padding: 40px 32px;
+  color: #fff;
+  text-align: center;
+  width: 1035px;
+  max-width: 98vw;
+  margin: 0 auto;
+}
+
+.header-content h1 {
+  font-size: 28px;
+  font-weight: 700;
+  margin: 0 0 12px 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+}
+
+.page-subtitle {
+  font-size: 16px;
+  opacity: 0.9;
+  margin: 0;
 }
 
 .el-card {
@@ -573,34 +642,62 @@ vueOnMounted(() => {
 .header-bar {
   display: flex;
   align-items: center;
-  justify-content: flex-start;
+  justify-content: space-between;
   width: 100%;
-  position: relative;
 }
-.header-bar-spacer {
-  flex: 1 1 auto;
+
+.header-buttons {
+  display: flex;
+  gap: 12px;
+  align-items: center;
 }
+
 .import-btn {
-  background: #409eff;
-  color: #fff;
-  border: none;
-  border-radius: 6px;
+  background: rgba(255, 255, 255, 0.9);
+  color: #667eea;
+  border: 1px solid rgba(255, 255, 255, 0.3);
+  border-radius: 8px;
   font-weight: 500;
-  letter-spacing: 1px;
-  padding: 0 12px;
-  height: 30px;
+  letter-spacing: 0.5px;
+  padding: 0 16px;
+  height: 36px;
   font-size: 14px;
   min-width: 0;
-  box-shadow: none;
-  transition: background 0.2s;
+  transition: all 0.3s ease;
+  backdrop-filter: blur(10px);
 }
+
 .import-btn:hover {
-  background: #337ecc;
-  box-shadow: none;
+  background: rgba(255, 255, 255, 1);
+  color: #5a6fd8;
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(255, 255, 255, 0.3);
+}
+
+.create-btn {
+  background: linear-gradient(135deg, #67c23a 0%, #85ce61 100%);
+  border: none;
+  color: #fff;
+  border-radius: 8px;
+  font-weight: 600;
+  letter-spacing: 0.5px;
+  padding: 0 16px;
+  height: 36px;
+  font-size: 14px;
+  min-width: 0;
+  transition: all 0.3s ease;
+}
+
+.create-btn:hover {
+  background: linear-gradient(135deg, #5daf34 0%, #7bc143 100%);
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(103, 194, 58, 0.3);
 }
 
 .resume-title {
-  font-size: 20px;
+  font-size: 18px;
+  font-weight: 600;
+  color: #333;
 }
 
 @media (max-width: 1200px) {
@@ -610,6 +707,14 @@ vueOnMounted(() => {
     max-width: 100vw;
     border-radius: 0;
   }
+  
+  .page-header {
+    width: 100vw;
+    max-width: 100vw;
+    border-radius: 0;
+    padding: 32px 16px;
+  }
+  
   .resume-a4-ops-bar, .resume-create-time-a4 {
     width: 100vw !important;
     min-width: unset;
@@ -630,6 +735,47 @@ vueOnMounted(() => {
     min-width: unset;
     border-radius: 0;
     padding: 0;
+  }
+}
+
+/* 响应式设计 - 头部适配 */
+@media (max-width: 768px) {
+  .page-header {
+    padding: 32px 24px;
+  }
+
+  .header-content h1 {
+    font-size: 24px;
+    flex-direction: column;
+    gap: 8px;
+  }
+
+  .header-buttons {
+    flex-direction: column;
+    gap: 8px;
+    width: 100%;
+  }
+
+  .import-btn,
+  .create-btn {
+    width: 100%;
+    justify-content: center;
+  }
+
+  .header-bar {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 16px;
+  }
+}
+
+@media (max-width: 480px) {
+  .header-content h1 {
+    font-size: 22px;
+  }
+
+  .page-subtitle {
+    font-size: 14px;
   }
 }
 </style>

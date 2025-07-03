@@ -1,5 +1,16 @@
 <template>
   <div class="resume-edit-container" :class="{ 'with-ai-sidebar': showAiSidebar }">
+    <!-- 页面头部 -->
+    <div class="page-header">
+      <div class="header-content">
+        <h1 class="page-title">
+          <el-icon><Edit /></el-icon>
+          简历编辑器
+        </h1>
+        <p class="page-subtitle">创建专业简历，展现最好的自己</p>
+      </div>
+    </div>
+
     <!-- AI侧边栏 -->
     <transition name="ai-sidebar">
       <div v-if="showAiSidebar" class="ai-sidebar">
@@ -81,12 +92,17 @@
     <el-card :class="{ 'with-ai-sidebar': showAiSidebar }" class="main-content">
       <template #header>
         <div class="header-bar">
-          <span class="resume-title">填写简历</span>
-          <el-button type="success" size="small" class="ai-btn" @click="onAiOptimize">
-            <el-icon style="margin-right:4px;">
-              <User />
-            </el-icon>AI优化
-          </el-button>
+          <span class="resume-title">编辑简历内容</span>
+          <div class="header-buttons">
+            <el-button type="default" @click="onClearAll" size="medium" class="clear-btn">
+              <el-icon style="margin-right:4px;"><Refresh /></el-icon>
+              清空重置
+            </el-button>
+            <el-button @click="onAiOptimize" type="primary" size="medium" class="ai-btn">
+              <el-icon style="margin-right:4px;"><Promotion /></el-icon>
+              AI优化
+            </el-button>
+          </div>
         </div>
       </template>
       <el-form :model="form.Resume" :rules="rules" ref="formRef" label-width="100px" class="resume-form"
@@ -974,12 +990,41 @@ const currentPreviewComponent = computed(() => {
 
 <style scoped>
 .resume-edit-container {
-  padding: 32px;
   max-width: 900px;
   margin: 0 auto;
   font-family: 'Microsoft YaHei', Arial, sans-serif;
-  background: #f8f9fa;
+  background: #f8fafe;
   transition: all 0.3s ease;
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+  min-height: 100vh;
+  padding: 24px;
+}
+
+/* 页面头部样式 */
+.page-header {
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  border-radius: 16px;
+  padding: 40px 32px;
+  color: #fff;
+  text-align: center;
+}
+
+.header-content h1 {
+  font-size: 28px;
+  font-weight: 700;
+  margin: 0 0 12px 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+}
+
+.page-subtitle {
+  font-size: 16px;
+  opacity: 0.9;
+  margin: 0;
 }
 
 .resume-edit-container.with-ai-sidebar {
@@ -1021,21 +1066,99 @@ const currentPreviewComponent = computed(() => {
   }
 }
 
+/* 响应式设计 - 头部适配 */
+@media (max-width: 768px) {
+  .resume-edit-container {
+    padding: 16px;
+  }
+
+  .page-header {
+    padding: 32px 24px;
+  }
+
+  .header-content h1 {
+    font-size: 24px;
+    flex-direction: column;
+    gap: 8px;
+  }
+
+  .header-buttons {
+    flex-direction: column;
+    gap: 8px;
+    width: 100%;
+  }
+
+  .clear-btn,
+  .ai-btn {
+    width: 100%;
+    justify-content: center;
+  }
+
+  .header-bar {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 16px;
+  }
+}
+
+@media (max-width: 480px) {
+  .header-content h1 {
+    font-size: 22px;
+  }
+
+  .page-subtitle {
+    font-size: 14px;
+  }
+}
+
 .header-bar {
   display: flex;
   justify-content: space-between;
   align-items: center;
+  width: 100%;
 }
 
 .resume-title {
-  font-size: 22px;
-  font-weight: bold;
-  color: #222;
-  letter-spacing: 1px;
+  font-size: 18px;
+  font-weight: 600;
+  color: #333;
+}
+
+.header-buttons {
+  display: flex;
+  gap: 12px;
+  align-items: center;
+}
+
+.clear-btn {
+  background: rgba(255, 255, 255, 0.9);
+  border: 1px solid rgba(0, 0, 0, 0.1);
+  color: #666;
+  font-weight: 500;
+  transition: all 0.3s ease;
+  backdrop-filter: blur(10px);
+}
+
+.clear-btn:hover {
+  background: rgba(255, 255, 255, 1);
+  border-color: rgba(0, 0, 0, 0.2);
+  color: #333;
+  transform: translateY(-1px);
 }
 
 .ai-btn {
-  margin-left: 16px;
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  border: none;
+  color: #fff;
+  font-weight: 600;
+  transition: all 0.3s ease;
+  backdrop-filter: blur(10px);
+}
+
+.ai-btn:hover {
+  background: linear-gradient(135deg, #5a6fd8 0%, #6a4190 100%);
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(102, 126, 234, 0.3);
 }
 
 /* AI侧边栏样式 */

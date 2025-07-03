@@ -6,7 +6,7 @@
       <el-tabs v-model="activeTab" class="status-tabs" @tab-change="handleTabChange">
         <el-tab-pane :label="`待分配 (${pendingCount})`" name="pending" />
         <el-tab-pane :label="`指导中 (${processingCount})`" name="processing" />
-        <el-tab-pane label="已完成" name="completed" />
+        <el-tab-pane :label="`已完成 (${completedCount})`" name="completed" />
       </el-tabs>
     </div>
 
@@ -145,7 +145,6 @@
                   </el-tag>
                 </div>
               </div>
-              <el-button type="text" @click="viewFullResume">查看完整简历</el-button>
             </div>
           </div>
 
@@ -348,6 +347,7 @@ const fetchUserInfos = async (requests) => {
 // 计算属性
 const pendingCount = computed(() => pendingRequests.value.length)
 const processingCount = computed(() => processingRequests.value.length)
+const completedCount = computed(() => completedRequests.value.length)
 
 const currentRequestList = computed(() => {
   switch (activeTab.value) {
@@ -546,11 +546,6 @@ const completeGuidance = async () => {
     console.error('完成指导失败:', error)
     ElMessage.error('操作失败，请稍后重试')
   }
-}
-
-const viewFullResume = () => {
-  ElMessage.info('跳转到完整简历页面...')
-  // 这里可以跳转到简历详情页面
 }
 
 const contactJobSeeker = async () => {
