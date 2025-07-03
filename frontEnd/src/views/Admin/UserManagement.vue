@@ -57,11 +57,11 @@
       />
 
         <el-dialog title="查看用户详细信息" v-model="checkDialogVisible">
-        <el-table :data="infoList" style="width: 100%" >
+        <el-table :data="infoList" style="width: 100%" border>
         <el-table-column prop="id" label="ID" width="80"/>
         <el-table-column prop="userId" label="用户ID" width="100" />
-        <el-table-column prop="realname" label="真实姓名" width="120"/>
-        <el-table-column prop="age" label="年龄" /> 
+        <el-table-column prop="realname" label="真实姓名" min-width="100"/>
+        <el-table-column prop="age" label="年龄" width="100"/> 
         <el-table-column prop="gender" label="性别">
         <template #default="scope">
              <span>{{ scope.row.gender === undefined || scope.row.gender === null
@@ -73,25 +73,25 @@
           : '女性'}}</span>
           </template>
         </el-table-column>
-        <el-table-column prop="status" label="状态">
+        <el-table-column prop="status" label="状态" width="100">
         <template #default="scope">
              <span>{{ scope.row.status === undefined ||scope.row.status===null
         ? '  '
         : scope.row.status =='0' ? '冻结' : '正常' }}</span>
           </template>
         </el-table-column>
-        <el-table-column prop="phone" label="电话号码" width="120"/>
-        <el-table-column prop="email" label="邮箱"/>
+        <el-table-column prop="phone" label="电话号码" min-width="150"/>
+        <el-table-column prop="email" label="邮箱" min-width="200"/>
       </el-table>
       
-      <el-table v-if="userrole === 1" :data="detailInfoList" style="width: 100%" >
-        <el-table-column prop="education" label="学历" width="175">
+      <el-table v-if="userrole === 1" :data="detailInfoList" style="width: 100%" border>
+        <el-table-column prop="education" label="学历" min-width="100">
        <template #default="scope">
        <span>{{ scope.row?.education ? educationMap[scope.row.education] : '未知学历' }}</span>
       </template>
        </el-table-column> 
-        <el-table-column prop="school" label="毕业院校" width="200"/> 
-        <el-table-column prop="favor" label="理想岗位" width="200">
+        <el-table-column prop="school" label="毕业院校" min-width="200"/> 
+        <el-table-column prop="favor" label="理想岗位" min-width="200">
         <template #default="scope">
         <span>
        {{
@@ -113,7 +113,7 @@
         </span>
         </template>
       </el-table-column>
-        <el-table-column prop="membership" label="会员等级" width="175">
+        <el-table-column prop="membership" label="会员等级" min-width="175">
        <template #default="scope">
        <span>{{ scope.row?.membership === undefined || scope.row?.membership === null
       ? '  '
@@ -121,27 +121,16 @@
         </template>
        </el-table-column>
       </el-table>
-        <el-table v-else-if="userrole === 2" :data="detailInfoList" style="width: 100%">
-                <el-table-column prop="company" label="所属公司" width="250" />
-        <el-table-column prop="position" label="招聘岗位" width="250" />
-        <el-table-column prop="experience" label="资历" width="250" />
+        <el-table v-else-if="userrole === 2" :data="detailInfoList" style="width: 100%" border>
+                <el-table-column prop="company" label="所属公司" min-width="250" />
+        <el-table-column prop="position" label="招聘岗位" min-width="250" />
+        <el-table-column prop="experience" label="资历" min-width="250" />
       </el-table>
         <template #footer>
           <el-button @click="checkDialogVisible = false">返回</el-button>
         </template>
       </el-dialog>                          
 
-      <el-dialog title="重置密码" v-model="editDialogVisible">
-        <el-form :model="editUser">
-          <el-form-item label="新密码：">
-            <el-input v-model="editUser.password" />
-          </el-form-item>
-        </el-form>
-        <template #footer>
-          <el-button @click="editDialogVisible = false">取消</el-button>
-          <el-button type="primary" @click="saveEdit">保存</el-button>
-        </template>
-      </el-dialog>
     </div>
   </div>
 </template>
@@ -153,7 +142,9 @@ import { getUsers, updateUser, deleteUser } from '../../api/user'
 import { getInfoByUserId } from '../../api/info'
 import { getSeekerByUserId } from '../../api/seeker'
 import { hrApi } from '../../api/hr'
+import {authApi} from '../../api/auth'
 import axios from 'axios'
+
 
 // 响应式数据
 const users = ref([])
@@ -161,7 +152,6 @@ const currentPage = ref(1)
 const pageSize = ref(10)
 const searchKeyword = ref('')
 const filterRole=ref('')
-const editDialogVisible = ref(false)
 const checkDialogVisible = ref(false)
 const editUser = ref({})
 const infoList = ref([])
@@ -272,19 +262,20 @@ const handleCheck = async (id,role) => {
   checkDialogVisible.value = true
 }
 
-const handleEdit = (user) => {
+const handleEdit =async (user) => {
   editUser.value = { ...user }
-  editDialogVisible.value = true
-}
-
-const saveEdit = async () => {
   try {
+    await ElMessageBox.confirm(
+      `确定重置用户 ${user.username}的密码吗？`,
+      '提示',
+      { type: 'warning' }
+    )
+    editUser.value.password ="$2a$10$O7Yo4qvs5j8EL7NicSHkGewR6InCxFLy06tMJCcaQdqRietabAkzC"
     await updateUser(editUser.value.id, editUser.value)
-    ElMessage.success('用户更新成功')
-    editDialogVisible.value = false
+    ElMessage.success('密码重置成功')
     loadUsers()
   } catch (e) {
-    ElMessage.error('更新失败')
+    if (e !== 'cancel') ElMessage.error('密码重置失败')
   }
 }
 
@@ -500,5 +491,22 @@ onBeforeUnmount(() => {
 :deep(.el-dialog) {
   width: 800px !important;
   max-width: 90vw;
+}
+
+::v-deep(.el-dialog) {
+  max-width: none !important;
+  width: 95vw !important; /* 让 Dialog 占满 95% 视口宽度 */
+}
+
+/* 表格内边距 + 字体大小优化 */
+::v-deep(.el-table th),
+::v-deep(.el-table td) {
+  padding: 12px 10px;
+  font-size: 14px;
+}
+
+/* 可选：给表格容器增加左右内边距 */
+::v-deep(.el-dialog__body) {
+  padding: 20px 30px;
 }
 </style>
