@@ -14,7 +14,7 @@
     <div class="search-section">
       <el-input
         v-model="searchKeyword"
-        placeholder="搜索求职者姓名或职位"
+        placeholder="搜索求职意向或指导需求"
         class="search-input"
         clearable
         @input="handleSearch"

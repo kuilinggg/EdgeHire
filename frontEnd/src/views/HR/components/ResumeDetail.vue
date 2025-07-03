@@ -192,7 +192,7 @@ const startChat = async () => {
     const loading = ElMessage({
       message: '正在发起沟通...',
       type: 'info',
-      duration: 0
+      duration: 3000
     })
 
     // 调用发起沟通API
