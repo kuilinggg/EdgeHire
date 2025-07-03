@@ -29,7 +29,7 @@ public class WebSocketHandler {
     private static final ConcurrentHashMap<Integer, SocketSession> SESSION_MAP = new ConcurrentHashMap<>();
     private static UserRepository userRepository;
     private static MessageRepository messageRepository;
-    ObjectMapper objectMapper = new ObjectMapper();
+    private final ObjectMapper objectMapper = new ObjectMapper();
     private static WebSocketHandler INSTANCE;
 
     @Autowired
