@@ -1,73 +1,153 @@
 <template>
-  <div class="resume-view-container">
-    <el-card>
+  <div class="match-history-container">
+    <!-- 页面头部 -->
+    <div class="page-header">
+      <div class="header-content">
+        <h1 class="page-title">
+          <el-icon><Clock /></el-icon>
+          历史匹配记录
+        </h1>
+        <p class="page-subtitle">查看您的历史简历匹配记录与详情</p>
+      </div>
+    </div>
+
+    <!-- 主内容卡片 -->
+    <el-card class="main-card" shadow="never">
       <template #header>
-        <div class="header-bar">
-          <span class="resume-title">历史匹配</span>
+        <div class="card-header">
+          <h3>
+            <el-icon><Document /></el-icon>
+            匹配记录
+          </h3>
+          <p>选择左侧记录查看详细信息</p>
         </div>
       </template>
-      <el-row :gutter="32" class="resume-main-row">
+      <div class="history-content-wrapper">
         <template v-if="matchList.length > 0">
-          <el-col :span="5" class="resume-list-col">
+          <div class="history-sidebar">
             <el-menu
               :default-active="selectedIndex"
               @select="handleSelect"
-              class="resume-list-menu"
-              style="height: 100%"
+              class="history-list-menu"
             >
               <el-menu-item
                 v-for="(item, idx) in matchList"
                 :key="item.id"
                 :index="String(idx)"
-                class="resume-menu-item"
+                class="history-menu-item"
               >
                 <div class="menu-item-flex">
-                  <el-icon style="margin-right: 4px;"><Document /></el-icon>
-                  <span>匹配{{ idx + 1 }}</span>
+                  <el-icon style="margin-right: 8px;"><Document /></el-icon>
+                  <div class="menu-item-content">
+                    <span class="match-title">匹配记录 {{ idx + 1 }}</span>
+                    <span class="match-date">{{ formatDate(item.createdAt) }}</span>
+                  </div>
                 </div>
               </el-menu-item>
             </el-menu>
-          </el-col>
-          <el-col :span="19" class="resume-a4-col">
-            <div v-if="selectedResume" class="resume-a4-wrapper">
-              <!-- 求职者信息卡片，始终显示 -->
-              <el-card class="seekerinfo-card" style="margin-bottom: 18px;">
-                <div class="profile-view">
-                  <p><strong>学历：</strong>{{ educationText }}</p>
-                  <p><strong>学校：</strong>{{ seekerInfo.school || '-' }}</p>
-                  <p><strong>理想岗位：</strong>
-                    <template v-if="favorList.length > 0">
-                      <el-tag v-for="(item, idx) in favorList" :key="idx" type="info" style="margin-right: 8px;">{{ item }}</el-tag>
-                    </template>
-                    <template v-else>-</template>
-                  </p>
-                  <p><strong>会员类型：</strong>{{ seekerInfo.membership == 0 ? '普通会员': '高级会员' }}</p>
+          </div>
+          <div class="history-preview">
+            <div v-if="selectedResume" class="resume-content">
+              <!-- 求职者信息卡片 -->
+              <el-card class="seeker-info-card" shadow="never">
+                <template #header>
+                  <div class="info-card-header">
+                    <h4>
+                      <el-icon><User /></el-icon>
+                      求职者信息
+                    </h4>
+                  </div>
+                </template>
+                <div class="info-grid">
+                  <div class="info-item">
+                    <div class="info-label">
+                      <el-icon><Reading /></el-icon>
+                      学历
+                    </div>
+                    <div class="info-value">{{ educationText }}</div>
+                  </div>
+                  <div class="info-item">
+                    <div class="info-label">
+                      <el-icon><School /></el-icon>
+                      学校
+                    </div>
+                    <div class="info-value">{{ seekerInfo.school || '-' }}</div>
+                  </div>
+                  <div class="info-item">
+                    <div class="info-label">
+                      <el-icon><Star /></el-icon>
+                      会员类型
+                    </div>
+                    <div class="info-value">
+                      <el-tag :type="seekerInfo.membership == 0 ? 'info' : 'success'">
+                        {{ seekerInfo.membership == 0 ? '普通会员' : '高级会员' }}
+                      </el-tag>
+                    </div>
+                  </div>
+                  <div class="info-item full-width">
+                    <div class="info-label">
+                      <el-icon><TrendCharts /></el-icon>
+                      理想岗位
+                    </div>
+                    <div class="info-value">
+                      <template v-if="favorList.length > 0">
+                        <el-tag v-for="(item, idx) in favorList" :key="idx" type="primary" effect="light" class="favor-tag">
+                          {{ item }}
+                        </el-tag>
+                      </template>
+                      <template v-else>
+                        <span class="no-data">暂无设置</span>
+                      </template>
+                    </div>
+                  </div>
                 </div>
               </el-card>
-              <!-- 简历内容区分类型显示 -->
-              <div v-if="isImportedResume" class="pdf-a4-fixed-wrapper">
-                <canvas ref="pdfCanvasRef" class="pdf-a4-canvas"></canvas>
-                <div v-if="pdfLoading" class="pdf-loading-mask">PDF加载中...</div>
-              </div>
-              <div v-else class="resume-a4-paper">
-                <component
-                  :is="resumeA4Component"
-                  :content="parsedResumeContent"
-                  :avatar="selectedResume.avatar"
-                />
-              </div>
+              
+              <!-- 简历预览区域 -->
+              <el-card class="resume-preview-card" shadow="never">
+                <template #header>
+                  <div class="info-card-header">
+                    <h4>
+                      <el-icon><Document /></el-icon>
+                      简历详情
+                    </h4>
+                  </div>
+                </template>
+                <div class="resume-wrapper">
+                  <div v-if="isImportedResume" class="pdf-a4-fixed-wrapper">
+                    <canvas ref="pdfCanvasRef" class="pdf-a4-canvas"></canvas>
+                    <div v-if="pdfLoading" class="pdf-loading-mask">PDF加载中...</div>
+                  </div>
+                  <div v-else class="resume-a4-paper">
+                    <component
+                      :is="resumeA4Component"
+                      :content="parsedResumeContent"
+                      :avatar="selectedResume.avatar"
+                    />
+                  </div>
+                </div>
+              </el-card>
             </div>
-            <el-empty v-else description="请选择左侧历史匹配" />
-          </el-col>
+            <el-empty v-else description="请选择左侧历史匹配记录" />
+          </div>
         </template>
         <template v-else>
-          <el-col :span="24">
+          <div class="empty-state">
             <el-empty description="暂无历史匹配数据" />
-          </el-col>
+          </div>
         </template>
-      </el-row>
-      <div class="button-area" v-if="matchList.length > 0">
-        <el-button type="danger" size="large" @click="onDeleteMatch" :disabled="!selectedMatch">删除匹配</el-button>
+      </div>
+      <div class="action-area" v-if="matchList.length > 0">
+        <el-button 
+          type="danger" 
+          size="large" 
+          @click="onDeleteMatch" 
+          :disabled="!selectedMatch"
+          class="delete-btn"
+        >
+          <el-icon><Delete /></el-icon>
+          删除匹配
+        </el-button>
       </div>
     </el-card>
   </div>
@@ -75,7 +155,7 @@
 
 <script setup>
 import { ref, onMounted, computed, watch } from 'vue'
-import { Document } from '@element-plus/icons-vue'
+import { Document, Clock, User, Reading, School, Star, TrendCharts, Delete } from '@element-plus/icons-vue'
 import { ElMessage } from 'element-plus'
 import { getPostsByUserIdWithDetails, deletePost } from '../../api/post'
 import { useAuthStore } from '../../stores/authStore'
@@ -237,9 +317,9 @@ async function renderPdfToCanvas(url) {
     }
     const page = await pdf.getPage(1)
     const viewport = page.getViewport({ scale: 1 })
-    const targetWidth = 794
-    const targetHeight = 1123
-    const scale = Math.min(targetWidth / viewport.width, targetHeight / viewport.height)
+    // 计算合适的缩放比例，适应容器宽度
+    const containerWidth = Math.min(800, window.innerWidth - 100)
+    const scale = containerWidth / viewport.width
     const scaledViewport = page.getViewport({ scale })
     const canvas = pdfCanvasRef.value
     const context = canvas.getContext('2d')
@@ -288,220 +368,493 @@ onMounted(async () => {
 </script>
 
 <style scoped>
-.resume-view-container {
-  padding: 32px 0;
-  min-height: 100vh;
-  background: #f4f6fa;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-}
-
-.el-card {
-  box-shadow: 0 4px 32px rgba(64, 158, 255, 0.10), 0 1.5px 6px 0 rgba(0, 0, 0, 0.04);
-  border-radius: 18px;
-  width: 1100px;
-  max-width: 98vw;
+.match-history-container {
+  max-width: 1200px;
   margin: 0 auto;
-  background: #f9fafb;
+  padding: 20px;
+  background: #f8fafe;
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
 }
 
-.header-bar {
+/* 页面头部 */
+.page-header {
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  border-radius: 16px;
+  padding: 32px 24px;
+  color: #fff;
+  text-align: center;
+}
+
+.header-content h1 {
+  font-size: 28px;
+  font-weight: 700;
+  margin: 0 0 12px 0;
   display: flex;
-  justify-content: space-between;
   align-items: center;
-  padding: 0 16px;
-  height: 64px;
-}
-.resume-title {
-  font-size: 24px;
-  font-weight: bold;
-  color: #222;
-  letter-spacing: 1px;
-  line-height: 1.2;
-}
-.seekerinfo-card {
-  margin-bottom: 24px;
-  background: #fff;
-  border-radius: 4px;
-  box-shadow: 0 4px 24px 0 rgba(64,158,255,0.08), 0 1.5px 6px 0 rgba(0,0,0,0.04);
-  width: 794px;
-  max-width: 100%;
-  margin-left: auto;
-  margin-right: auto;
-}
-.profile-view {
-  display: flex;
-  flex-direction: column;
-  align-items: flex-start;
-  padding: 16px 0 8px 0;
-  width: 100%;
-}
-.profile-view p {
-  margin: 10px 0 4px 0;
-  font-size: 16px;
-  color: #333;
-  letter-spacing: 0.5px;
-  text-align: left;
-  width: 100%;
-}
-.resume-main-row {
-  min-height: 900px;
-  align-items: flex-start;
-}
-.resume-list-col {
-  min-width: 180px;
-  max-width: 260px;
-  height: 900px;
-  background: transparent;
-  display: flex;
-  flex-direction: column;
-  align-items: stretch;
+  justify-content: center;
+  gap: 12px;
 }
 
-.resume-list-menu {
-  border-radius: 14px;
-  background: #f7f8fa;
-  box-shadow: 0 1px 4px rgba(99,102,241,0.03);
-  padding: 0;
-  height: 100%;
+.page-subtitle {
+  font-size: 16px;
+  opacity: 0.9;
+  margin: 0;
+}
+
+/* 主卡片 */
+.main-card {
+  flex: 1;
+  border-radius: 16px;
   border: none;
-  transition: background 0.2s, box-shadow 0.2s;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.06);
+  background: #fff;
 }
 
-.resume-menu-item {
-  border-radius: 0 8px 8px 0;
-  margin: 2px 0;
-  font-size: 16px;
-  transition: background 0.2s, color 0.2s;
-  padding: 8px 12px 8px 0;
+.card-header {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.card-header h3 {
+  font-size: 20px;
+  font-weight: 600;
+  color: #333;
+  margin: 0;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.card-header p {
+  font-size: 14px;
+  color: #666;
+  margin: 0;
+}
+
+/* 历史记录内容区域 */
+.history-content-wrapper {
+  display: flex;
+  gap: 12px;
+  min-height: auto;
+  align-items: flex-start;
+}
+
+.history-sidebar {
+  min-width: 220px;
+  max-width: 240px;
+  height: auto;
+  max-height: 80vh;
+  flex-shrink: 0;
+  overflow-y: auto;
+}
+
+.history-list-menu {
+  border-radius: 12px;
+  background: #f8fafe;
+  box-shadow: 0 2px 8px rgba(102, 126, 234, 0.08);
+  padding: 8px;
+  height: 100%;
+  border: 1px solid #e8f2ff;
+  overflow: hidden;
+}
+
+.history-menu-item {
+  border-radius: 8px;
+  margin: 4px 0;
+  font-size: 14px;
+  transition: all 0.3s ease;
+  padding: 16px;
   color: #333;
   position: relative;
-  overflow: visible;
+  background: transparent;
+  border: 1px solid transparent;
+  min-height: auto;
 }
 
-.resume-menu-item.is-active,
-.resume-menu-item:hover {
+.history-menu-item:hover {
   background: linear-gradient(90deg, #e6eaff 0%, #f4f6fb 100%);
-  color: #4f46e5;
-  font-weight: 600;
-  box-shadow: 0 2px 8px rgba(99,102,241,0.06);
+  color: #667eea;
+  border-color: #c7d2fe;
+  transform: translateX(4px);
 }
 
-.resume-menu-item.is-active::before,
-.resume-menu-item:hover::before {
+.history-menu-item.is-active {
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  color: #fff;
+  font-weight: 600;
+  box-shadow: 0 4px 12px rgba(102, 126, 234, 0.3);
+  border-color: #667eea;
+}
+
+.history-menu-item.is-active::before {
   content: '';
   position: absolute;
-  left: 0;
-  top: 8px;
-  bottom: 8px;
+  left: -8px;
+  top: 50%;
+  transform: translateY(-50%);
   width: 4px;
-  border-radius: 4px;
-  background: #6366f1;
-  z-index: 1;
+  height: 30px;
+  border-radius: 2px;
+  background: #fff;
 }
 
 .menu-item-flex {
-  padding-left: 16px;
   display: flex;
   align-items: center;
+  gap: 8px;
 }
 
-.resume-a4-col {
-  min-width: 740px;
+.menu-item-content {
   display: flex;
   flex-direction: column;
-  align-items: center;
-  justify-content: flex-start;
+  gap: 4px;
 }
-.resume-a4-wrapper {
-  width: 100%;
+
+.match-title {
+  font-weight: 500;
+  font-size: 15px;
+}
+
+.match-date {
+  font-size: 12px;
+  opacity: 0.8;
+}
+
+.history-preview {
+  flex: 1;
   display: flex;
   flex-direction: column;
-  align-items: center;
-  margin: 0 auto;
 }
+
+.resume-content {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+/* 求职者信息卡片 */
+.seeker-info-card {
+  background: #fffbf0;
+  border: 1px solid #fef3c7;
+  border-radius: 12px;
+}
+
+.seeker-info-card .el-card__header {
+  background: #fef3c7;
+  border-bottom: 1px solid #fbbf24;
+}
+
+.info-card-header h4 {
+  font-size: 16px;
+  font-weight: 600;
+  color: #92400e;
+  margin: 0;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.info-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 12px;
+  padding: 12px;
+}
+
+.info-item {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.info-item.full-width {
+  grid-column: 1 / -1;
+}
+
+.info-label {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 13px;
+  font-weight: 500;
+  color: #667eea;
+}
+
+.info-value {
+  font-size: 14px;
+  color: #333;
+  font-weight: 500;
+}
+
+.favor-tag {
+  margin-right: 6px;
+  margin-bottom: 4px;
+}
+
+.no-data {
+  color: #999;
+  font-style: italic;
+}
+
+/* 简历预览卡片 */
+.resume-preview-card {
+  background: #fff;
+  border: 1px solid #e5e7eb;
+  border-radius: 12px;
+  overflow: visible;
+}
+
+.resume-preview-card .el-card__header {
+  background: #f9fafb;
+  border-bottom: 1px solid #e5e7eb;
+}
+
+.resume-preview-card .info-card-header h4 {
+  color: #333;
+}
+
+.resume-preview-card .el-card__body {
+  overflow: visible;
+  padding: 0;
+}
+
+.resume-wrapper {
+  display: flex;
+  justify-content: center;
+  padding: 8px;
+  overflow: visible;
+}
+
 .resume-a4-paper {
   width: 794px;
-  min-height: 1123px;
+  min-height: auto;
   margin: 0 auto;
   display: flex;
   flex-direction: column;
   align-items: center;
   background: #fff;
-  box-shadow: 0 2px 12px #eee;
-}
-.button-area {
-  text-align: right;
-  padding: 16px 0;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.12);
+  border-radius: 8px;
+  max-width: 100%;
+  overflow: visible;
 }
 
-.pdf-viewer {
+/* PDF 渲染样式 */
+.pdf-a4-fixed-wrapper {
+  width: 100%;
+  height: auto;
+  min-height: 600px;
+  max-width: 100%;
+  background: #fff;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.12);
+  border-radius: 8px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: visible;
+  position: relative;
+}
+
+.pdf-a4-canvas {
+  width: 100%;
+  height: auto;
+  min-height: 600px;
+  background: #fff;
+  display: block;
+  border-radius: 8px;
+}
+
+.pdf-loading-mask {
+  position: absolute;
+  left: 0;
+  top: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(255, 255, 255, 0.9);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 18px;
+  color: #667eea;
+  z-index: 10;
+  backdrop-filter: blur(2px);
+}
+
+.empty-state {
   width: 100%;
   display: flex;
-  flex-direction: column;
   align-items: center;
+  justify-content: center;
+  min-height: 400px;
+}
+
+/* 操作区域 */
+.action-area {
+  text-align: center;
+  padding: 16px 0;
+  border-top: 1px solid #e5e7eb;
   margin-top: 16px;
 }
 
-.pdf-canvas {
-  width: 100%;
-  border: 1px solid #e0e0e0;
-  border-radius: 4px;
+.delete-btn {
+  background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%);
+  border: none;
+  font-weight: 600;
+  padding: 0 32px;
+  height: 44px;
+  font-size: 15px;
+  border-radius: 22px;
+  transition: all 0.3s ease;
 }
 
-.pdf-loading {
-  margin: 16px 0;
-  font-size: 16px;
-  color: #666;
+.delete-btn:hover:not(:disabled) {
+  background: linear-gradient(135deg, #dc2626 0%, #b91c1c 100%);
+  transform: translateY(-2px);
+  box-shadow: 0 8px 24px rgba(239, 68, 68, 0.3);
 }
 
-.pdf-a4-fixed-wrapper {
-  width: 794px;
-  height: 1123px;
-  max-width: 100%;
-  max-height: 100%;
-  background: #fff;
-  box-shadow: 0 2px 12px #eee;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  overflow: hidden;
-  position: relative;
-}
-.pdf-a4-canvas {
-  width: 794px;
-  height: 1123px;
-  background: #fff;
-  display: block;
-}
-.pdf-loading-mask {
-  position: absolute;
-  left: 0; top: 0; right: 0; bottom: 0;
-  background: rgba(255,255,255,0.7);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-size: 20px;
-  color: #409eff;
-  z-index: 10;
+.delete-btn:disabled {
+  background: #d1d5db;
+  color: #9ca3af;
+  cursor: not-allowed;
 }
 
+/* 响应式设计 */
 @media (max-width: 1200px) {
-  .el-card {
-    width: 100vw;
-    min-width: unset;
-    max-width: 100vw;
-    border-radius: 0;
+  .match-history-container {
+    max-width: 100%;
+    padding: 16px;
+  }
+  
+  .history-content-wrapper {
+    gap: 16px;
+    min-height: auto;
+  }
+  
+  .history-sidebar {
+    min-width: 200px;
+    max-width: 220px;
+    height: auto;
+    max-height: 60vh;
+    min-height: auto;
+  }
+  
+  .history-list-menu {
+    min-height: auto;
   }
 }
 
-@media (max-width: 900px) {
-  .resume-view-container {
-    padding: 8px 0;
+@media (max-width: 768px) {
+  .match-history-container {
+    padding: 12px;
   }
-  .resume-a4-col {
-    min-width: unset;
+  
+  .page-header {
+    padding: 32px 24px;
+  }
+  
+  .header-content h1 {
+    font-size: 24px;
+    flex-direction: column;
+    gap: 8px;
+  }
+  
+  .history-content-wrapper {
+    flex-direction: column;
+    gap: 16px;
+  }
+  
+  .history-sidebar {
+    min-width: auto;
+    max-width: 100%;
+    width: 100%;
+    height: auto;
+    min-height: auto;
+  }
+  
+  .history-list-menu {
+    display: flex;
+    flex-direction: row;
+    overflow-x: auto;
+    overflow-y: hidden;
+    padding: 8px;
+    height: auto;
+    min-height: auto;
+  }
+  
+  .history-menu-item {
+    min-width: 180px;
+    margin: 0 4px;
+    text-align: center;
+    flex-shrink: 0;
+  }
+  
+  .history-preview {
+    width: 100%;
+  }
+  
+  .info-grid {
+    grid-template-columns: 1fr;
+    gap: 12px;
+    padding: 12px;
+  }
+  
+  .info-item.full-width {
+    grid-column: 1;
+  }
+  
+  .resume-wrapper {
+    padding: 8px;
+  }
+  
+  .pdf-a4-fixed-wrapper {
+    width: 100%;
+    height: auto;
+    min-height: auto;
+    max-height: none;
+  }
+  
+  .pdf-a4-canvas {
+    width: 100%;
+    height: auto;
+    min-height: auto;
+  }
+}
+
+@media (max-width: 480px) {
+  .page-header {
+    padding: 24px 16px;
+  }
+  
+  .header-content h1 {
+    font-size: 20px;
+  }
+  
+  .page-subtitle {
+    font-size: 14px;
+  }
+  
+  .delete-btn {
+    padding: 0 24px;
+    height: 40px;
+    font-size: 14px;
+  }
+  
+  .history-menu-item {
+    min-width: 160px;
+    padding: 12px;
+  }
+  
+  .match-title {
+    font-size: 14px;
+  }
+  
+  .match-date {
+    font-size: 11px;
   }
 }
 </style>
