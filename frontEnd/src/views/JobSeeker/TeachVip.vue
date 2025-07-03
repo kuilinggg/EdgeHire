@@ -647,6 +647,7 @@ import {
   Refresh,
   Calendar
 } from '@element-plus/icons-vue'
+import { getAvatarUrl } from '../../api/info'
 
 const seekerInfo = ref({ membership: 0 })
 const loading = ref(true)
@@ -925,14 +926,23 @@ async function viewDetails(record) {
   try {
     // 调用API获取详细信息
     const { data } = await getGuidanceRequestDetail(record.id)
-    
     if (data.success) {
-      selectedRecord.value = {
+      const detail = {
         ...data.data,
         // 确保技能字段是数组格式
-        skills: Array.isArray(data.data.skills) ? data.data.skills : 
-                (typeof data.data.skills === 'string' ? JSON.parse(data.data.skills || '[]') : [])
+        skills: Array.isArray(data.data.skills) ? data.data.skills :
+          (typeof data.data.skills === 'string' ? JSON.parse(data.data.skills || '[]') : [])
       }
+      // 动态获取hr头像
+      if (detail.hrUserId) {
+        try {
+          const url = await getAvatarUrl(detail.hrUserId)
+          if (url) detail.hrAvatar = url
+        } catch (e) {
+          // 获取失败不影响主流程
+        }
+      }
+      selectedRecord.value = detail
       showDetailDialog.value = true
     } else {
       throw new Error(data.message || '获取详情失败')

@@ -36,8 +36,12 @@ export const hrApi = {
 
   // HR发起沟通
   initiateChat(hrUserId, targetUserId, customMessage = null) {
-    const data = customMessage ? { customMessage } : {}
-    localStorage.setItem('activeUser', targetUserId)
+    const data = customMessage ? { customMessage } : null
     return axios.post(`${API_BASE}/hr/initiate-chat/${hrUserId}/${targetUserId}`, data)
+  },
+
+  // HR联系求职者（求职指导场景）
+  contactSeeker(hrUserId, seekerUserId, message = "你好，我已通过你的求职指导请求，现在我们可以开始交流了。") {
+    return this.initiateChat(hrUserId, seekerUserId, message)
   }
 }
