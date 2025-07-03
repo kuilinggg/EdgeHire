@@ -42,7 +42,7 @@
           <div class="chart-header">
             <h3>用户画像</h3>
             <el-radio-group v-model="activeChart" size="small">
-              <el-radio-button label="role">用户角色</el-radio-button>
+              <el-radio-button label="role">身份分布</el-radio-button>
               <el-radio-button label="gender">性别分布</el-radio-button>
               <el-radio-button label="age">年龄分布</el-radio-button>
             </el-radio-group>
@@ -58,7 +58,7 @@
       </el-col>
       <el-col :span="12">
         <el-card class="chart-card">
-          <h3>算法运行情况</h3>
+          <h3>核心算法效果图</h3>
           <div ref="" style="height: 300px;"></div>
         </el-card>
       </el-col>
@@ -370,6 +370,9 @@ onBeforeUnmount(() => {
 <style scoped>
 .statistics {
   padding: 20px;
+  font-size: 18px;
+  font-weight: 600;
+  color: #3a36db;
 }
 
 .cards {

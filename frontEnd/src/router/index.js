@@ -76,6 +76,10 @@ const routes = [
     meta: { requiresAuth: true },
     children: [
       {
+        path: '',
+        redirect: '/hr/home'
+      },
+      {
         path: 'home',
         name: 'HRHome',
         component: () => import('../views/HR/HRHome.vue')

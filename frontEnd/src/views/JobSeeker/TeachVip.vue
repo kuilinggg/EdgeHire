@@ -448,6 +448,174 @@
         </span>
       </template>
     </el-dialog>
+
+    <!-- 反馈查看对话框 -->
+    <el-dialog
+      v-model="showFeedbackDialog"
+      title="指导反馈详情"
+      width="600px"
+      :before-close="closeFeedbackDialog"
+    >
+      <div v-if="selectedFeedbackRecord" class="feedback-dialog-content">
+        <div class="feedback-header">
+          <div class="feedback-meta">
+            <div class="meta-row">
+              <span class="meta-label">指导类型：</span>
+              <span class="meta-value">{{ selectedFeedbackRecord.guidanceType }}</span>
+            </div>
+            <div class="meta-row">
+              <span class="meta-label">目标职位：</span>
+              <span class="meta-value">{{ selectedFeedbackRecord.targetPosition }}</span>
+            </div>
+            <div class="meta-row">
+              <span class="meta-label">指导顾问：</span>
+              <span class="meta-value">{{ selectedFeedbackRecord.hrName || '未分配' }}</span>
+            </div>
+            <div class="meta-row">
+              <span class="meta-label">完成时间：</span>
+              <span class="meta-value">{{ formatDate(selectedFeedbackRecord.completedTime || selectedFeedbackRecord.requestTime) }}</span>
+            </div>
+          </div>
+        </div>
+
+        <div class="feedback-content">
+          <h4>
+            <el-icon><ChatDotRound /></el-icon>
+            指导反馈内容
+          </h4>
+          <div class="feedback-text">
+            {{ selectedFeedbackRecord.feedback }}
+          </div>
+        </div>
+
+        <div v-if="selectedFeedbackRecord.rating" class="feedback-rating">
+          <h4>
+            <el-icon><Star /></el-icon>
+            您的评价
+          </h4>
+          <div class="rating-display">
+            <div class="rating-stars">
+              <el-rate
+                v-model="selectedFeedbackRecord.rating"
+                disabled
+                show-score
+                text-color="#ff9900"
+                score-template="{value} 分"
+              />
+            </div>
+            <div v-if="selectedFeedbackRecord.userComment" class="rating-comment">
+              <span>{{ selectedFeedbackRecord.userComment }}</span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <template #footer>
+        <span class="dialog-footer">
+          <el-button @click="closeFeedbackDialog">关闭</el-button>
+          <el-button 
+            v-if="selectedFeedbackRecord && !selectedFeedbackRecord.rating"
+            type="warning"
+            @click="rateServiceFromDialog"
+          >
+            <el-icon><Star /></el-icon>
+            评价服务
+          </el-button>
+          <el-button 
+            v-if="selectedFeedbackRecord && selectedFeedbackRecord.status === 'completed'"
+            type="primary"
+            @click="contactHR(selectedFeedbackRecord)"
+          >
+            <el-icon><ChatDotRound /></el-icon>
+            联系顾问
+          </el-button>
+        </span>
+      </template>
+    </el-dialog>
+
+    <!-- 评分弹窗 -->
+    <el-dialog
+      v-model="showRatingDialog"
+      title="评价指导服务"
+      width="500px"
+      :before-close="closeRatingDialog"
+    >
+      <div v-if="selectedRatingRecord" class="rating-dialog-content">
+        <div class="rating-header">
+          <div class="rating-info">
+            <h4>{{ selectedRatingRecord.guidanceType }} - {{ selectedRatingRecord.targetPosition }}</h4>
+            <div class="rating-meta">
+              <span class="meta-item">
+                <el-icon><User /></el-icon>
+                指导顾问：{{ selectedRatingRecord.hrName || '未分配' }}
+              </span>
+              <span class="meta-item">
+                <el-icon><Calendar /></el-icon>
+                完成时间：{{ formatDate(selectedRatingRecord.completedTime || selectedRatingRecord.requestTime) }}
+              </span>
+            </div>
+          </div>
+        </div>
+
+        <el-form
+          ref="ratingFormRef"
+          :model="ratingForm"
+          label-width="80px"
+          class="rating-form"
+        >
+          <el-form-item label="服务评分" required>
+            <div class="rating-container">
+              <div class="rating-stars">
+                <el-rate
+                  v-model="ratingForm.rating"
+                  :max="5"
+                  show-score
+                  text-color="#ff9900"
+                  score-template="{value} 分"
+                  size="large"
+                  :colors="['#99A9BF', '#F7BA2A', '#FF9900']"
+                  :low-threshold="2"
+                  :high-threshold="4"
+                />
+                <div class="rating-desc">
+                  <span v-if="ratingForm.rating === 1" class="rating-text poor">非常不满意</span>
+                  <span v-else-if="ratingForm.rating === 2" class="rating-text below">不满意</span>
+                  <span v-else-if="ratingForm.rating === 3" class="rating-text average">一般</span>
+                  <span v-else-if="ratingForm.rating === 4" class="rating-text good">满意</span>
+                  <span v-else-if="ratingForm.rating === 5" class="rating-text excellent">非常满意</span>
+                </div>
+              </div>
+            </div>
+          </el-form-item>
+
+          <el-form-item label="评价内容">
+            <el-input
+              v-model="ratingForm.comment"
+              type="textarea"
+              :rows="4"
+              placeholder="请分享您对此次指导服务的具体感受和建议..."
+              maxlength="500"
+              show-word-limit
+              resize="none"
+            />
+          </el-form-item>
+        </el-form>
+      </div>
+
+      <template #footer>
+        <span class="dialog-footer">
+          <el-button @click="closeRatingDialog">取消</el-button>
+          <el-button 
+            type="primary" 
+            @click="submitRating"
+            :disabled="!ratingForm.rating"
+          >
+            <el-icon><Check /></el-icon>
+            提交评价
+          </el-button>
+        </span>
+      </template>
+    </el-dialog>
   </div>
 </template>
 
@@ -497,6 +665,19 @@ const historyTotal = ref(0)
 const showDetailDialog = ref(false)
 const selectedRecord = ref(null)
 const historyLoaded = ref(false) // 标记历史记录是否已加载
+
+// 反馈查看对话框相关
+const showFeedbackDialog = ref(false)
+const selectedFeedbackRecord = ref(null)
+
+// 评分弹窗相关
+const showRatingDialog = ref(false)
+const selectedRatingRecord = ref(null)
+const ratingForm = ref({
+  rating: 5,
+  comment: ''
+})
+const ratingFormRef = ref(null)
 
 // 表单数据
 const requestForm = ref({
@@ -791,12 +972,29 @@ function contactHR(record) {
 
 // 查看反馈
 function viewFeedback(record) {
-  ElMessage({
-    message: record.feedback,
-    type: 'info',
-    duration: 5000,
-    showClose: true
-  })
+  selectedFeedbackRecord.value = record
+  showFeedbackDialog.value = true
+}
+
+// 关闭反馈对话框
+function closeFeedbackDialog() {
+  showFeedbackDialog.value = false
+  selectedFeedbackRecord.value = null
+}
+
+// 从反馈弹窗中评价服务
+async function rateServiceFromDialog() {
+  if (!selectedFeedbackRecord.value) return
+  
+  // 设置评分记录
+  selectedRatingRecord.value = selectedFeedbackRecord.value
+  ratingForm.value = {
+    rating: selectedFeedbackRecord.value.rating || 5,
+    comment: selectedFeedbackRecord.value.userComment || ''
+  }
+  
+  // 打开评分弹窗
+  showRatingDialog.value = true
 }
 
 // 处理历史记录分页大小变化
@@ -843,42 +1041,60 @@ async function cancelRequest(record) {
 
 // 评价服务
 async function rateService(record) {
+  selectedRatingRecord.value = record
+  ratingForm.value = {
+    rating: record.rating || 5,
+    comment: record.userComment || ''
+  }
+  showRatingDialog.value = true
+}
+
+// 提交评分
+async function submitRating() {
+  if (!selectedRatingRecord.value) return
+  
   try {
-    const { value } = await ElMessageBox.prompt(
-      '请为本次指导服务打分并留下评价（1-5分）',
-      '服务评价',
-      {
-        confirmButtonText: '提交',
-        cancelButtonText: '取消',
-        inputPattern: /^[1-5]$/,
-        inputErrorMessage: '请输入1-5的评分',
-        inputPlaceholder: '请输入评分(1-5)和评价内容，用空格分隔'
-      }
+    const response = await rateGuidanceService(
+      selectedRatingRecord.value.id,
+      ratingForm.value.rating,
+      ratingForm.value.comment
     )
-
-    // 解析评分和评价内容
-    const parts = value.trim().split(' ')
-    const rating = parseInt(parts[0])
-    const comment = parts.slice(1).join(' ') || '用户未留下评价'
-
-    if (rating < 1 || rating > 5) {
-      ElMessage.error('评分必须在1-5之间')
-      return
-    }
-
-    const { data } = await rateGuidanceService(record.id, rating, comment)
     
-    if (data.success) {
-      ElMessage.success('评价提交成功，感谢您的反馈！')
-      await loadHistoryRecords(true) // 刷新列表
+    if (response.data.success) {
+      ElMessage.success('评分提交成功')
+      
+      // 更新本地记录
+      const recordIndex = historyList.value.findIndex(h => h.id === selectedRatingRecord.value.id)
+      if (recordIndex !== -1) {
+        historyList.value[recordIndex].rating = ratingForm.value.rating
+        historyList.value[recordIndex].userComment = ratingForm.value.comment
+      }
+      
+      // 关闭弹窗
+      closeRatingDialog()
+      
+      // 如果从反馈弹窗中评分，更新反馈弹窗中的记录
+      if (selectedFeedbackRecord.value && selectedFeedbackRecord.value.id === selectedRatingRecord.value.id) {
+        selectedFeedbackRecord.value.rating = ratingForm.value.rating
+        selectedFeedbackRecord.value.userComment = ratingForm.value.comment
+      }
+      
     } else {
-      throw new Error(data.message || '评价提交失败')
+      throw new Error(response.data.message || '评分提交失败')
     }
   } catch (error) {
-    if (error !== 'cancel') {
-      console.error('评价失败:', error)
-      ElMessage.error(error.response?.data?.message || '评价失败，请稍后重试')
-    }
+    console.error('提交评分时出错:', error)
+    ElMessage.error(error.response?.data?.message || '评分提交失败')
+  }
+}
+
+// 关闭评分弹窗
+function closeRatingDialog() {
+  showRatingDialog.value = false
+  selectedRatingRecord.value = null
+  ratingForm.value = {
+    rating: 5,
+    comment: ''
   }
 }
 
@@ -1393,6 +1609,117 @@ function scrollToForm() {
   gap: 12px;
 }
 
+/* 反馈弹窗样式 */
+.feedback-dialog-content {
+  max-height: 500px;
+  overflow-y: auto;
+}
+
+.feedback-header {
+  margin-bottom: 24px;
+  padding: 20px;
+  background: linear-gradient(135deg, #f8fafe 0%, #f0f2ff 100%);
+  border-radius: 12px;
+  border: 1px solid #e8f2ff;
+}
+
+.feedback-meta {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 12px;
+}
+
+.meta-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.meta-label {
+  font-weight: 600;
+  color: #666;
+  min-width: 80px;
+}
+
+.meta-value {
+  color: #333;
+  font-weight: 500;
+}
+
+.feedback-content {
+  margin-bottom: 24px;
+}
+
+.feedback-content h4 {
+  font-size: 16px;
+  font-weight: 600;
+  color: #333;
+  margin: 0 0 16px 0;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding-bottom: 8px;
+  border-bottom: 2px solid #e8f2ff;
+}
+
+.feedback-text {
+  background: #fff;
+  border: 2px solid #e8f2ff;
+  border-radius: 12px;
+  padding: 20px;
+  line-height: 1.8;
+  color: #333;
+  font-size: 15px;
+  min-height: 120px;
+  box-shadow: 0 2px 8px rgba(102, 126, 234, 0.08);
+}
+
+.feedback-rating {
+  background: #fffbf0;
+  border: 1px solid #ffeaa7;
+  border-radius: 12px;
+  padding: 20px;
+}
+
+.feedback-rating h4 {
+  font-size: 16px;
+  font-weight: 600;
+  color: #856404;
+  margin: 0 0 16px 0;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.rating-display {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.rating-stars {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.rating-comment {
+  background: #fff;
+  border: 1px solid #ffeaa7;
+  border-radius: 8px;
+  padding: 12px;
+  color: #856404;
+  line-height: 1.6;
+  font-style: italic;
+}
+
+.rating-comment::before {
+  content: '"';
+  font-size: 18px;
+  font-weight: bold;
+  color: #e6a23c;
+}
+
 /* 响应式设计 */
 @media (max-width: 768px) {
   .teachvip-container {
@@ -1487,6 +1814,40 @@ function scrollToForm() {
   .el-descriptions {
     font-size: 14px;
   }
+
+  /* 反馈弹窗移动端适配 */
+  .feedback-meta {
+    grid-template-columns: 1fr;
+    gap: 8px;
+  }
+
+  .meta-row {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 4px;
+  }
+
+  .meta-label {
+    min-width: auto;
+    font-size: 13px;
+  }
+
+  .meta-value {
+    font-size: 14px;
+  }
+
+  .feedback-text {
+    font-size: 14px;
+    padding: 16px;
+  }
+
+  .feedback-rating {
+    padding: 16px;
+  }
+
+  .rating-display {
+    gap: 8px;
+  }
 }
 
 @media (max-width: 480px) {
@@ -1497,6 +1858,122 @@ function scrollToForm() {
 
   .feature-icon {
     font-size: 28px;
+  }
+}
+
+/* 评分弹窗样式 */
+.rating-dialog-content {
+  padding: 16px 0;
+}
+
+.rating-header {
+  margin-bottom: 24px;
+}
+
+.rating-info h4 {
+  margin: 0 0 12px 0;
+  color: #303133;
+  font-size: 16px;
+  font-weight: 600;
+}
+
+.rating-meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 16px;
+  font-size: 14px;
+  color: #606266;
+}
+
+.rating-meta .meta-item {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.rating-form {
+  margin-top: 16px;
+}
+
+.rating-container {
+  width: 100%;
+}
+
+.rating-stars {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  margin-bottom: 8px;
+}
+
+.rating-desc {
+  flex-shrink: 0;
+  min-width: 80px;
+}
+
+.rating-text {
+  font-size: 14px;
+  font-weight: 500;
+}
+
+.rating-text.poor {
+  color: #f56c6c;
+}
+
+.rating-text.below {
+  color: #e6a23c;
+}
+
+.rating-text.average {
+  color: #909399;
+}
+
+.rating-text.good {
+  color: #67c23a;
+}
+
+.rating-text.excellent {
+  color: #67c23a;
+}
+
+/* 评分弹窗移动端适配 */
+@media (max-width: 768px) {
+  .rating-meta {
+    flex-direction: column;
+    gap: 8px;
+  }
+
+  .rating-stars {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 8px;
+  }
+
+  .rating-desc {
+    min-width: auto;
+    text-align: center;
+  }
+
+  .rating-form .el-form-item {
+    margin-bottom: 16px;
+  }
+}
+
+@media (max-width: 480px) {
+  .rating-dialog-content {
+    padding: 12px 0;
+  }
+
+  .rating-info h4 {
+    font-size: 15px;
+  }
+
+  .rating-meta {
+    font-size: 13px;
+  }
+
+  .rating-text {
+    font-size: 13px;
   }
 }
 </style>

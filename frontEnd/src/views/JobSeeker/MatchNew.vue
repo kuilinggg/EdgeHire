@@ -114,18 +114,18 @@
             </el-menu>
           </div>
           <div class="resume-preview">
-            <div v-if="selectedResume" class="resume-a4-wrapper">
+            <div v-if="selectedResume" class="resume-wrapper">
               <div v-if="isImportedResume" class="pdf-a4-fixed-wrapper">
                 <canvas ref="pdfCanvasRef" class="pdf-a4-canvas"></canvas>
                 <div v-if="pdfLoading" class="pdf-loading-mask">PDF加载中...</div>
               </div>
-              <component
-                v-else
-                :is="resumeA4Component"
-                :content="parsedResumeContent"
-                :avatar="selectedResume.avatar"
-                class="resume-a4-paper"
-              />
+              <div v-else class="resume-a4-paper">
+                <component
+                  :is="resumeA4Component"
+                  :content="parsedResumeContent"
+                  :avatar="selectedResume.avatar"
+                />
+              </div>
             </div>
             <el-empty v-else description="请选择左侧简历" />
           </div>
@@ -586,17 +586,46 @@ onMounted(() => {
   justify-content: flex-start;
 }
 
-.resume-a4-wrapper {
-  width: 100%;
+.resume-wrapper {
+  display: flex;
+  justify-content: center;
+  padding: 8px;
+  overflow: visible;
+}
+.resume-a4-paper {
+  width: 794px;
+  min-height: auto;
+  margin: 0 auto;
   display: flex;
   flex-direction: column;
   align-items: center;
-  margin: 0 auto;
-}
-
-.resume-a4-paper {
+  background: #fff;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.12);
+  border-radius: 8px;
   max-width: 100%;
+  overflow: visible;
+}
+.pdf-a4-fixed-wrapper {
+  width: 100%;
   height: auto;
+  min-height: 600px;
+  max-width: 100%;
+  background: #fff;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.12);
+  border-radius: 8px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: visible;
+  position: relative;
+}
+.pdf-a4-canvas {
+  width: 100%;
+  height: auto;
+  min-height: 600px;
+  background: #fff;
+  display: block;
+  border-radius: 8px;
 }
 
 .empty-state {
@@ -608,29 +637,6 @@ onMounted(() => {
 }
 
 /* PDF 渲染样式 */
-.pdf-a4-fixed-wrapper {
-  width: 794px;
-  height: 900px;
-  max-width: 100%;
-  max-height: 100%;
-  background: #fff;
-  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.12);
-  border-radius: 8px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  overflow: hidden;
-  position: relative;
-}
-
-.pdf-a4-canvas {
-  width: 794px;
-  height: 900px;
-  background: #fff;
-  display: block;
-  border-radius: 8px;
-}
-
 .pdf-loading-mask {
   position: absolute;
   left: 0;
@@ -757,12 +763,14 @@ onMounted(() => {
   .pdf-a4-fixed-wrapper {
     width: 100%;
     height: auto;
-    max-height: 600px;
+    min-height: auto;
+    max-height: none;
   }
   
   .pdf-a4-canvas {
     width: 100%;
     height: auto;
+    min-height: auto;
   }
 }
 
