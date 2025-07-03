@@ -22,5 +22,8 @@
 <style scoped>
 .algorithm {
   padding: 20px;
+  font-size: 18px;
+  font-weight: 600;
+  color: #3a36db;
 }
 </style>

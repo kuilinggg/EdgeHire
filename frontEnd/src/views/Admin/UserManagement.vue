@@ -60,7 +60,7 @@
         <el-table :data="infoList" style="width: 100%" >
         <el-table-column prop="id" label="ID" width="80"/>
         <el-table-column prop="userId" label="用户ID" />
-        <el-table-column prop="realname" label="真实姓名"/>
+        <el-table-column prop="realname" label="真实姓名" width="120"/>
         <el-table-column prop="age" label="年龄" /> 
         <el-table-column prop="gender" label="性别">
         <template #default="scope">
@@ -80,7 +80,7 @@
         : scope.row.status =='0' ? '冻结' : '正常' }}</span>
           </template>
         </el-table-column>
-        <el-table-column prop="phone" label="电话号码"/>
+        <el-table-column prop="phone" label="电话号码" width="120"/>
         <el-table-column prop="email" label="邮箱"/>
       </el-table>
       
@@ -91,7 +91,28 @@
       </template>
        </el-table-column> 
         <el-table-column prop="school" label="毕业院校" width="200"/> 
-        <el-table-column prop="favor" label="理想岗位" width="200"/>
+        <el-table-column prop="favor" label="理想岗位" width="200">
+        <template #default="scope">
+        <span>
+       {{
+        (() => {
+          const val = scope.row?.favor;
+          if (!val) return '暂无';
+
+          try {
+            const parsed = JSON.parse(val);
+            if (Array.isArray(parsed)) {
+              return parsed.length > 0 ? parsed.join('、') : '暂无';
+            }
+            return String(parsed);
+          } catch {
+            return val || '暂无';
+          }
+          })()
+          }}
+        </span>
+        </template>
+      </el-table-column>
         <el-table-column prop="membership" label="会员等级" width="200">
        <template #default="scope">
        <span>{{ scope.row?.membership === undefined || scope.row?.membership === null
@@ -384,6 +405,7 @@ onMounted(async () => {
 
       const isComplete = await checkUserInfoComplete(user)
       if (!isComplete) {
+        //发送提醒消息
         const success = await sendReminder(
           user.id,
           `【系统提醒】您的${user.role === 1 ? '求职者' : 'HR'}信息不完整，请及时完善！`
@@ -414,6 +436,9 @@ onBeforeUnmount(() => {
 <style scoped>
 .user-management{
   padding: 20px;
+  font-size: 18px;
+  font-weight: 600;
+  color: #3a36db;
 }
 
 .card {
@@ -448,7 +473,11 @@ onBeforeUnmount(() => {
   width: auto;
 }
 
-:deep(.el-table th),
+:deep(.el-table th) {
+  padding: 14px 16px;
+  text-align: center;
+}
+
 :deep(.el-table td) {
   text-align: center;
   vertical-align: middle;
