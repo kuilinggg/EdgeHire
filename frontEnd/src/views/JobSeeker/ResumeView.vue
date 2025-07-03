@@ -456,7 +456,7 @@ async function downloadImportedPdf() {
   padding: 40px 32px;
   color: #fff;
   text-align: center;
-  width: 1100px;
+  width: 1035px;
   max-width: 98vw;
   margin: 0 auto;
 }
