@@ -6,7 +6,7 @@
         <el-input v-model="searchKeyword" placeholder="搜索用户...(用户名)" style="width: 300px" />
         <el-button type="primary" @click="handleSearch">搜索</el-button>
         <el-button 
-          type="info" 
+          type="success"
           @click="filterRecentResumes"
           :class="{ 'active-filter': isRecentFilterActive }"
           :disabled="isRecentFilterActive"
@@ -167,19 +167,16 @@ const parseResumeContent = () => {
   try {
     const jsonObj = JSON.parse(content);
     
-    // 获取第一个键名
     const keys = Object.keys(jsonObj);
     if (keys.length > 0) {
-      const firstKey = keys[0];
-      
-      if (firstKey === 'importType') {
+      if ('importType' in jsonObj) {
         if (jsonObj.importType === 'pdf' && jsonObj.pdfUrl) {
           resumeType.value = 'pdf';
           pdfUrl.value = jsonObj.pdfUrl;
           return;
         }
       } 
-      else if (firstKey === 'template') {
+      else if ('template' in jsonObj) {
         resumeType.value = 'template';
         resumeTemplate.value = jsonObj.template || '1';
         return;
