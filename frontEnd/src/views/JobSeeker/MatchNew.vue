@@ -1,53 +1,104 @@
 <template>
-  <div class="resume-view-container">
+  <div class="match-new-container">
+    <!-- 页面头部 -->
+    <div class="page-header">
+      <div class="header-content">
+        <h1 class="page-title">
+          <el-icon><Document /></el-icon>
+          智能简历匹配
+        </h1>
+        <p class="page-subtitle">选择您的优质简历，开启精准求职之旅</p>
+      </div>
+    </div>
+
     <!-- 顶部提示 -->
     <el-alert
       title="请在下方选择需要提交的简历"
-      type="warning"
+      type="info"
       show-icon
       center
-      class="top-tip-el-alert"
+      class="top-tip-alert"
       :closable="false"
     />
-    <!-- 求职信息单卡片展示 -->
-    <el-card style="margin-bottom: 24px;">
+
+    <!-- 求职信息卡片 -->
+    <el-card class="info-card" shadow="never">
       <template #header>
-        <div class="header-bar">
-          <span class="resume-title">求职信息</span>
+        <div class="card-header">
+          <h3>
+            <el-icon><User /></el-icon>
+            求职信息
+          </h3>
+          <p>您的基本求职信息概览</p>
         </div>
       </template>
-      <el-row :gutter="32" class="seeker-main-row-short">
-        <el-col :span="24">
-          <el-card v-if="seekerInfo && seekerInfo.id" class="seeker-single-card">
-            <div><strong>学历：</strong>{{ educationOptions.find(e => e.value === seekerInfo.education)?.label || '-' }}</div>
-            <div><strong>学校：</strong>{{ seekerInfo.school || '-' }}</div>
-            <div><strong>理想岗位：</strong>
-              <template v-if="favorList.length > 0">
-                <el-tag v-for="(item, idx) in favorList" :key="idx" type="info" style="margin-right: 8px;">{{ item }}</el-tag>
-              </template>
-              <template v-else>-</template>
+      <div class="seeker-info-content">
+        <el-card v-if="seekerInfo && seekerInfo.id" class="seeker-info-card">
+          <div class="info-grid">
+            <div class="info-item">
+              <div class="info-label">
+                <el-icon><Reading /></el-icon>
+                学历
+              </div>
+              <div class="info-value">{{ educationOptions.find(e => e.value === seekerInfo.education)?.label || '-' }}</div>
             </div>
-            <div><strong>会员类型：</strong>{{ seekerInfo.membership === 0 ? '普通会员' : '高级会员' }}</div>
-          </el-card>
-          <el-empty v-else description="暂无求职信息" />
-        </el-col>
-      </el-row>
+            <div class="info-item">
+              <div class="info-label">
+                <el-icon><School /></el-icon>
+                学校
+              </div>
+              <div class="info-value">{{ seekerInfo.school || '-' }}</div>
+            </div>
+            <div class="info-item">
+              <div class="info-label">
+                <el-icon><Star /></el-icon>
+                会员类型
+              </div>
+              <div class="info-value">
+                <el-tag :type="seekerInfo.membership === 0 ? 'info' : 'success'">
+                  {{ seekerInfo.membership === 0 ? '普通会员' : '高级会员' }}
+                </el-tag>
+              </div>
+            </div>
+            <div class="info-item full-width">
+              <div class="info-label">
+                <el-icon><TrendCharts /></el-icon>
+                理想岗位
+              </div>
+              <div class="info-value">
+                <template v-if="favorList.length > 0">
+                  <el-tag v-for="(item, idx) in favorList" :key="idx" type="primary" effect="light" class="favor-tag">
+                    {{ item }}
+                  </el-tag>
+                </template>
+                <template v-else>
+                  <span class="no-data">暂无设置</span>
+                </template>
+              </div>
+            </div>
+          </div>
+        </el-card>
+        <el-empty v-else description="暂无求职信息" />
+      </div>
     </el-card>
-    <!-- 新建匹配卡片 -->
-    <el-card>
+    <!-- 简历选择卡片 -->
+    <el-card class="resume-card" shadow="never">
       <template #header>
-        <div class="header-bar">
-          <span class="resume-title">简历列表</span>
+        <div class="card-header">
+          <h3>
+            <el-icon><Document /></el-icon>
+            简历选择
+          </h3>
+          <p>选择您要提交的简历进行匹配</p>
         </div>
       </template>
-      <el-row :gutter="32" class="resume-main-row">
+      <div class="resume-content-wrapper">
         <template v-if="resumeList.length > 0">
-          <el-col :span="5" class="resume-list-col">
+          <div class="resume-sidebar">
             <el-menu
               :default-active="selectedIndex"
               @select="handleSelect"
               class="resume-list-menu"
-              style="height: 100%"
             >
               <el-menu-item
                 v-for="(item, idx) in resumeList"
@@ -61,8 +112,8 @@
                 </div>
               </el-menu-item>
             </el-menu>
-          </el-col>
-          <el-col :span="19" class="resume-a4-col">
+          </div>
+          <div class="resume-preview">
             <div v-if="selectedResume" class="resume-a4-wrapper">
               <div v-if="isImportedResume" class="pdf-a4-fixed-wrapper">
                 <canvas ref="pdfCanvasRef" class="pdf-a4-canvas"></canvas>
@@ -77,16 +128,25 @@
               />
             </div>
             <el-empty v-else description="请选择左侧简历" />
-          </el-col>
+          </div>
         </template>
         <template v-else>
-          <el-col :span="24">
+          <div class="empty-state">
             <el-empty description="暂无简历数据" />
-          </el-col>
+          </div>
         </template>
-      </el-row>
-      <div style="margin-top: 32px; text-align: center; display: flex; justify-content: center; gap: 16px;">
-        <el-button type="primary" size="large" @click="onSubmitMatch" :disabled="!selectedResume || !seekerInfo || !seekerInfo.id">提交匹配</el-button>
+      </div>
+      <div style="margin-top: 32px; text-align: center;">
+        <el-button 
+          type="primary" 
+          size="large" 
+          @click="onSubmitMatch" 
+          :disabled="!selectedResume || !seekerInfo || !seekerInfo.id"
+          class="submit-btn"
+        >
+          <el-icon><Check /></el-icon>
+          提交匹配
+        </el-button>
       </div>
     </el-card>
   </div>
@@ -94,7 +154,7 @@
 
 <script setup>
 import { ref, onMounted, computed, watch } from 'vue'
-import { Document } from '@element-plus/icons-vue'
+import { Document, User, Reading, School, Star, TrendCharts, Check } from '@element-plus/icons-vue'
 import { ElMessage } from 'element-plus'
 import { createPost } from '../../api/post'
 import { useAuthStore } from '../../stores/authStore'
@@ -293,114 +353,239 @@ onMounted(() => {
 </script>
 
 <style scoped>
-.resume-view-container {
-  padding: 32px 0;
+.match-new-container {
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 24px;
+  background: #f8fafe;
   min-height: 100vh;
-  background: #f4f6fa;
   display: flex;
   flex-direction: column;
+  gap: 24px;
+}
+
+/* 页面头部 */
+.page-header {
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  border-radius: 16px;
+  padding: 40px 32px;
+  color: #fff;
+  text-align: center;
+}
+
+.header-content h1 {
+  font-size: 28px;
+  font-weight: 700;
+  margin: 0 0 12px 0;
+  display: flex;
   align-items: center;
+  justify-content: center;
+  gap: 12px;
 }
 
+.page-subtitle {
+  font-size: 16px;
+  opacity: 0.9;
+  margin: 0;
+}
+
+/* 顶部提示 */
+.top-tip-alert {
+  border-radius: 12px;
+  border: 1px solid #e1f3ff;
+  background: #f0f9ff;
+  color: #1e40af;
+  font-size: 16px;
+  font-weight: 500;
+}
+
+.top-tip-alert .el-alert__icon {
+  color: #3b82f6;
+}
+
+/* 卡片通用样式 */
 .el-card {
-  box-shadow: 0 4px 32px rgba(64, 158, 255, 0.10), 0 1.5px 6px 0 rgba(0, 0, 0, 0.04);
-  border-radius: 18px;
-  width: 1100px;
-  max-width: 98vw;
-  margin: 0 auto 24px auto;
-  background: #f9fafb;
+  border-radius: 16px;
+  border: none;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.06);
+  background: #fff;
 }
 
-.seekerinfo-card {
-  margin-bottom: 24px;
-  background: #fff;
-  border-radius: 4px;
-  box-shadow: 0 4px 24px 0 rgba(64,158,255,0.08), 0 1.5px 6px 0 rgba(0,0,0,0.04);
-}
-.profile-view {
+.card-header {
   display: flex;
   flex-direction: column;
-  align-items: flex-start;
-  padding: 16px 0 8px 0;
-  width: 100%;
+  gap: 8px;
 }
-.profile-view p {
-  margin: 10px 0 4px 0;
+
+.card-header h3 {
+  font-size: 20px;
+  font-weight: 600;
+  color: #333;
+  margin: 0;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.card-header p {
+  font-size: 14px;
+  color: #666;
+  margin: 0;
+}
+
+/* 求职信息卡片 */
+.info-card {
+  background: #fffbf0;
+  border: 1px solid #fef3c7;
+}
+
+.info-card .el-card__header {
+  background: #fef3c7;
+  border-bottom: 1px solid #fbbf24;
+}
+
+.info-card .card-header h3 {
+  color: #92400e;
+}
+
+.info-card .card-header p {
+  color: #a16207;
+}
+
+.seeker-info-content {
+  padding: 20px 0;
+}
+
+.seeker-info-card {
+  background: #fff;
+  border: 1px solid #f3f4f6;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
+}
+
+.info-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+  gap: 20px;
+  padding: 20px;
+}
+
+.info-item {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.info-item.full-width {
+  grid-column: 1 / -1;
+}
+
+.info-label {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 14px;
+  font-weight: 500;
+  color: #667eea;
+}
+
+.info-value {
   font-size: 16px;
   color: #333;
-  letter-spacing: 0.5px;
-  text-align: left;
-  width: 100%;
+  font-weight: 500;
 }
-.resume-main-row {
-  min-height: 900px;
+
+.favor-tag {
+  margin-right: 8px;
+  margin-bottom: 4px;
+}
+
+.no-data {
+  color: #999;
+  font-style: italic;
+}
+
+/* 简历选择卡片 */
+.resume-card {
+  flex: 1;
+}
+
+.resume-content-wrapper {
+  display: flex;
+  gap: 32px;
+  min-height: 700px;
   align-items: flex-start;
 }
-.resume-list-col {
-  min-width: 180px;
-  max-width: 260px;
-  height: 900px;
-  background: transparent;
-  display: flex;
-  flex-direction: column;
-  align-items: stretch;
+
+.resume-sidebar {
+  min-width: 240px;
+  max-width: 280px;
+  height: 700px;
+  flex-shrink: 0;
 }
 
 .resume-list-menu {
-  border-radius: 14px;
-  background: #f7f8fa;
-  box-shadow: 0 1px 4px rgba(99,102,241,0.03);
-  padding: 0;
+  border-radius: 12px;
+  background: #f8fafe;
+  box-shadow: 0 2px 8px rgba(102, 126, 234, 0.08);
+  padding: 8px;
   height: 100%;
-  border: none;
-  transition: background 0.2s, box-shadow 0.2s;
+  border: 1px solid #e8f2ff;
+  overflow: hidden;
 }
 
 .resume-menu-item {
-  border-radius: 0 8px 8px 0;
-  margin: 2px 0;
+  border-radius: 8px;
+  margin: 4px 0;
   font-size: 16px;
-  transition: background 0.2s, color 0.2s;
-  padding: 8px 12px 8px 0;
+  transition: all 0.3s ease;
+  padding: 12px 16px;
   color: #333;
   position: relative;
-  overflow: visible;
+  background: transparent;
+  border: 1px solid transparent;
 }
 
-.resume-menu-item.is-active,
 .resume-menu-item:hover {
   background: linear-gradient(90deg, #e6eaff 0%, #f4f6fb 100%);
-  color: #4f46e5;
-  font-weight: 600;
-  box-shadow: 0 2px 8px rgba(99,102,241,0.06);
+  color: #667eea;
+  border-color: #c7d2fe;
+  transform: translateX(4px);
 }
 
-.resume-menu-item.is-active::before,
-.resume-menu-item:hover::before {
+.resume-menu-item.is-active {
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  color: #fff;
+  font-weight: 600;
+  box-shadow: 0 4px 12px rgba(102, 126, 234, 0.3);
+  border-color: #667eea;
+}
+
+.resume-menu-item.is-active::before {
   content: '';
   position: absolute;
-  left: 0;
-  top: 8px;
-  bottom: 8px;
+  left: -8px;
+  top: 50%;
+  transform: translateY(-50%);
   width: 4px;
-  border-radius: 4px;
-  background: #6366f1;
-  z-index: 1;
+  height: 20px;
+  border-radius: 2px;
+  background: #fff;
 }
 
 .menu-item-flex {
-  padding-left: 16px;
   display: flex;
   align-items: center;
+  gap: 8px;
 }
 
-.resume-a4-col {
-  min-width: 740px;
+.resume-preview {
+  flex: 1;
   display: flex;
   flex-direction: column;
   align-items: center;
   justify-content: flex-start;
 }
+
 .resume-a4-wrapper {
   width: 100%;
   display: flex;
@@ -408,93 +593,196 @@ onMounted(() => {
   align-items: center;
   margin: 0 auto;
 }
-.header-bar {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  padding: 0 16px;
-  height: 64px;
-}
-.resume-title {
-  font-size: 24px;
-  font-weight: bold;
-  color: #222;
-  letter-spacing: 1px;
-  line-height: 1.2;
-}
-.seeker-main-row-short {
-  min-height: unset;
-  height: 220px;
-  align-items: flex-start;
-}
-.seeker-list-col-scroll {
-  min-width: 180px;
-  max-width: 260px;
-  height: 200px;
-  overflow-y: auto;
-}
-.seeker-single-card {
-  min-height: 180px;
-  max-width: 400px;
-  margin: 0 auto;
-  display: flex;
-  flex-direction: column;
-  justify-content: center;
-}
-.top-tip-el-alert {
-  margin-bottom: 18px;
-  font-size: 18px;
-  max-width: 600px;
-  margin-left: auto;
-  margin-right: auto;
+
+.resume-a4-paper {
+  max-width: 100%;
+  height: auto;
 }
 
+.empty-state {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 400px;
+}
+
+/* PDF 渲染样式 */
 .pdf-a4-fixed-wrapper {
   width: 794px;
-  height: 1123px;
+  height: 900px;
   max-width: 100%;
   max-height: 100%;
   background: #fff;
-  box-shadow: 0 2px 12px #eee;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.12);
+  border-radius: 8px;
   display: flex;
   align-items: center;
   justify-content: center;
   overflow: hidden;
   position: relative;
 }
+
 .pdf-a4-canvas {
   width: 794px;
-  height: 1123px;
+  height: 900px;
   background: #fff;
   display: block;
+  border-radius: 8px;
 }
+
 .pdf-loading-mask {
   position: absolute;
-  left: 0; top: 0; right: 0; bottom: 0;
-  background: rgba(255,255,255,0.7);
+  left: 0;
+  top: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(255, 255, 255, 0.9);
   display: flex;
   align-items: center;
   justify-content: center;
-  font-size: 20px;
-  color: #409eff;
+  font-size: 18px;
+  color: #667eea;
   z-index: 10;
+  backdrop-filter: blur(2px);
 }
 
+/* 提交按钮 */
+.submit-btn {
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  border: none;
+  font-weight: 600;
+  padding: 0 48px;
+  height: 48px;
+  font-size: 16px;
+  border-radius: 24px;
+  transition: all 0.3s ease;
+}
+
+.submit-btn:hover:not(:disabled) {
+  background: linear-gradient(135deg, #5a6fd8 0%, #6a4190 100%);
+  transform: translateY(-2px);
+  box-shadow: 0 8px 24px rgba(102, 126, 234, 0.3);
+}
+
+.submit-btn:disabled {
+  background: #d1d5db;
+  color: #9ca3af;
+  cursor: not-allowed;
+}
+
+/* 响应式设计 */
 @media (max-width: 1200px) {
-  .el-card {
-    width: 100vw;
-    min-width: unset;
-    max-width: 100vw;
-    border-radius: 0;
+  .match-new-container {
+    max-width: 100%;
+    padding: 16px;
+  }
+  
+  .resume-content-wrapper {
+    gap: 20px;
+    min-height: auto;
+  }
+  
+  .resume-sidebar {
+    min-width: 200px;
+    max-width: 220px;
+    height: auto;
+    min-height: 400px;
+  }
+  
+  .resume-list-menu {
+    min-height: 400px;
   }
 }
 
-@media (max-width: 900px) {
-  .resume-view-container {
-    padding: 8px 0;
+@media (max-width: 768px) {
+  .match-new-container {
+    padding: 12px;
   }
-  .resume-a4-col {
-    min-width: unset;
+  
+  .page-header {
+    padding: 32px 24px;
+  }
+  
+  .header-content h1 {
+    font-size: 24px;
+    flex-direction: column;
+    gap: 8px;
+  }
+  
+  .info-grid {
+    grid-template-columns: 1fr;
+    gap: 16px;
+    padding: 16px;
+  }
+  
+  .info-item.full-width {
+    grid-column: 1;
+  }
+  
+  .resume-content-wrapper {
+    flex-direction: column;
+    gap: 16px;
+  }
+  
+  .resume-sidebar {
+    min-width: auto;
+    max-width: 100%;
+    width: 100%;
+    height: auto;
+    min-height: auto;
+  }
+  
+  .resume-list-menu {
+    display: flex;
+    flex-direction: row;
+    overflow-x: auto;
+    overflow-y: hidden;
+    padding: 8px;
+    height: auto;
+    min-height: auto;
+  }
+  
+  .resume-menu-item {
+    min-width: 120px;
+    margin: 0 4px;
+    text-align: center;
+    flex-shrink: 0;
+  }
+  
+  .resume-preview {
+    width: 100%;
+  }
+  
+  .pdf-a4-fixed-wrapper {
+    width: 100%;
+    height: auto;
+    max-height: 600px;
+  }
+  
+  .pdf-a4-canvas {
+    width: 100%;
+    height: auto;
+  }
+}
+
+@media (max-width: 480px) {
+  .page-header {
+    padding: 24px 16px;
+  }
+  
+  .header-content h1 {
+    font-size: 20px;
+  }
+  
+  .page-subtitle {
+    font-size: 14px;
+  }
+  
+  .submit-btn {
+    padding: 0 32px;
+    height: 44px;
+    font-size: 15px;
   }
 }
 </style>
