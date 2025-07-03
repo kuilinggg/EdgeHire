@@ -351,9 +351,9 @@ function loadPdfJsScript() {
   return new Promise((resolve, reject) => {
     if (window.pdfjsLib) return resolve(window.pdfjsLib)
     const script = document.createElement('script')
-    script.src = 'https://cdn.jsdelivr.net/npm/pdfjs-dist@3.11.174/build/pdf.min.js'
+    script.src = '/libs/pdf.min.js' // 本地部署pdfjs主脚本
     script.onload = () => {
-      window.pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdn.jsdelivr.net/npm/pdfjs-dist@3.11.174/build/pdf.worker.min.js'
+      window.pdfjsLib.GlobalWorkerOptions.workerSrc = '/libs/pdf.worker.min.js' // 本地部署worker脚本
       resolve(window.pdfjsLib)
     }
     script.onerror = reject
