@@ -1,92 +1,160 @@
 <template>
-  <div class="profile-container">
+  <div class="match-container">
     <el-alert v-if="showFillAlert" title="请先完善求职信息" type="warning" show-icon class="top-alert" />
-    <div class="header-bar">
-      <span class="resume-title">求职信息</span>
-    </div>
-    <el-card v-if="!editing">
-      <div class="profile-view">
-        <p><strong>学历：</strong>{{ educationText }}</p>
-        <p><strong>学校：</strong>{{ form.school || '-' }}</p>
-        <p><strong>理想岗位：</strong>
-          <template v-if="favorList.length > 0">
-            <el-tag v-for="(item, idx) in favorList" :key="idx" type="info" style="margin-right: 8px;">{{ item }}</el-tag>
-          </template>
-          <template v-else>-</template>
-        </p>
-        <p><strong>会员类型：</strong>{{ form.membership === 0 ? '普通会员' : '高级会员' }}</p>
+    
+    <!-- 页面头部 -->
+    <div class="page-header">
+      <div class="header-content">
+        <h1 class="page-title">
+          <el-icon><User /></el-icon>
+          求职信息管理
+        </h1>
+        <p class="page-subtitle">完善您的求职信息，提升匹配成功率</p>
       </div>
-    </el-card>
-    <el-form v-else :model="form" label-width="80px" :rules="rules" ref="matchForm" class="edit-form">
-      <el-form-item label="学历" prop="education" :required="true">
-        <el-select v-model="form.education" placeholder="请选择学历">
-          <el-option v-for="item in educationOptions" :key="item.value" :label="item.label" :value="item.value" />
-        </el-select>
-      </el-form-item>
-      <el-form-item label="学校" prop="school" :required="true">
-        <el-input v-model="form.school" placeholder="请输入毕业学校" />
-      </el-form-item>
-      <el-form-item label="理想岗位" prop="favor" :required="true">
-        <div style="display: flex; flex-wrap: wrap; align-items: center; gap: 8px;">
-          <!-- 已保存的岗位标签 -->
-          <el-tag
-            v-for="(item, idx) in favorEditList"
-            :key="idx"
-            closable
-            @close="removeFavor(idx)"
-            type="info"
-            style="margin-bottom: 4px;"
-          >{{ item }}</el-tag>
-          
-          <!-- 当前编辑中的输入框 -->
-          <el-input
-            v-if="showInput"
-            v-model="favorInput"
-            placeholder="请输入理想岗位"
-            size="small"
-            style="width: 160px;"
-            @keyup.enter.native="confirmAdd"
-            @blur="confirmAdd"
-            ref="favorInputRef"
-          />
-          
-          <!-- 添加按钮 -->
-          <el-button 
-            v-if="!showInput && favorEditList.length > 0" 
-            type="primary" 
-            size="small" 
-            @click="showAddInput"
-            icon="el-icon-plus"
-          >
-            添加岗位
+    </div>
+
+    <!-- 信息展示卡片 -->
+    <el-card v-if="!editing" class="info-card" shadow="never">
+      <template #header>
+        <div class="card-header">
+          <h3>
+            <el-icon><Document /></el-icon>
+            当前求职信息
+          </h3>
+          <el-button type="primary" class="edit-btn" @click="startEdit">
+            <el-icon><Edit /></el-icon>
+            编辑信息
           </el-button>
-          
-          <!-- 当没有岗位且不显示输入框时的提示按钮 -->
-          <el-button 
-            v-if="!showInput && favorEditList.length === 0" 
-            type="primary" 
-            size="small" 
-            @click="showAddInput"
-            icon="el-icon-plus"
-          >
-            添加第一个岗位
-          </el-button>
-          
-          <!-- 确认和取消按钮 -->
-          <div v-if="showInput" style="display: flex; gap: 4px;">
-            <el-button type="success" size="small" @click="confirmAdd">确认</el-button>
-            <el-button size="small" @click="cancelAdd">取消</el-button>
+        </div>
+      </template>
+      
+      <div class="info-display">
+        <div class="info-grid">
+          <div class="info-item">
+            <div class="info-label">学历水平</div>
+            <div class="info-value">{{ educationText }}</div>
+          </div>
+          <div class="info-item">
+            <div class="info-label">毕业院校</div>
+            <div class="info-value">{{ form.school || '-' }}</div>
+          </div>
+          <div class="info-item">
+            <div class="info-label">会员类型</div>
+            <div class="info-value">
+              <el-tag :type="form.membership === 0 ? 'info' : 'success'">
+                {{ form.membership === 0 ? '普通会员' : '高级会员' }}
+              </el-tag>
+            </div>
           </div>
         </div>
-      </el-form-item>
-      <el-form-item>
-        <el-button type="success" @click="onSaveClick" :loading="saveLoading">保存</el-button>
-        <el-button @click="cancelEdit" style="margin-left:8px;">取消</el-button>
-      </el-form-item>
-    </el-form>
-    <div style="display: flex; justify-content: center; margin-top: 18px;">
-      <el-button type="primary" class="edit-btn" @click="startEdit" v-if="!editing" style="margin-top: 18px; align-self: flex-end;">编辑</el-button>
-    </div>
+        
+        <div class="info-item full-width">
+          <div class="info-label">理想岗位</div>
+          <div class="info-value">
+            <template v-if="favorList.length > 0">
+              <div class="skills-display">
+                <el-tag 
+                  v-for="(item, idx) in favorList" 
+                  :key="idx" 
+                  type="primary" 
+                  effect="light"
+                  class="skill-tag"
+                >
+                  {{ item }}
+                </el-tag>
+              </div>
+            </template>
+            <template v-else>
+              <span class="empty-text">暂未设置理想岗位</span>
+            </template>
+          </div>
+        </div>
+      </div>
+    </el-card>
+    <!-- 编辑表单 -->
+    <el-card v-else class="edit-form-card" shadow="never">
+      <template #header>
+        <div class="card-header">
+          <h3>
+            <el-icon><Edit /></el-icon>
+            编辑求职信息
+          </h3>
+          <p>请完善您的求职信息，以便获得更精准的职位匹配</p>
+        </div>
+      </template>
+      
+      <el-form :model="form" label-width="120px" :rules="rules" ref="matchForm" class="edit-form">
+        <el-form-item label="学历水平" prop="education" required>
+          <el-select v-model="form.education" placeholder="请选择您的学历" style="width: 100%">
+            <el-option v-for="item in educationOptions" :key="item.value" :label="item.label" :value="item.value" />
+          </el-select>
+        </el-form-item>
+        
+        <el-form-item label="毕业院校" prop="school" required>
+          <el-input v-model="form.school" placeholder="请输入毕业院校名称" />
+        </el-form-item>
+        
+        <el-form-item label="理想岗位" prop="favor" required>
+          <div class="favor-input-container">
+            <!-- 已添加的岗位标签 -->
+            <div v-if="favorEditList.length > 0" class="skills-display">
+              <el-tag
+                v-for="(item, idx) in favorEditList"
+                :key="idx"
+                closable
+                @close="removeFavor(idx)"
+                type="primary"
+                effect="light"
+                class="skill-tag"
+              >
+                {{ item }}
+              </el-tag>
+            </div>
+            
+            <!-- 输入框和控制按钮 -->
+            <div class="input-controls">
+              <el-input
+                v-if="showInput"
+                v-model="favorInput"
+                placeholder="请输入理想岗位名称"
+                style="width: 200px; margin-right: 8px;"
+                @keyup.enter="confirmAdd"
+                @blur="confirmAdd"
+                ref="favorInputRef"
+              />
+              
+              <el-button 
+                v-if="!showInput" 
+                type="primary" 
+                @click="showAddInput"
+                :icon="Plus"
+                size="small"
+              >
+                {{ favorEditList.length === 0 ? '添加岗位' : '添加更多' }}
+              </el-button>
+              
+              <div v-if="showInput" class="button-group">
+                <el-button type="success" size="small" @click="confirmAdd" :icon="Check">确认</el-button>
+                <el-button size="small" @click="cancelAdd" :icon="Close">取消</el-button>
+              </div>
+            </div>
+          </div>
+        </el-form-item>
+        
+        <el-form-item>
+          <div class="form-actions">
+            <el-button type="primary" @click="onSaveClick" :loading="saveLoading" size="large">
+              <el-icon><Check /></el-icon>
+              保存信息
+            </el-button>
+            <el-button @click="cancelEdit" size="large">
+              <el-icon><Close /></el-icon>
+              取消编辑
+            </el-button>
+          </div>
+        </el-form-item>
+      </el-form>
+    </el-card>
   </div>
 </template>
 
@@ -94,6 +162,7 @@
 import { ref, reactive, onMounted, computed, nextTick } from 'vue'
 import { ElMessage } from 'element-plus'
 import { getSeekerByUserId, createSeeker, updateSeeker } from '../../api/seeker'
+import { User, Document, Edit, Plus, Check, Close } from '@element-plus/icons-vue'
 
 const user_id = localStorage.getItem('userId')
 const form = reactive({
@@ -317,109 +386,259 @@ onMounted(() => {
 </script>
 
 <style scoped>
-.profile-container {
-  padding: 32px;
-  max-width: 900px;
-  min-width: 700px;
+.match-container {
+  max-width: 1000px;
   margin: 0 auto;
-  background: #fff;
-  border-radius: 4px;
-  box-shadow: 0 4px 24px 0 rgba(64,158,255,0.08), 0 1.5px 6px 0 rgba(0,0,0,0.04);
-  position: relative;
+  padding: 24px;
+  background: #f8fafe;
+  min-height: 100vh;
 }
-.header-bar {
-  display: flex;
-  justify-content: flex-start;
-  align-items: center;
-  margin-bottom: 20px;
-  padding-left: 0;
-  min-height: 40px;
+
+.top-alert {
+  margin-bottom: 24px;
+  border-radius: 12px;
 }
-.el-card {
+
+.page-header {
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  border-radius: 16px;
+  padding: 40px 32px;
+  color: #fff;
+  text-align: center;
   margin-bottom: 24px;
 }
-.profile-view {
+
+.header-content h1 {
+  font-size: 28px;
+  font-weight: 700;
+  margin: 0 0 12px 0;
   display: flex;
-  flex-direction: column;
-  align-items: flex-start;
-  padding: 16px 0 8px 0;
-  width: 100%;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
 }
-.profile-view p {
-  margin: 10px 0 4px 0;
+
+.page-subtitle {
   font-size: 16px;
+  opacity: 0.9;
+  margin: 0;
+}
+
+.info-card,
+.edit-form-card {
+  border-radius: 16px;
+  border: none;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.06);
+  margin-bottom: 24px;
+}
+
+.card-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.card-header h3 {
+  font-size: 20px;
+  font-weight: 600;
   color: #333;
-  letter-spacing: 0.5px;
-  text-align: left;
-  width: 100%;
+  margin: 0;
+  display: flex;
+  align-items: center;
+  gap: 8px;
 }
-.edit-btn, .el-button[type="success"] {
-  min-width: 140px;
-  font-size: 17px;
-  font-weight: 600;
-  letter-spacing: 2px;
-  box-shadow: 0 2px 8px rgba(64,158,255,0.13);
-  background: linear-gradient(90deg, #409EFF 0%, #66b1ff 100%);
-  color: #fff;
+
+.card-header p {
+  font-size: 14px;
+  color: #666;
+  margin: 8px 0 0 0;
+}
+
+.edit-btn {
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
   border: none;
-  transition: background 0.3s, box-shadow 0.3s;
-}
-.edit-btn:hover, .el-button[type="success"]:hover {
-  background: linear-gradient(90deg, #66b1ff 0%, #409EFF 100%);
-  box-shadow: 0 4px 16px rgba(64,158,255,0.18);
-}
-.header-bar .el-button.create-btn,
-.header-bar .el-button.edit-btn {
-  min-width: 80px;
-  font-size: 17px;
   font-weight: 600;
-  letter-spacing: 2px;
-  box-shadow: 0 2px 8px rgba(64,158,255,0.13);
-  background: linear-gradient(90deg, #409EFF 0%, #66b1ff 100%);
-  color: #fff;
-  border: none;
-  transition: background 0.3s, box-shadow 0.3s;
-}
-.header-bar .el-button.create-btn:hover,
-.header-bar .el-button.edit-btn:hover {
-  background: linear-gradient(90deg, #66b1ff 0%, #409EFF 100%);
-  box-shadow: 0 4px 16px rgba(64,158,255,0.18);
-}
-.el-button {
-  font-weight: 600;
-  letter-spacing: 2px;
-  font-size: 16px;
-}
-.el-button + .el-button {
-  margin-left: 14px !important;
-}
-.top-alert {
-  margin-bottom: 22px;
   border-radius: 8px;
 }
-.resume-title {
-  font-size: 24px;
-  font-weight: bold;
-  color: #222;
-  letter-spacing: 1px;
-  line-height: 1.2;
+
+.edit-btn:hover {
+  background: linear-gradient(135deg, #5a6fd8 0%, #6a4190 100%);
 }
-.edit-form {
-  background: #f8fbff;
-  padding: 24px 18px 12px 18px;
-  box-shadow: 0 1.5px 6px 0 rgba(0,0,0,0.03);
-  border-radius: 4px;
+
+.info-display {
+  padding: 8px 0;
+}
+
+.info-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+  gap: 24px;
   margin-bottom: 24px;
 }
-.el-form-item {
-  margin-bottom: 18px;
+
+.info-item {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
 }
-.el-form-item__label {
+
+.info-item.full-width {
+  grid-column: 1 / -1;
+}
+
+.info-label {
+  font-weight: 600;
+  color: #666;
+  font-size: 14px;
+}
+
+.info-value {
+  font-size: 16px;
+  color: #333;
   font-weight: 500;
-  color: #222;
+}
+
+.empty-text {
+  color: #999;
+  font-style: italic;
+}
+
+.skills-display {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 8px;
+}
+
+.skill-tag {
+  margin: 0;
+  border-radius: 6px;
+}
+
+.edit-form-card {
+  background: #fff;
+}
+
+.edit-form {
+  margin-top: 24px;
+}
+
+.edit-form .el-form-item {
+  margin-bottom: 24px;
+}
+
+.edit-form .el-form-item__label {
+  font-weight: 600;
+  color: #333;
   font-size: 15px;
 }
-.el-input, .el-select {
+
+.edit-form .el-input__inner,
+.edit-form .el-select {
+  border-radius: 8px;
+  border: 1px solid #e0e6ed;
+  transition: all 0.3s ease;
+}
+
+.edit-form .el-input__inner:focus,
+.edit-form .el-select:focus {
+  border-color: #667eea;
+  box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+}
+
+.favor-input-container {
   width: 100%;
+}
+
+.input-controls {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-top: 12px;
+}
+
+.button-group {
+  display: flex;
+  gap: 8px;
+}
+
+.form-actions {
+  display: flex;
+  gap: 16px;
+  justify-content: center;
+  margin-top: 32px;
+}
+
+.form-actions .el-button {
+  border-radius: 8px;
+  font-weight: 600;
+  padding: 12px 24px;
+  font-size: 16px;
+}
+
+.form-actions .el-button--primary {
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  border: none;
+}
+
+.form-actions .el-button--primary:hover {
+  background: linear-gradient(135deg, #5a6fd8 0%, #6a4190 100%);
+}
+
+.form-actions .el-button:not(.el-button--primary) {
+  color: #666;
+  border-color: #ddd;
+}
+
+.form-actions .el-button:not(.el-button--primary):hover {
+  color: #333;
+  border-color: #999;
+}
+
+/* 响应式设计 */
+@media (max-width: 768px) {
+  .match-container {
+    padding: 16px;
+  }
+
+  .page-header {
+    padding: 32px 24px;
+  }
+
+  .header-content h1 {
+    font-size: 24px;
+    flex-direction: column;
+    gap: 8px;
+  }
+
+  .info-grid {
+    grid-template-columns: 1fr;
+    gap: 16px;
+  }
+
+  .card-header {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 12px;
+  }
+
+  .form-actions {
+    flex-direction: column;
+    align-items: center;
+  }
+
+  .form-actions .el-button {
+    width: 100%;
+    max-width: 300px;
+  }
+
+  .input-controls {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+
+  .input-controls .el-input {
+    width: 100% !important;
+  }
 }
 </style>
