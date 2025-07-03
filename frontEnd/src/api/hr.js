@@ -36,7 +36,8 @@ export const hrApi = {
 
   // HR发起沟通
   initiateChat(hrUserId, targetUserId, customMessage = null) {
-    const data = customMessage ? { customMessage } : null
+    const data = customMessage ? { customMessage } : {}
+    localStorage.setItem('activeUser', targetUserId)
     return axios.post(`${API_BASE}/hr/initiate-chat/${hrUserId}/${targetUserId}`, data)
   },
 
