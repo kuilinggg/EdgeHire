@@ -11,7 +11,7 @@
           :class="{ 'active-filter': isRecentFilterActive }"
           :disabled="isRecentFilterActive"
         >
-          近三日简历
+          今日简历
         </el-button>
         <el-button 
           type="warning" 
@@ -60,20 +60,58 @@
       </el-table>
 
       <!-- 弹窗 -->
-      <el-dialog
-        title="简历详情"
-        v-model="dialogVisible"
-        width="50%"
-        center
-      >
-        <el-scrollbar height="300px">
-          <p style="white-space: pre-wrap">{{ selectedResumeContent }}</p>
-        </el-scrollbar>
-
-        <template #footer>
-          <el-button @click="dialogVisible = false">返回</el-button>
-        </template>
-      </el-dialog>
+     <el-dialog
+    v-model="dialogVisible"
+    title="简历详情"
+    width="80%"
+    center
+    class="resume-dialog"
+  >
+    <div class="resume-dialog-content">
+      <div v-if="selectedResume">
+        <!-- PDF类型简历 -->
+        <div v-if="resumeType === 'pdf'">
+          <h3>PDF简历</h3>
+          <div style="width:100%;height:80vh;">
+            <iframe
+              v-if="pdfUrl"
+              :src="pdfUrl"
+              width="100%"
+              height="100%"
+              style="border:none;"
+              title="PDF简历预览"
+            ></iframe>
+            <el-empty v-else description="PDF加载失败" />
+          </div>
+        </div>
+        
+        <!-- 模板类型简历 -->
+        <div v-else-if="resumeType === 'template'" class="resume-a4-wrapper">
+          <component
+            :is="resumeA4Component"
+            :content="parsedResumeContent"
+            :avatar="selectedResume.avatar"
+            class="resume-a4-paper"
+          />
+          <div class="resume-template-info">
+            使用的模板: {{ resumeTemplate }}
+          </div>
+        </div>
+        
+        <!-- 其他类型简历 -->
+        <div v-else>
+          <el-scrollbar height="500px">
+            <pre>{{ selectedResume.content }}</pre>
+          </el-scrollbar>
+        </div>
+      </div>
+      <el-empty v-else description="暂无简历内容" />
+    </div>
+    
+    <template #footer>
+      <el-button @click="dialogVisible = false">返回</el-button>
+    </template>
+  </el-dialog>
 
       <el-pagination
         style="margin-top: 20px; text-align: center"
@@ -95,6 +133,9 @@ import { getAllResumes , deleteResume } from '../../api/resume';
 import { ElMessage ,ElMessageBox } from 'element-plus';
 import dayjs from 'dayjs'
 import axios from 'axios'
+import ResumeA4Paper from '../../components/ResumeA4Paper.vue'
+import ResumeA4PaperBlueLeft from '../../components/ResumeA4PaperBlueLeft.vue'
+import ResumeA4PaperBlueTopBar from '../../components/ResumeA4PaperBlueTopBar.vue'
 
 const dialogVisible=ref(false);
 const resumes = ref([]);
@@ -103,7 +144,64 @@ const selectedResumeContent = ref('')
 const currentPage = ref(1)
 const pageSize = ref(10)
 const searchKeyword = ref('')
-const isRecentFilterActive = ref(false) // 近三日筛选状态
+const isRecentFilterActive = ref(false) // 今日筛选状态
+const selectedResume = ref(null)
+const resumeType = ref(''); // 'pdf', 'template', 'other'
+const pdfUrl = ref('');
+const resumeTemplate = ref('');
+
+// 解析简历内容
+const parseResumeContent = () => {
+  if (!selectedResume.value || !selectedResume.value.content) {
+    resumeType.value = 'other';
+    return;
+  }
+  
+  const content = selectedResume.value.content;
+  if(!isStrictJSON(content)) {
+    resumeType.value = 'other';
+    return;
+  }
+
+  // 尝试解析为 JSON
+  try {
+    const jsonObj = JSON.parse(content);
+    
+    // 获取第一个键名
+    const keys = Object.keys(jsonObj);
+    if (keys.length > 0) {
+      const firstKey = keys[0];
+      
+      if (firstKey === 'importType') {
+        if (jsonObj.importType === 'pdf' && jsonObj.pdfUrl) {
+          resumeType.value = 'pdf';
+          pdfUrl.value = jsonObj.pdfUrl;
+          return;
+        }
+      } 
+      else if (firstKey === 'template') {
+        resumeType.value = 'template';
+        resumeTemplate.value = jsonObj.template || '1';
+        return;
+      }
+    }
+  } catch (e) {
+    console.warn('简历内容不是有效的 JSON:', e);
+  }
+  
+  // 其他情况
+  resumeType.value = 'other';
+};
+
+const parsedResumeContent = computed(() => {
+  if (!selectedResume.value || !selectedResume.value.content) return {};
+  try {
+    return JSON.parse(selectedResume.value.content);
+  } catch {
+    return { 内容: selectedResume.value.content };
+  }
+});
+
 
 // 计算属性
 const paginatedResumes = computed(() => {
@@ -123,13 +221,13 @@ const handleSearch = () => {
   filterResumes()
 }
 
-//近三日筛选功能
+//今日筛选功能
 const filterRecentResumes = () => {
   if (!isRecentFilterActive.value) {
     isRecentFilterActive.value = true
     currentPage.value = 1
     filterResumes()
-    ElMessage.success('已筛选近三日简历')
+    ElMessage.success('已筛选今日简历')
   }
 }
 
@@ -142,6 +240,14 @@ const resetFilters = () => {
   ElMessage.success('筛选条件已重置')
 }
 
+const resumeA4Component = computed(() => {
+  const template = parsedResumeContent.value.template || '1'
+  if (template === '2') return ResumeA4PaperBlueLeft
+  else if (template === '3') return ResumeA4PaperBlueTopBar
+  // 未来可扩展更多模板
+  return ResumeA4Paper
+})
+
 const isStrictJSON=(str)=> {
   try {
     const parsed = JSON.parse(str);
@@ -149,37 +255,6 @@ const isStrictJSON=(str)=> {
   } catch (e) {
     return false;
   }
-}
-
-const jsonToTxt = (obj, indent = "") => {
-  let result = "";
-  
-  for (const key in obj) {
-    if (Array.isArray(obj[key])) {
-      // 处理数组类型的值
-      result += `${indent}${key}：\n`;
-      
-      obj[key].forEach((item, index) => {
-        // 如果是对象，递归处理
-        if (typeof item === "object") {
-          result += `${indent}  ${index + 1}.\n${jsonToTxt(item, indent + "    ")}`;
-        } 
-        // 如果是基本类型，直接显示
-        else {
-          result += `${indent}  ${index + 1}. ${item}\n`;
-        }
-      });
-      
-    } else if (typeof obj[key] === "object" && obj[key] !== null) {
-      // 处理普通对象
-      result += `${indent}${key}：\n${jsonToTxt(obj[key], indent + "  ")}`;
-    } else {
-      // 处理基本类型值
-      result += `${indent}${key}：${obj[key]}\n`;
-    }
-  }
-  
-  return result;
 }
 
 // 获取用户信息并合并到简历数据
@@ -215,11 +290,11 @@ const filterResumes = () => {
       String(resume.username).includes(searchKeyword.value))
   }
   
-  // 应用近三日筛选
+  // 应用今日筛选
   if (isRecentFilterActive.value) {
-    const threeDaysAgo = dayjs().subtract(3, 'day').startOf('day')
+    const oneDayAgo = dayjs().subtract(0, 'day').startOf('day')
     result = result.filter(resume => 
-      dayjs(resume.createTime).isAfter(threeDaysAgo))
+      dayjs(resume.createTime).isAfter(oneDayAgo))
   }
   
   filteredResumes.value = result
@@ -242,24 +317,9 @@ const loadResumes = async () => {
 
 //简历内容查询
 const contentCheck = async (row) => {
-  console.log(row.content)
-  if (!row || !row.content) {
-    selectedResumeContent.value = '暂无简历内容'
-    dialogVisible.value = true
-    return
-  }
-  
-  // 尝试解析JSON
-  if(isStrictJSON(row.content))
-  { 
-    const parsedData = JSON.parse(row.content);
-    //转化后赋值
-    selectedResumeContent.value = jsonToTxt(parsedData);
-  }
-  else
-    selectedResumeContent.value = row.content
-  
-  dialogVisible.value = true
+  selectedResume.value = row;
+  parseResumeContent(); 
+  dialogVisible.value = true;
 }
 
 const handlePageChange = (page) => {
@@ -394,5 +454,119 @@ onMounted(()=>{
 :deep(.el-image-viewer__btn:hover) {
   background-color: rgba(0, 0, 0, 0.8);
 }
+}
+
+/* 简历弹窗样式 */
+.resume-dialog :deep(.el-dialog) {
+  display: flex;
+  flex-direction: column;
+  max-width: 1000px;
+}
+
+.resume-dialog :deep(.el-dialog__body) {
+  padding: 10px 20px;
+  flex: 1;
+  display: flex;
+}
+
+.resume-dialog-content {
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+  height: 100%;
+}
+
+.resume-a4-container {
+  display: flex;
+  justify-content: center;
+  align-items: flex-start;
+  width: 100%;
+  height: 100%;
+  overflow: auto;
+  padding: 10px 0;
+}
+
+.resume-preview-wrapper {
+  display: flex;
+  justify-content: center;
+  width: 100%;
+  max-width: 900px;
+}
+
+.resume-a4-paper {
+  width: 100%;
+  max-width: 794px; /* A4纸宽度 */
+  min-height: 1123px; /* A4纸高度 */
+  background: white;
+  box-shadow: 0 2px 12px rgba(0, 0, 0, 0.1);
+  padding: 40px;
+  box-sizing: border-box;
+  margin: 0 auto;
+}
+
+/* 响应式调整 */
+@media (max-width: 992px) {
+  .resume-dialog {
+    width: 95% !important;
+  }
+  
+  .resume-a4-paper {
+    padding: 20px;
+    min-height: auto;
+    max-width: 100%;
+  }
+}
+
+@media (max-width: 768px) {
+  .resume-a4-paper {
+    padding: 15px;
+    font-size: 14px;
+  }
+}
+
+/* 图片预览样式 */
+:deep(.el-image-viewer__wrapper) {
+  --el-image-viewer-index-text-color: #fff;
+  --el-image-viewer-index-font-size: 16px;
+  --el-image-viewer-index-text-shadow: 0 1px 1px #000;
+}
+
+:deep(.el-image-viewer__mask) {
+  background: rgba(0, 0, 0, 0.8);
+  opacity: 1;
+}
+
+:deep(.el-image-viewer__btn) {
+  color: #fff;
+  background-color: rgba(0, 0, 0, 0.5);
+  border-radius: 50%;
+  width: 44px;
+  height: 44px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.3s;
+}
+
+:deep(.el-image-viewer__btn:hover) {
+  background-color: rgba(0, 0, 0, 0.8);
+}
+
+.resume-template-info {
+  margin-top: 15px;
+  padding: 10px;
+  background-color: #f5f7fa;
+  border-radius: 4px;
+  text-align: center;
+  font-size: 16px;
+}
+
+.resume-dialog-content pre {
+  white-space: pre-wrap;
+  word-break: break-all;
+  padding: 15px;
+  background: #f8f8f8;
+  border-radius: 4px;
+  font-family: monospace;
 }
 </style>

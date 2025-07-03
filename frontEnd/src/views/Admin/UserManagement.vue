@@ -417,12 +417,14 @@ onMounted(async () => {
         }
       }
     }
-
-    ElNotification({
+    
+    if(incompleteCount !== 0) {
+      ElNotification({
       title: '信息完整度检测完成',
       message: `已发送 ${incompleteCount} 条提醒`,
       type: 'success'
     })
+    }
   } catch (error) {
     console.error('自动提醒流程异常:', error)
   }
