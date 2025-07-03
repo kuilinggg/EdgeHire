@@ -1,6 +1,8 @@
 package com.se.EdgeHire.Controller;
 
 import com.se.EdgeHire.Entity.HrInfo;
+import com.se.EdgeHire.Repository.MessageRepository;
+import com.se.EdgeHire.Repository.GuidanceRequestRepository;
 import com.se.EdgeHire.Service.HrService;
 import com.se.EdgeHire.Service.MessageService;
 import com.se.EdgeHire.WebSocket.WebSocketHandler;
@@ -8,6 +10,9 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
+import java.time.LocalDateTime;
+import java.time.temporal.ChronoUnit;
+import java.util.HashMap;
 import java.util.Map;
 import java.util.Optional;
 
@@ -20,6 +25,10 @@ public class HrController {
     private HrService hrService;
     @Autowired
     private MessageService messageService;
+    @Autowired
+    private MessageRepository messageRepository;
+    @Autowired
+    private GuidanceRequestRepository guidanceRequestRepository;
 
     /**
      * 处理预检请求
@@ -151,6 +160,49 @@ public class HrController {
             System.err.println("发起沟通失败: " + e.getMessage());
             e.printStackTrace();
             return ResponseEntity.status(500).body(Map.of("error", "发起沟通失败: " + e.getMessage()));
+        }
+    }
+
+    /**
+     * 获取HR的KPI数据
+     * @param userId HR用户ID
+     * @return KPI数据
+     */
+    @GetMapping("/kpi/{userId}")
+    public ResponseEntity<?> getKpiData(@PathVariable Integer userId) {
+        try {
+            // 验证用户是否为HR
+            if (!hrService.isHr(userId)) {
+                return ResponseEntity.badRequest().body(Map.of("error", "用户不是HR角色"));
+            }
+
+            Map<String, Object> kpiData = new HashMap<>();
+
+            // 1. 统计本周联系的不重复用户数
+            LocalDateTime weekStart = LocalDateTime.now().truncatedTo(ChronoUnit.DAYS).minusDays(6);
+            long weeklyContacts = messageRepository.countDistinctContactsThisWeek(userId, weekStart);
+            kpiData.put("newContacts", weeklyContacts);
+
+            // 2. 统计未读消息数量
+            long unreadMessages = messageRepository.countByReceiverIdAndIsRead(userId, 0);
+            kpiData.put("unreadMessages", unreadMessages);
+
+            // 3. 统计新的指导请求数量（待分配的）
+            long newGuidanceRequests = guidanceRequestRepository.findPendingRequests().size();
+            kpiData.put("newGuidance", newGuidanceRequests);
+
+            // 4. 统计本周完成的指导数量
+            LocalDateTime weekStartForGuidance = LocalDateTime.now().truncatedTo(ChronoUnit.DAYS).minusDays(6);
+            long completedGuidance = guidanceRequestRepository.countByHrUserIdAndStatusAndCompletedTimeBetween(
+                Long.valueOf(userId), "completed", weekStartForGuidance, LocalDateTime.now());
+            kpiData.put("completedGuidance", completedGuidance);
+
+            return ResponseEntity.ok(kpiData);
+
+        } catch (Exception e) {
+            System.err.println("获取KPI数据失败: " + e.getMessage());
+            e.printStackTrace();
+            return ResponseEntity.status(500).body(Map.of("error", "获取KPI数据失败: " + e.getMessage()));
         }
     }
 }

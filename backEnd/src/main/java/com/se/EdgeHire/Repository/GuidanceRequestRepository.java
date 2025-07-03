@@ -44,4 +44,14 @@ public interface GuidanceRequestRepository extends JpaRepository<GuidanceRequest
      * 根据ID查询单个记录
      */
     Optional<GuidanceRequest> findById(Long id);
+
+    /**
+     * 统计HR在指定时间段内完成的指导数量
+     */
+    @Query("SELECT COUNT(gr) FROM GuidanceRequest gr WHERE gr.hrUserId = :hrUserId AND gr.status = :status AND gr.completedTime >= :startTime AND gr.completedTime <= :endTime AND gr.deletedAt IS NULL")
+    long countByHrUserIdAndStatusAndCompletedTimeBetween(
+            @Param("hrUserId") Long hrUserId,
+            @Param("status") String status,
+            @Param("startTime") LocalDateTime startTime,
+            @Param("endTime") LocalDateTime endTime);
 }

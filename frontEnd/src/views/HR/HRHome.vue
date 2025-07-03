@@ -46,17 +46,18 @@
         <div class="task-title">待办事项</div>
         <el-divider />
         <div class="task-list">
-          <div class="task-item clickable" @click="goToGuidance">
+          <div v-if="kpi.newGuidance > 0" class="task-item clickable" @click="goToGuidance">
             <el-icon><EditPen /></el-icon>
             <span>您有 <b>{{ kpi.newGuidance }}</b> 条新的求职指导请求待处理。</span>
           </div>
-          <div class="task-item clickable" @click="goToChat">
+          <div v-if="kpi.unreadMessages > 0" class="task-item clickable" @click="goToChat">
             <el-icon><ChatDotRound /></el-icon>
             <span>您有 <b>{{ kpi.unreadMessages }}</b> 条来自求职者的未读消息。</span>
           </div>
-        </div>
-        <div class="task-footer">
-          <el-link type="primary" @click="goToGuidance">查看全部</el-link>
+          <div v-if="kpi.newGuidance === 0 && kpi.unreadMessages === 0" class="task-item no-tasks">
+            <el-icon><Check /></el-icon>
+            <span>暂无待办事项，您已处理完所有任务！</span>
+          </div>
         </div>
       </el-card>
       <el-card class="quick-card">
@@ -71,6 +72,10 @@
             <el-icon><Search /></el-icon>
             <span>搜索人才</span>
           </div>
+          <div class="quick-entry clickable" @click="goToGuidance">
+            <el-icon><EditPen /></el-icon>
+            <span>求职指导</span>
+          </div>
         </div>
       </el-card>
     </div>
@@ -80,7 +85,7 @@
 <script setup>
 import { ref, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
-import { EditPen, ChatDotRound, Finished, Document, Search } from '@element-plus/icons-vue'
+import { EditPen, ChatDotRound, Finished, Document, Search, Check } from '@element-plus/icons-vue'
 import { ElMessage } from 'element-plus'
 import { hrApi } from '../../api/hr.js'
 import { getInfoByUserId } from '../../api/info.js'
@@ -282,7 +287,7 @@ onMounted(async () => {
   align-items: flex-start;
   justify-content: center;
   min-width: 150px;
-  min-height: 100px;
+  min-height: 130px;
   border-radius: 14px;
   color: #fff;
   box-shadow: 0 2px 8px 0 rgba(58,54,219,0.04);
@@ -300,10 +305,10 @@ onMounted(async () => {
   top: 18px;
 }
 .kpi-value {
-  font-size: 36px;
+  font-size: 42px;
   font-weight: 700;
-  margin-top: 16px;
-  margin-bottom: 8px;
+  margin-top: 20px;
+  margin-bottom: 10px;
   z-index: 1;
 }
 .kpi-label {
@@ -318,12 +323,13 @@ onMounted(async () => {
 .task-card, .quick-card {
   flex: 1;
   min-width: 260px;
+  min-height: 280px;
   border-radius: 14px;
   background: #fff;
   box-shadow: 0 2px 8px 0 rgba(58,54,219,0.04);
   display: flex;
   flex-direction: column;
-  justify-content: space-between;
+  justify-content: flex-start;
 }
 .task-title {
   font-size: 18px;
@@ -332,14 +338,15 @@ onMounted(async () => {
   margin-bottom: 8px;
 }
 .task-list {
-  margin: 16px 0 8px 0;
+  margin: 20px 0 16px 0;
+  flex-grow: 1;
 }
 .task-item {
   display: flex;
   align-items: center;
   font-size: 15px;
   color: #333;
-  padding: 10px 0;
+  padding: 16px 0;
   cursor: pointer;
   border-radius: 8px;
   transition: background 0.2s;
@@ -352,14 +359,18 @@ onMounted(async () => {
 .task-item.clickable:hover {
   background: #f5f5ff;
 }
-.task-footer {
-  text-align: right;
-  margin-top: 8px;
+.task-item.no-tasks {
+  color: #67c23a;
+  font-style: italic;
+}
+.task-item.no-tasks .el-icon {
+  color: #67c23a;
 }
 .quick-entry-row {
   display: flex;
   gap: 12px;
-  margin: 12px 0 4px 0;
+  margin: 20px 0 16px 0;
+  flex-grow: 1;
 }
 .quick-entry {
   flex: 1;
@@ -369,13 +380,14 @@ onMounted(async () => {
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  padding: 16px 0;
+  padding: 24px 0;
   font-size: 15px;
   font-weight: 600;
   color: #3a36db;
   cursor: pointer;
   transition: box-shadow 0.2s, background 0.2s;
   box-shadow: 0 2px 8px 0 rgba(58,54,219,0.04);
+  min-height: 120px;
 }
 .quick-entry .el-icon {
   font-size: 28px;
