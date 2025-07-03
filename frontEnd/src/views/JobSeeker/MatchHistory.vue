@@ -317,9 +317,9 @@ async function renderPdfToCanvas(url) {
     }
     const page = await pdf.getPage(1)
     const viewport = page.getViewport({ scale: 1 })
-    const targetWidth = 794
-    const targetHeight = 1123
-    const scale = Math.min(targetWidth / viewport.width, targetHeight / viewport.height)
+    // 计算合适的缩放比例，适应容器宽度
+    const containerWidth = Math.min(800, window.innerWidth - 100)
+    const scale = containerWidth / viewport.width
     const scaledViewport = page.getViewport({ scale })
     const canvas = pdfCanvasRef.value
     const context = canvas.getContext('2d')
@@ -371,19 +371,19 @@ onMounted(async () => {
 .match-history-container {
   max-width: 1200px;
   margin: 0 auto;
-  padding: 24px;
+  padding: 20px;
   background: #f8fafe;
   min-height: 100vh;
   display: flex;
   flex-direction: column;
-  gap: 24px;
+  gap: 20px;
 }
 
 /* 页面头部 */
 .page-header {
   background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
   border-radius: 16px;
-  padding: 40px 32px;
+  padding: 32px 24px;
   color: #fff;
   text-align: center;
 }
@@ -438,16 +438,18 @@ onMounted(async () => {
 /* 历史记录内容区域 */
 .history-content-wrapper {
   display: flex;
-  gap: 32px;
-  min-height: 700px;
+  gap: 12px;
+  min-height: auto;
   align-items: flex-start;
 }
 
 .history-sidebar {
-  min-width: 280px;
-  max-width: 320px;
-  height: 700px;
+  min-width: 220px;
+  max-width: 240px;
+  height: auto;
+  max-height: 80vh;
   flex-shrink: 0;
+  overflow-y: auto;
 }
 
 .history-list-menu {
@@ -531,7 +533,7 @@ onMounted(async () => {
 .resume-content {
   display: flex;
   flex-direction: column;
-  gap: 24px;
+  gap: 12px;
 }
 
 /* 求职者信息卡片 */
@@ -559,8 +561,8 @@ onMounted(async () => {
 .info-grid {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-  gap: 16px;
-  padding: 16px;
+  gap: 12px;
+  padding: 12px;
 }
 
 .info-item {
@@ -603,6 +605,7 @@ onMounted(async () => {
   background: #fff;
   border: 1px solid #e5e7eb;
   border-radius: 12px;
+  overflow: visible;
 }
 
 .resume-preview-card .el-card__header {
@@ -614,15 +617,21 @@ onMounted(async () => {
   color: #333;
 }
 
+.resume-preview-card .el-card__body {
+  overflow: visible;
+  padding: 0;
+}
+
 .resume-wrapper {
   display: flex;
   justify-content: center;
-  padding: 20px;
+  padding: 8px;
+  overflow: visible;
 }
 
 .resume-a4-paper {
   width: 794px;
-  min-height: 900px;
+  min-height: auto;
   margin: 0 auto;
   display: flex;
   flex-direction: column;
@@ -631,27 +640,29 @@ onMounted(async () => {
   box-shadow: 0 8px 32px rgba(0, 0, 0, 0.12);
   border-radius: 8px;
   max-width: 100%;
+  overflow: visible;
 }
 
 /* PDF 渲染样式 */
 .pdf-a4-fixed-wrapper {
-  width: 794px;
-  height: 900px;
+  width: 100%;
+  height: auto;
+  min-height: 600px;
   max-width: 100%;
-  max-height: 100%;
   background: #fff;
   box-shadow: 0 8px 32px rgba(0, 0, 0, 0.12);
   border-radius: 8px;
   display: flex;
   align-items: center;
   justify-content: center;
-  overflow: hidden;
+  overflow: visible;
   position: relative;
 }
 
 .pdf-a4-canvas {
-  width: 794px;
-  height: 900px;
+  width: 100%;
+  height: auto;
+  min-height: 600px;
   background: #fff;
   display: block;
   border-radius: 8px;
@@ -684,9 +695,9 @@ onMounted(async () => {
 /* 操作区域 */
 .action-area {
   text-align: center;
-  padding: 24px 0;
+  padding: 16px 0;
   border-top: 1px solid #e5e7eb;
-  margin-top: 24px;
+  margin-top: 16px;
 }
 
 .delete-btn {
@@ -720,19 +731,20 @@ onMounted(async () => {
   }
   
   .history-content-wrapper {
-    gap: 20px;
+    gap: 16px;
     min-height: auto;
   }
   
   .history-sidebar {
-    min-width: 240px;
-    max-width: 260px;
+    min-width: 200px;
+    max-width: 220px;
     height: auto;
-    min-height: 400px;
+    max-height: 60vh;
+    min-height: auto;
   }
   
   .history-list-menu {
-    min-height: 400px;
+    min-height: auto;
   }
 }
 
@@ -796,18 +808,20 @@ onMounted(async () => {
   }
   
   .resume-wrapper {
-    padding: 12px;
+    padding: 8px;
   }
   
   .pdf-a4-fixed-wrapper {
     width: 100%;
     height: auto;
-    max-height: 600px;
+    min-height: auto;
+    max-height: none;
   }
   
   .pdf-a4-canvas {
     width: 100%;
     height: auto;
+    min-height: auto;
   }
 }
 
