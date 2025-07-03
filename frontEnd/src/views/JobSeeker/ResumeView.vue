@@ -1,85 +1,58 @@
 <template>
   <div class="resume-view-container">
-    <!-- 页面头部 -->
-    <div class="page-header">
-      <div class="header-content">
-        <h1 class="page-title">
-          <el-icon><Document /></el-icon>
-          简历管理
-        </h1>
-        <p class="page-subtitle">查看和管理您的简历，打造完美求职形象</p>
-      </div>
-      <div class="header-actions">
-        <el-button type="primary" @click="handleImportClick" :icon="Upload">
-          导入简历（PDF）
-        </el-button>
-      </div>
-    </div>
-
-    <!-- 主要内容 -->
-    <el-card class="main-card" shadow="never" v-if="resumeList.length > 0">
+    <el-card>
       <template #header>
-        <div class="card-header">
-          <h3>
-            <el-icon><Folder /></el-icon>
-            简历列表
-          </h3>
-          <span class="resume-count">共 {{ resumeList.length }} 份简历</span>
+        <div class="header-bar">
+          <span class="resume-title">查看简历</span>
+          <div class="header-bar-spacer"></div>
+          <el-button type="primary" class="import-btn" size="medium" @click="handleImportClick">
+            <el-icon style="margin-right:4px;"><Upload /></el-icon>
+            导入简历（PDF）
+          </el-button>
         </div>
       </template>
-      
-      <div class="resume-content">
-        <!-- 左侧简历列表 -->
-        <div class="resume-list">
-          <div 
-            v-for="(item, idx) in resumeList" 
-            :key="item.id"
-            :class="['resume-item', { 'active': selectedIndex === String(idx) }]"
-            @click="handleSelect(String(idx))"
-          >
-            <div class="resume-item-header">
-              <div class="resume-title">
-                <el-icon><Document /></el-icon>
-                <span>简历 {{ idx + 1 }}</span>
-              </div>
-              <el-tag v-if="item.isPdf" type="success" size="small">PDF</el-tag>
-              <el-tag v-else type="primary" size="small">在线</el-tag>
-            </div>
-            <div class="resume-meta">
-              <div class="meta-item">
-                <el-icon><Calendar /></el-icon>
-                <span>{{ formatDate(item.createTime) }}</span>
-              </div>
-            </div>
-          </div>
-        </div>
-        
-        <!-- 右侧简历预览 -->
-        <div class="resume-preview">
-          <div v-if="selectedResume" class="preview-content">
-            <div class="preview-header">
-              <h4>简历预览</h4>
-              <div class="preview-actions">
-                <el-button v-if="isImportedResume" type="success" :icon="Document" :href="importedPdfUrl" target="_blank">
-                  下载PDF
-                </el-button>
-                <el-button v-else type="success" :icon="Document" @click="exportPdf">
-                  导出PDF
-                </el-button>
-                <el-button v-if="!isImportedResume" type="primary" :icon="Edit" @click="onEditSelected">
-                  编辑
-                </el-button>
-                <el-button type="danger" :icon="Delete" @click="confirmDelete">
-                  删除
-                </el-button>
-              </div>
-            </div>
-            
-            <div class="preview-body">
+      <el-dialog v-model="importDialogVisible" title="导入PDF简历" width="400px" :close-on-click-modal="false">
+        <input type="file" accept="application/pdf" @change="handleFileChange" />
+        <template #footer>
+          <el-button @click="importDialogVisible=false">取消</el-button>
+          <el-button type="primary" :loading="importLoading" :disabled="!importFile" @click="handleImportConfirm">上传</el-button>
+        </template>
+      </el-dialog>
+      <el-row :gutter="32" class="resume-main-row">
+        <template v-if="resumeList.length > 0">
+          <el-col :span="5" class="resume-list-col">
+            <el-menu :default-active="selectedIndex" @select="handleSelect" class="resume-list-menu"
+              style="height: 100%">
+              <el-menu-item v-for="(item, idx) in resumeList" :key="item.id" :index="String(idx)"
+                class="resume-menu-item">
+                <div class="menu-item-flex">
+                  <el-icon style="margin-right: 4px;">
+                    <Document />
+                  </el-icon>
+                  <span>简历{{ idx + 1 }}</span>
+                </div>
+              </el-menu-item>
+            </el-menu>
+          </el-col>
+          <el-col :span="19" class="resume-a4-col">
+            <div v-if="selectedResume" class="resume-a4-wrapper">
               <template v-if="isImportedResume">
-                <div class="pdf-preview-wrapper">
-                  <canvas ref="pdfCanvasRef" class="pdf-canvas"></canvas>
-                  <div v-if="pdfLoading" class="pdf-loading">PDF加载中...</div>
+                <div class="pdf-a4-fixed-wrapper">
+                  <canvas ref="pdfCanvasRef" class="pdf-a4-canvas"></canvas>
+                  <div v-if="pdfLoading" class="pdf-loading-mask">PDF加载中...</div>
+                </div>
+                <div class="resume-a4-ops-bar">
+                  <div class="resume-create-time-a4">
+                    上传时间：<span class="resume-label">{{ formatDate(selectedResume.createTime) }}</span>
+                  </div>
+                  <div style="margin-top: 32px; text-align: center; display: flex; justify-content: center; gap: 16px;">
+                    <el-button type="success" size="large" icon="Document" :href="importedPdfUrl" target="_blank">下载PDF</el-button>
+                    <el-popconfirm title="确定删除该简历？" @confirm="onDeleteSelected">
+                      <template #reference>
+                        <el-button type="danger" size="large" icon="Delete" class="delete-btn-main">删除当前简历</el-button>
+                      </template>
+                    </el-popconfirm>
+                  </div>
                 </div>
               </template>
               <template v-else>
@@ -87,88 +60,40 @@
                   :is="resumeA4Component"
                   :content="parsedResumeContent"
                   :avatar="selectedResume.avatar"
-                  class="resume-component"
+                  class="resume-a4-paper"
                 />
+                <div class="resume-a4-ops-bar">
+                  <div class="resume-create-time-a4">
+                    创建时间：<span class="resume-label">{{ formatDate(selectedResume.createTime) }}</span>
+                  </div>
+                  <div style="margin-top: 32px; text-align: center; display: flex; justify-content: center; gap: 16px;">
+                    <el-button type="success" size="large" icon="Document" @click="exportPdf">
+                      导出为PDF
+                    </el-button>
+                    <el-button type="primary" size="large" icon="Edit" class="edit-btn-main" @click="onEditSelected">
+                      编辑
+                    </el-button>
+                    <el-popconfirm title="确定删除该简历？" @confirm="onDeleteSelected">
+                      <template #reference>
+                        <el-button type="danger" size="large" icon="Delete" class="delete-btn-main">
+                          删除当前简历
+                        </el-button>
+                      </template>
+                    </el-popconfirm>
+                  </div>
+                </div>
               </template>
             </div>
-          </div>
-          
-          <div v-else class="empty-preview">
-            <el-empty description="请选择左侧简历进行预览" />
-          </div>
-        </div>
-      </div>
-    </el-card>
-
-    <!-- 空状态 -->
-    <el-card v-else class="empty-card" shadow="never">
-      <el-empty description="暂无简历">
-        <template #image>
-          <el-icon class="empty-icon"><Document /></el-icon>
+            <el-empty v-else description="请选择左侧简历" />
+          </el-col>
         </template>
-        <template #description>
-          <div class="empty-description">
-            <p>您还没有创建任何简历</p>
-            <p>开始创建您的第一份简历吧</p>
-          </div>
+        <template v-else>
+          <el-col :span="24">
+            <el-empty description="暂无简历数据" />
+          </el-col>
         </template>
-        <el-button type="primary" @click="handleImportClick" :icon="Upload">
-          导入PDF简历
-        </el-button>
-      </el-empty>
+      </el-row>
     </el-card>
-
-    <!-- 导入对话框 -->
-    <el-dialog v-model="importDialogVisible" title="导入PDF简历" width="500px" :close-on-click-modal="false">
-      <div class="import-dialog-content">
-        <el-upload
-          ref="uploadRef"
-          class="upload-demo"
-          :auto-upload="false"
-          :on-change="handleFileChange"
-          :file-list="fileList"
-          accept="application/pdf"
-          drag
-        >
-          <el-icon class="el-icon--upload"><Upload /></el-icon>
-          <div class="el-upload__text">
-            将PDF文件拖拽到此处，或<em>点击选择文件</em>
-          </div>
-          <template #tip>
-            <div class="el-upload__tip">
-              只能上传PDF文件，且不超过10MB
-            </div>
-          </template>
-        </el-upload>
-      </div>
-      <template #footer>
-        <div class="dialog-footer">
-          <el-button @click="importDialogVisible = false">取消</el-button>
-          <el-button type="primary" :loading="importLoading" :disabled="!importFile" @click="handleImportConfirm">
-            确认上传
-          </el-button>
-        </div>
-      </template>
-    </el-dialog>
-
-    <!-- 删除确认对话框 -->
-    <el-dialog v-model="deleteDialogVisible" title="确认删除" width="400px">
-      <div class="delete-dialog-content">
-        <el-icon class="warning-icon"><Warning /></el-icon>
-        <div class="warning-text">
-          <p>确定要删除这份简历吗？</p>
-          <p>删除后将无法恢复</p>
-        </div>
-      </div>
-      <template #footer>
-        <div class="dialog-footer">
-          <el-button @click="deleteDialogVisible = false">取消</el-button>
-          <el-button type="danger" :loading="deleteLoading" @click="onDeleteSelected">
-            确认删除
-          </el-button>
-        </div>
-      </template>
-    </el-dialog>
   </div>
 </template>
 
@@ -177,7 +102,7 @@ import { onMounted as vueOnMounted, ref, computed, watch } from 'vue'
 import { getResumesByUserId, deleteResume, createResume } from '../../api/resume'
 import { useAuthStore } from '../../stores/authStore'
 import { useRouter } from 'vue-router'
-import { Document, Delete, Edit, Calendar, Upload, Folder, Warning } from '@element-plus/icons-vue'
+import { Document, Delete, Edit, Calendar, Phone, Message, Location, User, InfoFilled, Reading, Briefcase, Suitcase, Star, Upload } from '@element-plus/icons-vue'
 import { ElMessage } from 'element-plus'
 import html2pdf from 'html2pdf.js'
 import domtoimage from 'dom-to-image'
@@ -195,11 +120,6 @@ const importDialogVisible = ref(false)
 const importFile = ref(null)
 const importLoading = ref(false)
 
-// 新增响应式变量
-const deleteDialogVisible = ref(false)
-const deleteLoading = ref(false)
-const fileList = ref([])
-
 const handleSelect = (idx) => {
   selectedIndex.value = idx
   selectedResume.value = resumeList.value[Number(idx)]
@@ -208,17 +128,13 @@ const handleSelect = (idx) => {
 const onDeleteSelected = async () => {
   if (!selectedResume.value) return
   const id = selectedResume.value.id
-  deleteLoading.value = true
   try {
     await deleteResume(id)
     ElMessage.success('删除成功')
-    deleteDialogVisible.value = false
     // 删除成功后刷新简历列表
     await refreshResumeList()
   } catch (e) {
     ElMessage.error('删除失败')
-  } finally {
-    deleteLoading.value = false
   }
 }
 
@@ -400,9 +316,13 @@ async function handleImportConfirm() {
   }
 }
 
-function handleFileChange(file) {
-  importFile.value = file.raw
-  fileList.value = [file]
+function handleFileChange(e) {
+  const file = e.target.files[0]
+  if (file && file.type === 'application/pdf') {
+    importFile.value = file
+  } else {
+    ElMessage.error('请上传PDF文件')
+  }
 }
 
 // PDF.js渲染相关
@@ -480,452 +400,236 @@ vueOnMounted(() => {
 
 <style scoped>
 .resume-view-container {
+  padding: 32px 0;
   min-height: 100vh;
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-  padding: 24px;
+  background: #f4f6fa;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
 }
 
-/* 页面头部样式 */
-.page-header {
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-  color: white;
-  padding: 40px 0;
-  margin: -24px -24px 24px -24px;
-  border-radius: 0 0 24px 24px;
+.el-card {
+  box-shadow: 0 4px 32px rgba(64,158,255,0.10), 0 1.5px 6px 0 rgba(0, 0, 0, 0.04);
+  border-radius: 18px;
+  width: 1100px;
+  max-width: 98vw;
+  margin: 0 auto;
+  background: #f9fafb;
+}
+
+.resume-main-row {
+  min-height: 900px;
+  align-items: flex-start;
+}
+
+.resume-list-col {
+  min-width: 180px;
+  max-width: 260px;
+  height: 900px;
+  background: transparent;
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+}
+
+.resume-list-menu {
+  border-radius: 14px;
+  background: #f7f8fa;
+  box-shadow: 0 1px 4px rgba(99,102,241,0.03);
+  padding: 0;
+  height: 100%;
+  border: none;
+  transition: background 0.2s, box-shadow 0.2s;
+}
+
+.resume-menu-item {
+  border-radius: 0 8px 8px 0;
+  margin: 2px 0;
+  font-size: 16px;
+  transition: background 0.2s, color 0.2s;
+  padding: 8px 12px 8px 0;
+  color: #333;
   position: relative;
-  overflow: hidden;
+  overflow: visible;
 }
 
-.page-header::before {
+.resume-menu-item.is-active,
+.resume-menu-item:hover {
+  background: linear-gradient(90deg, #e6eaff 0%, #f4f6fb 100%);
+  color: #4f46e5;
+  font-weight: 600;
+  box-shadow: 0 2px 8px rgba(99,102,241,0.06);
+}
+
+.resume-menu-item.is-active::before,
+.resume-menu-item:hover::before {
   content: '';
   position: absolute;
-  top: 0;
   left: 0;
-  right: 0;
-  bottom: 0;
-  background: url('data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1000 100" fill="white" fill-opacity="0.1"><polygon points="0,0 1000,0 1000,100 0,20"/></svg>');
-  background-size: cover;
-  background-position: bottom;
-}
-
-.header-content {
-  max-width: 1200px;
-  margin: 0 auto;
-  padding: 0 24px;
-  position: relative;
+  top: 8px;
+  bottom: 8px;
+  width: 4px;
+  border-radius: 4px;
+  background: #6366f1;
   z-index: 1;
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
 }
 
-.page-title {
-  font-size: 32px;
-  font-weight: 700;
-  margin: 0;
+.menu-item-flex {
+  padding-left: 16px;
   display: flex;
   align-items: center;
-  gap: 12px;
 }
 
-.page-title .el-icon {
-  font-size: 36px;
-}
-
-.page-subtitle {
-  font-size: 16px;
-  margin: 8px 0 0 0;
-  opacity: 0.9;
-}
-
-.header-actions {
+.resume-a4-col {
+  min-width: 740px;
   display: flex;
+  flex-direction: column;
   align-items: center;
-  gap: 16px;
+  justify-content: flex-start;
 }
 
-/* 主卡片样式 */
-.main-card {
-  background: white;
-  border-radius: 16px;
-  box-shadow: 0 8px 32px rgba(0,0,0,0.1);
-  border: none;
-  margin-bottom: 24px;
-  overflow: hidden;
-}
-
-.card-header {
+.resume-a4-wrapper {
+  width: 100%;
   display: flex;
+  flex-direction: column;
   align-items: center;
-  justify-content: space-between;
-  padding: 0;
+  margin: 0 auto;
 }
 
-.card-header h3 {
-  margin: 0;
-  font-size: 20px;
-  font-weight: 600;
-  color: #2d3748;
+.resume-create-time-a4 {
+  margin-top: 16px;
+  font-size: 15px;
+  color: #888;
+  text-align: left;
+  width: 794px;
+  max-width: 100%;
+  margin-left: auto;
+  margin-right: auto;
+}
+
+.resume-a4-ops-bar {
+  width: 794px;
+  max-width: 100%;
+  margin: 0 auto 18px auto;
   display: flex;
-  align-items: center;
-  gap: 8px;
+  flex-direction: column;
+  align-items: stretch;
 }
 
-.resume-count {
-  color: #718096;
-  font-size: 14px;
-}
-
-/* 简历内容区域 */
-.resume-content {
-  display: flex;
-  gap: 24px;
-  min-height: 600px;
-}
-
-.resume-list {
-  flex: 0 0 300px;
-  background: #f8fafc;
-  border-radius: 12px;
-  padding: 16px;
-  max-height: 600px;
-  overflow-y: auto;
-}
-
-.resume-item {
-  background: white;
-  border-radius: 12px;
-  padding: 16px;
-  margin-bottom: 12px;
-  cursor: pointer;
-  transition: all 0.3s ease;
-  border: 2px solid transparent;
-}
-
-.resume-item:hover {
-  transform: translateY(-2px);
-  box-shadow: 0 4px 16px rgba(0,0,0,0.1);
-}
-
-.resume-item.active {
-  border-color: #667eea;
-  box-shadow: 0 4px 16px rgba(102,126,234,0.2);
-}
-
-.resume-item-header {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  margin-bottom: 8px;
-}
-
-.resume-title {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  font-weight: 600;
-  color: #2d3748;
-}
-
-.resume-meta {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-}
-
-.meta-item {
-  display: flex;
-  align-items: center;
-  gap: 4px;
-  color: #718096;
-  font-size: 14px;
-}
-
-/* 简历预览区域 */
-.resume-preview {
-  flex: 1;
-  background: #f8fafc;
-  border-radius: 12px;
-  padding: 24px;
-  overflow: hidden;
-}
-
-.preview-content {
+.pdf-viewer-wrapper {
+  width: 100%;
   height: 100%;
   display: flex;
   flex-direction: column;
-}
-
-.preview-header {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  margin-bottom: 20px;
-  padding-bottom: 16px;
-  border-bottom: 1px solid #e2e8f0;
-}
-
-.preview-header h4 {
-  margin: 0;
-  font-size: 18px;
-  font-weight: 600;
-  color: #2d3748;
-}
-
-.preview-actions {
-  display: flex;
-  gap: 12px;
-}
-
-.preview-body {
-  flex: 1;
-  overflow: auto;
-  background: white;
-  border-radius: 8px;
-  padding: 16px;
-  box-shadow: 0 2px 8px rgba(0,0,0,0.05);
-}
-
-.pdf-preview-wrapper {
-  display: flex;
-  justify-content: center;
-  align-items: center;
-  position: relative;
-  min-height: 400px;
-}
-
-.pdf-canvas {
-  max-width: 100%;
-  max-height: 100%;
-  border-radius: 8px;
-  box-shadow: 0 4px 16px rgba(0,0,0,0.1);
-}
-
-.pdf-loading {
-  position: absolute;
-  top: 50%;
-  left: 50%;
-  transform: translate(-50%, -50%);
-  color: #667eea;
-  font-weight: 500;
-}
-
-.resume-component {
-  width: 100%;
-  max-width: 800px;
-  margin: 0 auto;
-}
-
-.empty-preview {
-  display: flex;
   align-items: center;
   justify-content: center;
-  height: 100%;
-  color: #718096;
+  padding: 32px 0;
+  box-sizing: border-box;
 }
 
-/* 空状态卡片 */
-.empty-card {
-  background: white;
-  border-radius: 16px;
-  box-shadow: 0 8px 32px rgba(0,0,0,0.1);
-  border: none;
-  padding: 60px 24px;
-  text-align: center;
-}
-
-.empty-icon {
-  font-size: 64px;
-  color: #cbd5e0;
+.pdf-icon {
+  font-size: 48px;
+  color: #409eff;
   margin-bottom: 16px;
 }
 
-.empty-description {
-  margin-bottom: 24px;
+.pdf-link {
+  font-size: 18px;
+  color: #409eff;
+  text-decoration: underline;
 }
 
-.empty-description p {
-  margin: 8px 0;
-  color: #718096;
-  font-size: 16px;
-}
-
-/* 对话框样式 */
-.import-dialog-content {
-  padding: 20px 0;
-}
-
-.upload-demo {
-  width: 100%;
-}
-
-.delete-dialog-content {
+.pdf-a4-fixed-wrapper {
+  width: 794px;
+  height: 1123px;
+  max-width: 100%;
+  max-height: 100%;
+  background: #fff;
+  box-shadow: 0 2px 12px #eee;
   display: flex;
   align-items: center;
-  gap: 16px;
-  padding: 20px 0;
+  justify-content: center;
+  overflow: hidden;
+  position: relative;
 }
-
-.warning-icon {
-  font-size: 48px;
-  color: #f56565;
+.pdf-a4-canvas {
+  width: 794px;
+  height: 1123px;
+  background: #fff;
+  display: block;
 }
-
-.warning-text p {
-  margin: 4px 0;
-  color: #2d3748;
-  font-size: 16px;
-}
-
-.dialog-footer {
+.pdf-loading-mask {
+  position: absolute;
+  left: 0; top: 0; right: 0; bottom: 0;
+  background: rgba(255,255,255,0.7);
   display: flex;
-  justify-content: flex-end;
-  gap: 12px;
+  align-items: center;
+  justify-content: center;
+  font-size: 20px;
+  color: #409eff;
+  z-index: 10;
 }
 
-/* 按钮样式 */
-.el-button {
-  border-radius: 8px;
-  font-weight: 500;
-  transition: all 0.3s ease;
+.header-bar {
+  display: flex;
+  align-items: center;
+  justify-content: flex-start;
+  width: 100%;
+  position: relative;
 }
-
-.el-button--primary {
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+.header-bar-spacer {
+  flex: 1 1 auto;
+}
+.import-btn {
+  background: #409eff;
+  color: #fff;
   border: none;
-  color: white;
-}
-
-.el-button--primary:hover {
-  background: linear-gradient(135deg, #5a67d8 0%, #6b46c1 100%);
-  transform: translateY(-1px);
-  box-shadow: 0 4px 16px rgba(102,126,234,0.4);
-}
-
-.el-button--success {
-  background: linear-gradient(135deg, #48bb78 0%, #38a169 100%);
-  border: none;
-  color: white;
-}
-
-.el-button--success:hover {
-  background: linear-gradient(135deg, #38a169 0%, #2f855a 100%);
-  transform: translateY(-1px);
-  box-shadow: 0 4px 16px rgba(72,187,120,0.4);
-}
-
-.el-button--danger {
-  background: linear-gradient(135deg, #f56565 0%, #e53e3e 100%);
-  border: none;
-  color: white;
-}
-
-.el-button--danger:hover {
-  background: linear-gradient(135deg, #e53e3e 0%, #c53030 100%);
-  transform: translateY(-1px);
-  box-shadow: 0 4px 16px rgba(245,101,101,0.4);
-}
-
-/* 标签样式 */
-.el-tag {
   border-radius: 6px;
   font-weight: 500;
-  border: none;
+  letter-spacing: 1px;
+  padding: 0 12px;
+  height: 30px;
+  font-size: 14px;
+  min-width: 0;
+  box-shadow: none;
+  transition: background 0.2s;
+}
+.import-btn:hover {
+  background: #337ecc;
+  box-shadow: none;
 }
 
-.el-tag--primary {
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-  color: white;
+.resume-title {
+  font-size: 20px;
 }
 
-.el-tag--success {
-  background: linear-gradient(135deg, #48bb78 0%, #38a169 100%);
-  color: white;
-}
-
-/* 响应式设计 */
 @media (max-width: 1200px) {
-  .page-header {
-    padding: 32px 0;
+  .el-card {
+    width: 100vw;
+    min-width: unset;
+    max-width: 100vw;
+    border-radius: 0;
   }
-  
-  .resume-content {
-    flex-direction: column;
-    gap: 16px;
-  }
-  
-  .resume-list {
-    flex: none;
-    max-height: 300px;
-  }
-  
-  .resume-preview {
-    min-height: 500px;
+  .resume-a4-ops-bar, .resume-create-time-a4 {
+    width: 100vw !important;
+    min-width: unset;
+    border-radius: 0;
+    padding: 0 2vw;
   }
 }
 
-@media (max-width: 768px) {
+@media (max-width: 900px) {
   .resume-view-container {
-    padding: 16px;
+    padding: 8px 0;
   }
-  
-  .page-header {
-    margin: -16px -16px 16px -16px;
-    padding: 24px 0;
+  .resume-a4-col {
+    min-width: unset;
   }
-  
-  .header-content {
-    flex-direction: column;
-    gap: 16px;
-    text-align: center;
-  }
-  
-  .page-title {
-    font-size: 24px;
-  }
-  
-  .resume-content {
-    gap: 12px;
-  }
-  
-  .resume-list {
-    max-height: 250px;
-  }
-  
-  .preview-actions {
-    flex-wrap: wrap;
-    gap: 8px;
-  }
-  
-  .preview-body {
-    padding: 12px;
-  }
-}
-
-@media (max-width: 480px) {
-  .page-title {
-    font-size: 20px;
-  }
-  
-  .card-header {
-    flex-direction: column;
-    align-items: flex-start;
-    gap: 8px;
-  }
-  
-  .resume-item {
-    padding: 12px;
-  }
-  
-  .preview-header {
-    flex-direction: column;
-    gap: 12px;
-    align-items: flex-start;
-  }
-  
-  .preview-actions {
-    width: 100%;
-    justify-content: center;
+  .resume-a4-ops-bar, .resume-create-time-a4 {
+    width: 100vw !important;
+    min-width: unset;
+    border-radius: 0;
+    padding: 0;
   }
 }
 </style>
