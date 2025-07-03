@@ -37,8 +37,7 @@
       <header class="header">
         <el-dropdown trigger="hover">
           <span class="user-info">
-            <el-avatar :src="avatar" size="40" icon="el-icon-user" />
-             <img class="avatar" :src="avatarUrl" alt="avatar" />
+            <el-avatar :src="avatarUrl" size="40" icon="el-icon-user" />
           </span>
           <template #dropdown>
             <el-dropdown-menu>
@@ -62,7 +61,7 @@ import { authApi } from '../../api/auth'
 import { ElMessage } from 'element-plus'
 import { User, Briefcase, DataAnalysis, Monitor } from '@element-plus/icons-vue'
 
-const avatarUrl = ref('https://api.dicebear.com/7.x/miniavs/svg?seed=jobseeker')
+const avatarUrl = ref('http://localhost:8080/api/files/admin.png')
 const router=useRouter()
 const avatar = ref(null)
 const logout = () => {
@@ -90,7 +89,7 @@ const logout = () => {
 .logo-container {
   display: flex;
   align-items: center;
-  justify-content: space-between;
+  justify-content: center;
   padding: 20px;
   border-bottom: 1px solid #f0f0f0;
   background: #fff;

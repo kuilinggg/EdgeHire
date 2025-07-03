@@ -31,17 +31,17 @@
             size="mini" 
             @click="handleEdit(scope.row)"
             type="warning"
-            >编辑</el-button>
+            >重置密码</el-button>
             <el-button size="mini" @click="
               infoList=[],detailInfoList=[],
               handleCheck(scope.row.id,scope.row.role)"
-              >查看</el-button>
+              >查看用户</el-button>
             <el-button 
             v-if="scope.row.role !== 0"
             size="mini" 
             type="danger" 
             @click="handleDelete(scope.row)"
-            >删除</el-button>
+            >删除用户</el-button>
           </template>
         </el-table-column>
       </el-table>
@@ -59,7 +59,7 @@
         <el-dialog title="查看用户详细信息" v-model="checkDialogVisible">
         <el-table :data="infoList" style="width: 100%" >
         <el-table-column prop="id" label="ID" width="80"/>
-        <el-table-column prop="userId" label="用户ID" />
+        <el-table-column prop="userId" label="用户ID" width="100" />
         <el-table-column prop="realname" label="真实姓名" width="120"/>
         <el-table-column prop="age" label="年龄" /> 
         <el-table-column prop="gender" label="性别">
@@ -85,7 +85,7 @@
       </el-table>
       
       <el-table v-if="userrole === 1" :data="detailInfoList" style="width: 100%" >
-        <el-table-column prop="education" label="学历" width="200">
+        <el-table-column prop="education" label="学历" width="175">
        <template #default="scope">
        <span>{{ scope.row?.education ? educationMap[scope.row.education] : '未知学历' }}</span>
       </template>
@@ -113,7 +113,7 @@
         </span>
         </template>
       </el-table-column>
-        <el-table-column prop="membership" label="会员等级" width="200">
+        <el-table-column prop="membership" label="会员等级" width="175">
        <template #default="scope">
        <span>{{ scope.row?.membership === undefined || scope.row?.membership === null
       ? '  '
@@ -122,19 +122,19 @@
        </el-table-column>
       </el-table>
         <el-table v-else-if="userrole === 2" :data="detailInfoList" style="width: 100%">
-                <el-table-column prop="company" label="所属公司" width="266.7" />
-        <el-table-column prop="position" label="招聘岗位" width="266.7" />
-        <el-table-column prop="experience" label="资历" width="266.7" />
+                <el-table-column prop="company" label="所属公司" width="250" />
+        <el-table-column prop="position" label="招聘岗位" width="250" />
+        <el-table-column prop="experience" label="资历" width="250" />
       </el-table>
         <template #footer>
           <el-button @click="checkDialogVisible = false">返回</el-button>
         </template>
       </el-dialog>                          
 
-      <el-dialog title="编辑用户" v-model="editDialogVisible">
+      <el-dialog title="重置密码" v-model="editDialogVisible">
         <el-form :model="editUser">
-          <el-form-item label="用户名：">
-            <el-input v-model="editUser.username" />
+          <el-form-item label="新密码：">
+            <el-input v-model="editUser.password" />
           </el-form-item>
         </el-form>
         <template #footer>
@@ -441,6 +441,7 @@ onBeforeUnmount(() => {
   font-size: 18px;
   font-weight: 600;
   color: #3a36db;
+  font-family: 'Microsoft YaHei', Arial, sans-serif;
 }
 
 .card {
@@ -448,14 +449,25 @@ onBeforeUnmount(() => {
   border-radius: 4px;
   padding: 20px;
   box-shadow: 0 1px 4px rgba(0, 0, 0, 0.1);
+  font-family: 'Microsoft YaHei', Arial, sans-serif;
+  font-size: 16px;
 }
 
 .el-table {
   table-layout: fixed; /* 固定表格布局 */
 }
 
+.el-dialog {
+  width: 80% !important; /* 固定对话框宽度 */
+  max-width: 1200px !important;
+}
+
 .el-table__body {
-  width: 100% !important;
+  font-size: 14px !important; /* 统一字体大小 */
+}
+
+.el-table-column--selection .cell {
+  padding: 0 10px !important; /* 统一单元格内边距 */
 }
 
 .el-table .el-table__cell {
@@ -483,5 +495,10 @@ onBeforeUnmount(() => {
 :deep(.el-table td) {
   text-align: center;
   vertical-align: middle;
+}
+
+:deep(.el-dialog) {
+  width: 800px !important;
+  max-width: 90vw;
 }
 </style>
