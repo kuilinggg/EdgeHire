@@ -47,12 +47,24 @@
         <el-divider />
         <div class="task-list">
           <div v-if="kpi.newGuidance > 0" class="task-item clickable" @click="goToGuidance">
-            <el-icon><EditPen /></el-icon>
-            <span>您有 <b>{{ kpi.newGuidance }}</b> 条新的求职指导请求待处理。</span>
+            <div class="task-content">
+              <el-icon><EditPen /></el-icon>
+              <span>您有 <b>{{ kpi.newGuidance }}</b> 条新的求职指导请求待处理。</span>
+            </div>
+            <div class="task-action">
+              <span class="action-text">点击处理</span>
+              <el-icon class="arrow-icon"><ArrowRight /></el-icon>
+            </div>
           </div>
           <div v-if="kpi.unreadMessages > 0" class="task-item clickable" @click="goToChat">
-            <el-icon><ChatDotRound /></el-icon>
-            <span>您有 <b>{{ kpi.unreadMessages }}</b> 条来自求职者的未读消息。</span>
+            <div class="task-content">
+              <el-icon><ChatDotRound /></el-icon>
+              <span>您有 <b>{{ kpi.unreadMessages }}</b> 条来自求职者的未读消息。</span>
+            </div>
+            <div class="task-action">
+              <span class="action-text">点击查看</span>
+              <el-icon class="arrow-icon"><ArrowRight /></el-icon>
+            </div>
           </div>
           <div v-if="kpi.newGuidance === 0 && kpi.unreadMessages === 0" class="task-item no-tasks">
             <el-icon><Check /></el-icon>
@@ -85,7 +97,7 @@
 <script setup>
 import { ref, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
-import { EditPen, ChatDotRound, Finished, Document, Search, Check } from '@element-plus/icons-vue'
+import { EditPen, ChatDotRound, Finished, Document, Search, Check, ArrowRight } from '@element-plus/icons-vue'
 import { ElMessage } from 'element-plus'
 import { hrApi } from '../../api/hr.js'
 import { getInfoByUserId } from '../../api/info.js'
@@ -344,27 +356,68 @@ onMounted(async () => {
 .task-item {
   display: flex;
   align-items: center;
+  justify-content: space-between;
   font-size: 15px;
   color: #333;
-  padding: 16px 0;
+  padding: 16px 12px;
   cursor: pointer;
   border-radius: 8px;
-  transition: background 0.2s;
+  transition: all 0.3s ease;
+  border: 1px solid transparent;
+  margin: 8px 0;
 }
-.task-item .el-icon {
+.task-item.clickable {
+  background: #fafbff;
+  border: 1px solid #e8ebf7;
+  box-shadow: 0 1px 3px rgba(58, 54, 219, 0.05);
+}
+.task-content {
+  display: flex;
+  align-items: center;
+  flex: 1;
+}
+.task-content .el-icon {
   margin-right: 10px;
   font-size: 20px;
   color: #3a36db;
 }
+.task-action {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  opacity: 0.7;
+  transition: all 0.3s ease;
+}
+.action-text {
+  font-size: 13px;
+  color: #3a36db;
+  font-weight: 500;
+}
+.arrow-icon {
+  font-size: 14px;
+  color: #3a36db;
+  transition: transform 0.3s ease;
+}
 .task-item.clickable:hover {
   background: #f5f5ff;
+  border-color: #3a36db;
+  box-shadow: 0 2px 8px rgba(58, 54, 219, 0.1);
+}
+.task-item.clickable:hover .task-action {
+  opacity: 1;
+}
+.task-item.clickable:hover .arrow-icon {
+  transform: translateX(3px);
 }
 .task-item.no-tasks {
   color: #67c23a;
   font-style: italic;
+  justify-content: flex-start;
+  cursor: default;
 }
 .task-item.no-tasks .el-icon {
   color: #67c23a;
+  margin-right: 10px;
 }
 .quick-entry-row {
   display: flex;
