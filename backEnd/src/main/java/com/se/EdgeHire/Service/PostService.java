@@ -47,4 +47,9 @@ public class PostService {
     public List<Post> getPostsByUserIdWithDetails(Integer userId) {
         return postRepository.findByUserIdWithDetails(userId);
     }
+
+    // 根据简历id批量删除post
+    public void deletePostsByResumeId(Integer resumeId) {
+        postRepository.deleteByResumeId(resumeId);
+    }
 }

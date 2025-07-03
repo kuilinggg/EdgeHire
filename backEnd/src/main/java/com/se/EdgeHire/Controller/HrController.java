@@ -97,10 +97,14 @@ public class HrController {
      * HR发起沟通
      * @param hrUserId HR用户ID
      * @param targetUserId 目标求职者用户ID
+     * @param customMessage 自定义消息内容（可选）
      * @return 响应结果
      */
     @PostMapping("/initiate-chat/{hrUserId}/{targetUserId}")
-    public ResponseEntity<?> initiateChat(@PathVariable Integer hrUserId, @PathVariable Integer targetUserId) {
+    public ResponseEntity<?> initiateChat(
+            @PathVariable Integer hrUserId,
+            @PathVariable Integer targetUserId,
+            @RequestBody(required = false) Map<String, String> requestBody) {
         try {
             // 验证用户是否为HR
             if (!hrService.isHr(hrUserId)) {
@@ -114,15 +118,21 @@ public class HrController {
                 ));
             }
 
-            // 获取HR信息
-            Optional<HrInfo> hrInfoOpt = hrService.getHrInfoByUserId(hrUserId);
-            String companyName = "未知公司";
-            if (hrInfoOpt.isPresent() && hrInfoOpt.get().getCompany() != null && !hrInfoOpt.get().getCompany().trim().isEmpty()) {
-                companyName = hrInfoOpt.get().getCompany();
+            // 构造消息内容
+            String greetingMessage;
+            if (requestBody != null && requestBody.containsKey("customMessage") &&
+                requestBody.get("customMessage") != null && !requestBody.get("customMessage").trim().isEmpty()) {
+                // 使用自定义消息
+                greetingMessage = requestBody.get("customMessage");
+            } else {
+                // 使用默认问候消息
+                Optional<HrInfo> hrInfoOpt = hrService.getHrInfoByUserId(hrUserId);
+                String companyName = "未知公司";
+                if (hrInfoOpt.isPresent() && hrInfoOpt.get().getCompany() != null && !hrInfoOpt.get().getCompany().trim().isEmpty()) {
+                    companyName = hrInfoOpt.get().getCompany();
+                }
+                greetingMessage = "你好，我是" + companyName + "的HR，对你的简历很感兴趣，希望能和你聊一聊。";
             }
-
-            // 构造问候消息
-            String greetingMessage = "你好，我是" + companyName + "的HR，对你的简历很感兴趣，希望能和你聊一聊。";
 
             // 通过WebSocket发送消息
             WebSocketHandler webSocketHandler = WebSocketHandler.getInstance();

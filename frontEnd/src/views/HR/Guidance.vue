@@ -302,6 +302,7 @@ import {
   getGuidanceRequestDetail
 } from '@/api/guidance'
 import { getInfoByUserId } from '@/api/info'
+import { hrApi } from '@/api/hr'
 
 const router = useRouter()
 
@@ -324,10 +325,10 @@ const completedRequests = ref([])
 // 用户信息缓存（userId -> t_info）
 const userInfoMap = ref({})
 
-// 获取当前HR用户ID（从localStorage或其他地方获取）
+// 获取当前HR用户ID（从localStorage获取）
 const getCurrentHRId = () => {
-  const userInfo = JSON.parse(localStorage.getItem('userInfo') || '{}')
-  return userInfo.id || 1 // 默认值，实际应该从登录信息获取
+  const userId = localStorage.getItem('userId')
+  return userId ? parseInt(userId) : 1 // 默认值，实际应该从登录信息获取
 }
 
 // 批量拉取所有请求涉及的userId的t_info
@@ -552,10 +553,23 @@ const viewFullResume = () => {
   // 这里可以跳转到简历详情页面
 }
 
-const contactJobSeeker = () => {
-  // 这里可以跳转到聊天页面或打开联系方式
-  ElMessage.info('正在跳转到聊天页面...')
-  // router.push(`/hr/chat/${selectedRequest.value.userId}`)
+const contactJobSeeker = async () => {
+  try {
+    const hrUserId = getCurrentHRId()
+    const targetUserId = selectedRequest.value.userId
+    const customMessage = "你好，我已通过你的求职指导请求，现在我们可以开始交流了。"
+
+    // 发送自定义消息
+    await hrApi.initiateChat(hrUserId, targetUserId, customMessage)
+
+    ElMessage.success('消息已发送，正在跳转到聊天页面...')
+
+    // 跳转到聊天页面
+    router.push('/chat')
+  } catch (error) {
+    console.error('发起聊天失败:', error)
+    ElMessage.error('发起聊天失败，请稍后重试')
+  }
 }
 
 const handleSizeChange = (val) => {
