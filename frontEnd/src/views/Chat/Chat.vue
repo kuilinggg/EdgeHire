@@ -44,7 +44,7 @@
         <!-- 空状态显示 -->
         <div v-if="!activeUser || activeUser === ''" class="chat-empty-state">
           <div class="empty-icon">💬</div>
-          <div class="empty-text">快找HR进行沟通吧</div>
+          <div class="empty-text">{{ getEmptyStateText() }}</div>
         </div>
         <!-- 消息列表 -->
         <div v-else v-for="(msg, idx) in messages" :key="idx" :class="['chat-message', msg.fromMe ? 'from-me' : 'from-other']">
@@ -698,6 +698,18 @@ function formatLatestMessage(message) {
     return '[图片]'
   }
   return message
+}
+
+// 获取空状态显示文字
+function getEmptyStateText() {
+  const role = localStorage.getItem('role')
+  if (role === '1') {
+    return '快找HR进行沟通吧'
+  } else if (role === '2') {
+    return '快找求职者进行沟通吧'
+  } else {
+    return '快开始聊天吧'
+  }
 }
 
 function logout() {
