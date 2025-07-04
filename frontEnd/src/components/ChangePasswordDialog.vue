@@ -52,7 +52,16 @@ const props = defineProps({ visible: Boolean })
 const emit = defineEmits(['update:visible'])
 
 const visible = ref(props.visible)
-watch(() => props.visible, v => visible.value = v)
+watch(() => props.visible, v => {
+  visible.value = v
+  if (v) {
+    // 弹窗打开时重置表单
+    form.value.oldPassword = ''
+    form.value.newPassword = ''
+    form.value.confirmPassword = ''
+    formRef.value && formRef.value.clearValidate && formRef.value.clearValidate()
+  }
+})
 watch(visible, v => emit('update:visible', v))
 
 const form = ref({
