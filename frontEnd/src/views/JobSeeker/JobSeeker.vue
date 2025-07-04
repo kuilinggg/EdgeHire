@@ -135,6 +135,7 @@ function logout() {
   }
 }
 function goToChat() {
+  localStorage.setItem('activeUser', null) // 清除当前活跃用户
   router.push('/chat') // 假设私聊页面路由为 /chat
 }
 const resumeMenuOpen = ref(true)

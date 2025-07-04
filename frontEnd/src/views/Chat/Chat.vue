@@ -18,7 +18,10 @@
     </div>
     <div class="chat-main">
       <div class="chat-header">
-        <el-avatar :src="currentUser.avatar" />
+        <el-avatar v-if="currentUser.avatar" :src="currentUser.avatar" />
+        <el-avatar v-else src="" class="default-avatar">
+          <el-icon><User /></el-icon>
+        </el-avatar>
         <div class="chat-user-info">
           <span class="chat-user-name">{{ currentUser.username || '请选择联系人' }}</span>
           <span v-if="currentUser.company" class="chat-user-company">{{ currentUser.company }}</span>
@@ -38,7 +41,13 @@
         </div>
       </div>
       <div class="chat-messages" ref="messagesRef">
-        <div v-for="(msg, idx) in messages" :key="idx" :class="['chat-message', msg.fromMe ? 'from-me' : 'from-other']">
+        <!-- 空状态显示 -->
+        <div v-if="!activeUser || activeUser === ''" class="chat-empty-state">
+          <div class="empty-icon">💬</div>
+          <div class="empty-text">快找HR进行沟通吧</div>
+        </div>
+        <!-- 消息列表 -->
+        <div v-else v-for="(msg, idx) in messages" :key="idx" :class="['chat-message', msg.fromMe ? 'from-me' : 'from-other']">
           <el-avatar :src="msg.avatar" size="small" />
           <div class="msg-content-wrapper">
             <div class="msg-time">{{ formatTime(msg.time) }}</div>
@@ -66,17 +75,18 @@
         </div>
       </div>
       <div class="chat-input">
-        <div class="input-wrapper">
+        <div class="input-wrapper" :class="{ 'disabled': !activeUser || activeUser === '' }">
           <el-input
             v-model="inputMsg"
             type="textarea"
             :rows="3"
-            placeholder="请输入聊天内容"
+            :placeholder="!activeUser || activeUser === '' ? '请先选择联系人' : '请输入聊天内容'"
             @keydown.enter.exact.prevent="sendMsg"
             @keydown.shift.enter="handleShiftEnter"
             clearable
             resize="none"
             class="message-input"
+            :disabled="!activeUser || activeUser === ''"
           />
           <div class="input-actions">
             <!-- 图片上传按钮 -->
@@ -87,8 +97,9 @@
               :http-request="customUpload"
               accept="image/*"
               class="image-upload"
+              :disabled="!activeUser || activeUser === ''"
             >
-              <el-button type="info" circle size="large" class="upload-button" :loading="uploading">
+              <el-button type="info" circle size="large" class="upload-button" :loading="uploading" :disabled="!activeUser || activeUser === ''">
                 <el-icon><Picture /></el-icon>
               </el-button>
             </el-upload>
@@ -97,7 +108,7 @@
               type="primary" 
               @click="sendMsg" 
               class="send-button"
-              :disabled="!inputMsg.trim()"
+              :disabled="!inputMsg.trim() || !activeUser || activeUser === ''"
               circle
               size="large"
             >
@@ -156,7 +167,7 @@ import { ref, computed, nextTick, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import axios from 'axios'
 import { ElMessage } from 'element-plus'
-import { Picture, Loading, Warning } from '@element-plus/icons-vue'
+import { Picture, Loading, Warning, User } from '@element-plus/icons-vue'
 import { getAvatarUrl } from '../../api/info'
 import { authApi } from "../../api/auth"
 import { getResumeById } from "../../api/resume"
@@ -168,7 +179,7 @@ import ResumeA4PaperBlueTopBar from '../../components/ResumeA4PaperBlueTopBar.vu
 const router = useRouter()
 const search = ref('')
 const inputMsg = ref('')
-const activeUser = ref('0')
+const activeUser = ref('')
 const uploading = ref(false) 
 
 // 简历弹窗相关
@@ -239,10 +250,17 @@ function trySelectActiveUser() {
   if (usersLoaded.value && messageMapLoaded.value) {
     const savedActiveUser = localStorage.getItem('activeUser')
     if (savedActiveUser) {
-      activeUser.value = savedActiveUser
-      nextTick(() => {
-        selectUser(users.value.find(u => u.id.toString() === savedActiveUser) || users.value[0])
-      })
+      const user = users.value.find(u => u.id.toString() === savedActiveUser)
+      if (user) {
+        activeUser.value = savedActiveUser
+        nextTick(() => {
+          selectUser(user)
+        })
+      } else {
+        // 如果保存的用户不存在，清除activeUser
+        activeUser.value = ''
+        localStorage.removeItem('activeUser')
+      }
     }
   }
 }
@@ -357,6 +375,10 @@ function selectUser(user) {
   })
 }
 function sendMsg() {
+  if (!activeUser.value || activeUser.value === '') {
+    ElMessage.warning('请先选择联系人')
+    return
+  }
   if (!inputMsg.value.trim()) {
     ElMessage.warning('消息不能为空')
     return
@@ -382,6 +404,10 @@ function beforeImageUpload(file) {
 
 // 自定义上传处理
 async function customUpload(options) {
+  if (!activeUser.value || activeUser.value === '') {
+    ElMessage.warning('请先选择联系人')
+    return
+  }
   if (activeUser.value === '0') {
     ElMessage.warning('不能向系统发送消息')
     return
@@ -466,6 +492,10 @@ async function sendImageMessage(imageUrl) {
 
 // 发送文字消息（分离出来的函数）
 async function sendTextMessage() {
+  if (!activeUser.value || activeUser.value === '') {
+    ElMessage.warning('请先选择联系人')
+    return
+  }
   if (activeUser.value === '0') {
     ElMessage.warning('不能向系统发送消息')
     return
@@ -1328,5 +1358,51 @@ onMounted(() => {
   font-size: 16px;
   color: #409eff;
   z-index: 10;
+}
+
+/* 聊天空状态样式 */
+.chat-empty-state {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  height: 100%;
+  color: #909399;
+  font-size: 16px;
+  text-align: center;
+  padding: 60px 20px;
+  margin-top: -80px; /* 向上移动文字 */
+}
+
+.empty-icon {
+  font-size: 48px;
+  margin-bottom: 16px;
+  opacity: 0.5;
+}
+
+.empty-text {
+  font-size: 16px;
+  color: #909399;
+  font-weight: 400;
+}
+
+/* 输入框禁用状态样式 */
+.input-wrapper.disabled {
+  opacity: 0.6;
+  background: #f5f7fa !important;
+  border-color: #e4e7ed !important;
+  cursor: not-allowed;
+}
+
+.input-wrapper.disabled .message-input :deep(.el-textarea__inner) {
+  background: #f5f7fa !important;
+  color: #c0c4cc !important;
+  cursor: not-allowed;
+}
+
+/* 默认头像样式 */
+.default-avatar {
+  background: #f0f2f5 !important;
+  color: #c0c4cc !important;
 }
 </style>

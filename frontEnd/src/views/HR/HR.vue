@@ -94,6 +94,7 @@ function logout() {
   }
 }
 function goToChat() {
+  localStorage.setItem('activeUser', null) // 清除当前活跃用户
   router.push('/chat')
 }
 
