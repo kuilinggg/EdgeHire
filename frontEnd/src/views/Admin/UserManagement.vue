@@ -56,49 +56,29 @@
       @current-change="handlePageChange"
       />
 
-        <el-dialog title="查看用户详细信息" v-model="checkDialogVisible">
-        <el-table :data="infoList" style="width: 100%" border>
-        <el-table-column prop="id" label="ID" width="80"/>
-        <el-table-column prop="userId" label="用户ID" width="100" />
-        <el-table-column prop="realname" label="真实姓名" min-width="100"/>
-        <el-table-column prop="age" label="年龄" width="100"/> 
-        <el-table-column prop="gender" label="性别">
-        <template #default="scope">
-             <span>{{ scope.row.gender === undefined || scope.row.gender === null
-      ? '  '
-      : scope.row.gender == '0'
-        ? '未知'
-        : scope.row.gender == '1'
-          ? '男性'
-          : '女性'}}</span>
-          </template>
-        </el-table-column>
-        <el-table-column prop="status" label="状态" width="100">
-        <template #default="scope">
-             <span>{{ scope.row.status === undefined ||scope.row.status===null
-        ? '  '
-        : scope.row.status =='0' ? '冻结' : '正常' }}</span>
-          </template>
-        </el-table-column>
-        <el-table-column prop="phone" label="电话号码" min-width="150"/>
-        <el-table-column prop="email" label="邮箱" min-width="200"/>
-      </el-table>
-      
-      <el-table v-if="userrole === 1" :data="detailInfoList" style="width: 100%" border>
-        <el-table-column prop="education" label="学历" min-width="100">
-       <template #default="scope">
-       <span>{{ scope.row?.education ? educationMap[scope.row.education] : '未知学历' }}</span>
-      </template>
-       </el-table-column> 
-        <el-table-column prop="school" label="毕业院校" min-width="200"/> 
-        <el-table-column prop="favor" label="理想岗位" min-width="200">
-        <template #default="scope">
-        <span>
-       {{
-        (() => {
-          const val = scope.row?.favor;
+        <el-dialog title="查看用户详细信息" v-model="checkDialogVisible" :width="dialogWidth">
+  <div class="dialog-desc-block">
+    <el-descriptions :column="1" border class="dialog-desc">
+      <el-descriptions-item label="ID">{{ infoList[0]?.id ?? '-' }}</el-descriptions-item>
+      <el-descriptions-item label="用户ID">{{ infoList[0]?.userId ?? '-' }}</el-descriptions-item>
+      <el-descriptions-item label="真实姓名">{{ infoList[0]?.realname ?? '-' }}</el-descriptions-item>
+      <el-descriptions-item label="年龄">{{ infoList[0]?.age ?? '-' }}</el-descriptions-item>
+      <el-descriptions-item label="性别">
+        {{ infoList[0]?.gender == null ? '-' : infoList[0]?.gender == '0' ? '未知' : infoList[0]?.gender == '1' ? '男性' : '女性' }}
+      </el-descriptions-item>
+      <el-descriptions-item label="状态">
+        {{ infoList[0]?.status == null ? '-' : infoList[0]?.status == '0' ? '冻结' : '正常' }}
+      </el-descriptions-item>
+      <el-descriptions-item label="电话号码">{{ infoList[0]?.phone ?? '-' }}</el-descriptions-item>
+      <el-descriptions-item label="邮箱">{{ infoList[0]?.email ?? '-' }}</el-descriptions-item>
+    </el-descriptions>
+    <el-descriptions v-if="userrole === 1 && detailInfoList[0]" :column="1" border class="dialog-desc" title="求职者详细信息">
+      <el-descriptions-item label="学历">{{ detailInfoList[0]?.education ? educationMap[detailInfoList[0].education] : '未知学历' }}</el-descriptions-item>
+      <el-descriptions-item label="毕业院校">{{ detailInfoList[0]?.school ?? '-' }}</el-descriptions-item>
+      <el-descriptions-item label="理想岗位">
+        {{ (() => {
+          const val = detailInfoList[0]?.favor;
           if (!val) return '暂无';
-
           try {
             const parsed = JSON.parse(val);
             if (Array.isArray(parsed)) {
@@ -108,28 +88,20 @@
           } catch {
             return val || '暂无';
           }
-          })()
-          }}
-        </span>
-        </template>
-      </el-table-column>
-        <el-table-column prop="membership" label="会员等级" min-width="175">
-       <template #default="scope">
-       <span>{{ scope.row?.membership === undefined || scope.row?.membership === null
-      ? '  '
-      : scope.row?.membership == '0' ? '普通会员' : '高级会员' }}</span>
-        </template>
-       </el-table-column>
-      </el-table>
-        <el-table v-else-if="userrole === 2" :data="detailInfoList" style="width: 100%" border>
-                <el-table-column prop="company" label="所属公司" min-width="250" />
-        <el-table-column prop="position" label="招聘岗位" min-width="250" />
-        <el-table-column prop="experience" label="资历" min-width="250" />
-      </el-table>
-        <template #footer>
-          <el-button @click="checkDialogVisible = false">返回</el-button>
-        </template>
-      </el-dialog>                          
+        })() }}
+      </el-descriptions-item>
+      <el-descriptions-item label="会员等级">{{ detailInfoList[0]?.membership == null ? '-' : detailInfoList[0]?.membership == '0' ? '普通会员' : '高级会员' }}</el-descriptions-item>
+    </el-descriptions>
+    <el-descriptions v-else-if="userrole === 2 && detailInfoList[0]" :column="1" border class="dialog-desc" title="HR详细信息">
+      <el-descriptions-item label="所属公司">{{ detailInfoList[0]?.company ?? '-' }}</el-descriptions-item>
+      <el-descriptions-item label="招聘岗位">{{ detailInfoList[0]?.position ?? '-' }}</el-descriptions-item>
+      <el-descriptions-item label="资历">{{ detailInfoList[0]?.experience ?? '-' }}</el-descriptions-item>
+    </el-descriptions>
+  </div>
+  <template #footer>
+    <el-button @click="checkDialogVisible = false">返回</el-button>
+  </template>
+</el-dialog>                          
 
     </div>
   </div>
@@ -179,7 +151,11 @@ const paginatedUsers = computed(() => {
   const end = start + pageSize.value
   return users.value.slice(start, end)
 })
-
+const dialogWidth = computed(() => {
+  if (window.innerWidth < 600) return '100vw';
+  if (window.innerWidth < 1000) return '98vw';
+  return '900px';
+})
 // 方法
 const isEmptyContent = (arr) => {
   return arr.length === 0 || arr.every(item => 
@@ -344,60 +320,86 @@ onBeforeUnmount(() => {
   max-width: 1200px !important;
 }
 
-.el-table__body {
-  font-size: 14px !important; /* 统一字体大小 */
-}
-
-.el-table-column--selection .cell {
-  padding: 0 10px !important; /* 统一单元格内边距 */
-}
-
-.el-table .el-table__cell {
-  padding: 12px 16px; /* 增加单元格内边距 */
-}
-
-.el-table-column[prop="id"] {
-  width: 180px;
-}
-
-.el-table-column[prop="operation"] {
-  width: 380px;
-}
-
-/* 其他列自动分配剩余空间 */
-.el-table-column:not([prop="id"]):not([prop="operation"]) {
-  width: auto;
-}
-
-:deep(.el-table th) {
-  padding: 14px 16px;
+/* 仅弹窗美化，主列表表格样式不变 */
+:deep(.el-dialog__header) {
   text-align: center;
+  font-size: 20px;
+  font-weight: 500;
+  color: #333;
+  border-bottom: 1.5px solid #f0f0f0;
+  padding-bottom: 12px;
+  margin-bottom: 18px;
 }
-
-:deep(.el-table td) {
+:deep(.el-dialog__body) {
+  background: #fff;
+  border-radius: 16px;
+  box-shadow: 0 4px 24px rgba(102,126,234,0.08);
+  padding: 32px 32px 18px 32px !important;
+}
+.dialog-desc-block {
+  padding: 4px 0 0 0;
+}
+.dialog-desc {
+  margin-bottom: 18px;
+  border-radius: 12px;
+  background: #fff;
+  --el-descriptions-border-color: #f0f0f0;
+  --el-descriptions-label-bg-color: #f6f8fc;
+  --el-descriptions-label-color: #4f46e5;
+  --el-descriptions-content-color: #222;
+  --el-descriptions-title-font-size: 17px;
+  --el-descriptions-label-font-size: 15px;
+  --el-descriptions-content-font-size: 15px;
+  --el-descriptions-label-font-weight: 500;
+  --el-descriptions-content-font-weight: 500;
+}
+:deep(.dialog-desc .el-descriptions__label) {
+  color: #4f46e5 !important;
+  background: #f6f8fc !important;
+  font-weight: 500;
+  font-size: 15px;
+  width: 120px;
+}
+:deep(.dialog-desc .el-descriptions__content) {
+  color: #222 !important;
+  font-weight: 500;
+  font-size: 15px;
+  word-break: break-all;
+}
+:deep(.dialog-desc .el-descriptions__title) {
+  color: #333;
+  font-size: 17px;
+  font-weight: 600;
+  margin-bottom: 8px;
+}
+:deep(.el-dialog__footer) {
   text-align: center;
-  vertical-align: middle;
+  padding-top: 10px;
 }
-
-:deep(.el-dialog) {
-  width: 800px !important;
-  max-width: 90vw;
+:deep(.el-dialog__footer .el-button) {
+  border-radius: 8px;
+  font-size: 16px;
+  padding: 8px 32px;
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  color: #fff;
+  border: none;
+  font-weight: 600;
+  margin: 0 8px;
 }
-
-::v-deep(.el-dialog) {
-  max-width: none !important;
-  width: 95vw !important; /* 让 Dialog 占满 95% 视口宽度 */
+:deep(.el-dialog__footer .el-button:hover) {
+  background: linear-gradient(135deg, #5a6fd8 0%, #6a4190 100%);
 }
-
-/* 表格内边距 + 字体大小优化 */
-::v-deep(.el-table th),
-::v-deep(.el-table td) {
-  padding: 12px 10px;
-  font-size: 14px;
-}
-
-/* 可选：给表格容器增加左右内边距 */
-::v-deep(.el-dialog__body) {
-  padding: 20px 30px;
+@media (max-width: 900px) {
+  :deep(.el-dialog__body) {
+    padding: 10px 2vw 10px 2vw !important;
+  }
+  .dialog-desc {
+    font-size: 13px;
+  }
+  :deep(.dialog-desc .el-descriptions__label),
+  :deep(.dialog-desc .el-descriptions__content) {
+    font-size: 13px;
+    padding: 8px 4px;
+  }
 }
 </style>
