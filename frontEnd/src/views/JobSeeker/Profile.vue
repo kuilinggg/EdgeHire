@@ -28,29 +28,28 @@
         </div>
       </template>
       
-      <div class="info-display">
+      <div class="info-display info-flex-layout">
         <div class="avatar-section">
-          <el-avatar :src="form.avatar" size="large" class="user-avatar" />
+          <el-avatar :src="form.avatar" :size="100" class="user-avatar avatar-large" />
         </div>
-        
-        <div class="info-grid">
-          <div class="info-item">
+        <div class="info-main-content">
+          <div class="info-row">
             <div class="info-label">姓名</div>
             <div class="info-value">{{ form.realname || '-' }}</div>
           </div>
-          <div class="info-item">
+          <div class="info-row">
             <div class="info-label">性别</div>
             <div class="info-value">{{ genderText }}</div>
           </div>
-          <div class="info-item">
+          <div class="info-row">
             <div class="info-label">年龄</div>
             <div class="info-value">{{ form.age != null ? form.age + ' 岁' : '-' }}</div>
           </div>
-          <div class="info-item">
+          <div class="info-row">
             <div class="info-label">手机号</div>
             <div class="info-value">{{ form.phone || '-' }}</div>
           </div>
-          <div class="info-item full-width">
+          <div class="info-row">
             <div class="info-label">邮箱地址</div>
             <div class="info-value">{{ form.email || '-' }}</div>
           </div>
@@ -381,20 +380,43 @@ onMounted(fetchProfile)
   padding: 8px 0;
 }
 
-.avatar-section {
-  text-align: center;
-  margin-bottom: 32px;
+.info-flex-layout {
+  display: flex;
+  align-items: flex-start;
+  gap: 40px;
+  padding: 16px 0 8px 0;
 }
 
-.user-avatar {
+.avatar-section {
+  min-width: 140px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  margin-top: 25px;
+  margin-bottom: 0;
+  gap: 10px;
+}
+.avatar-large {
+  width: 100px !important;
+  height: 100px !important;
+  font-size: 40px;
   border: 3px solid #e8f2ff;
   box-shadow: 0 4px 16px rgba(102, 126, 234, 0.15);
 }
 
-.info-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
-  gap: 24px;
+.info-main-content {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+  justify-content: center;
+}
+
+.info-row {
+  display: flex;
+  align-items: center;
+  gap: 18px;
+  margin-bottom: 2px;
 }
 
 .info-item {
@@ -408,15 +430,17 @@ onMounted(fetchProfile)
 }
 
 .info-label {
-  font-weight: 600;
-  color: #666;
-  font-size: 14px;
+  font-weight: 700;
+  color: #667eea;
+  font-size: 15px;
+  min-width: 70px;
 }
 
 .info-value {
-  font-size: 16px;
-  color: #333;
+  font-size: 17px;
+  color: #222;
   font-weight: 500;
+  word-break: break-all;
 }
 
 .edit-form-card {
@@ -568,6 +592,27 @@ onMounted(fetchProfile)
   .form-actions .el-button {
     width: 100%;
     max-width: 300px;
+  }
+
+  .info-flex-layout {
+    flex-direction: column;
+    align-items: center;
+    gap: 18px;
+    padding: 8px 0;
+  }
+
+  .info-main-content {
+    width: 100%;
+    gap: 14px;
+  }
+
+  .info-row {
+    gap: 10px;
+    font-size: 15px;
+  }
+
+  .avatar-section {
+    margin-bottom: 0;
   }
 }
 </style>
