@@ -30,22 +30,6 @@
             {{ scope.row.username || '加载中...' }}
           </template>
         </el-table-column>
-        <el-table-column label="头像">
-        <template #default="scope">
-        <el-image
-        style="width: 50px; height: 50px"
-        :src="scope.row.avatar"
-        :preview-src-list="scope.row.avatar ? [scope.row.avatar] : []"
-        :z-index="3000"
-        :preview-teleported="true"
-        hide-on-click-modal
-        >
-        <template #error>
-          <div class="image-placeholder"></div>
-        </template>
-      </el-image>
-    </template>
-  </el-table-column>
         <el-table-column prop="createTime" label="创建时间">
           <template #default="scope">
             {{ formatDate(scope.row.createTime) }}
@@ -403,15 +387,6 @@ watch(resumeType, (val) => {
   color: var(--el-text-color-primary);
 }
 
-.image-placeholder {
-  width: 50px;
-  height: 50px;
-  background: #f5f7fa; /* 浅灰色背景 */
-  display: flex;
-  align-items: center;
-  justify-content: center;
-}
-
 /* 筛选按钮激活状态的样式 */
 .active-filter {
   background-color: #409eff;
@@ -424,33 +399,6 @@ watch(resumeType, (val) => {
   gap: 10px;
   margin-bottom: 20px;
   flex-wrap: wrap;
-
-  :deep(.el-image-viewer__wrapper) {
-  --el-image-viewer-index-text-color: #fff;
-  --el-image-viewer-index-font-size: 16px;
-  --el-image-viewer-index-text-shadow: 0 1px 1px #000;
-}
-
-:deep(.el-image-viewer__mask) {
-  background: rgba(0, 0, 0, 0.8);
-  opacity: 1;
-}
-
-:deep(.el-image-viewer__btn) {
-  color: #fff;
-  background-color: rgba(0, 0, 0, 0.5);
-  border-radius: 50%;
-  width: 44px;
-  height: 44px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  transition: all 0.3s;
-}
-
-:deep(.el-image-viewer__btn:hover) {
-  background-color: rgba(0, 0, 0, 0.8);
-}
 }
 
 /* 弹窗内容 */
@@ -586,34 +534,6 @@ watch(resumeType, (val) => {
   .pdf-preview-wrapper {
     height: calc(100vh - 160px);
   }
-}
-
-/* 图片预览样式 */
-:deep(.el-image-viewer__wrapper) {
-  --el-image-viewer-index-text-color: #fff;
-  --el-image-viewer-index-font-size: 16px;
-  --el-image-viewer-index-text-shadow: 0 1px 1px #000;
-}
-
-:deep(.el-image-viewer__mask) {
-  background: rgba(0, 0, 0, 0.8);
-  opacity: 1;
-}
-
-:deep(.el-image-viewer__btn) {
-  color: #fff;
-  background-color: rgba(0, 0, 0, 0.5);
-  border-radius: 50%;
-  width: 44px;
-  height: 44px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  transition: all 0.3s;
-}
-
-:deep(.el-image-viewer__btn:hover) {
-  background-color: rgba(0, 0, 0, 0.8);
 }
 
 .resume-template-info {
