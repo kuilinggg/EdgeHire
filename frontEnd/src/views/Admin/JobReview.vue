@@ -59,59 +59,52 @@
         </el-table-column>
       </el-table>
 
-      <!-- 弹窗 -->
-     <el-dialog
-    v-model="dialogVisible"
-    title="简历详情"
-    width="80%"
-    center
-    class="resume-dialog"
-  >
-    <div class="resume-dialog-content">
-      <div v-if="selectedResume">
-        <!-- PDF类型简历 -->
-        <div v-if="resumeType === 'pdf'">
-          <h3>PDF简历</h3>
-          <div style="width:100%;height:80vh;">
+     <!-- 简历详情弹窗 -->
+      <el-dialog
+      v-model="dialogVisible"
+      title="简历详情"
+      :fullscreen="resumeType === 'template' || isMobile"
+      class="resume-dialog"
+      center
+      destroy-on-close
+    >
+      <div class="resume-dialog-content">
+        <div v-if="selectedResume">
+          <!-- PDF类型简历 -->
+          <div v-if="resumeType === 'pdf'" class="pdf-preview-wrapper">
             <iframe
-              v-if="pdfUrl"
-              :src="encodeURI(pdfUrl)"
-              width="100%"
-              height="100%"
-              style="border:none;"
-              title="PDF简历预览"
-            ></iframe>
+            v-if="pdfUrl"
+            :src="encodeURI(pdfUrl)"
+            style="width: 100%; min-height: 1200px; border: none; display: block;"
+            title="PDF简历预览"
+          ></iframe>
             <el-empty v-else description="PDF加载失败" />
           </div>
-        </div>
-        
-        <!-- 模板类型简历 -->
-        <div v-else-if="resumeType === 'template'" class="resume-a4-wrapper">
-          <component
-            :is="resumeA4Component"
-            :content="parsedResumeContent"
-            :avatar="selectedResume.avatar"
-            class="resume-a4-paper"
-          />
-          <div class="resume-template-info">
-            使用的模板: {{ resumeTemplate }}
+
+          <!-- 模板类型简历 -->
+          <div v-else-if="resumeType === 'template'" class="resume-template-wrapper">
+            <component
+              :is="resumeA4Component"
+              :content="parsedResumeContent"
+              :avatar="selectedResume.avatar"
+              class="resume-a4-paper"
+            />
+          </div>
+
+          <!-- 其他格式 -->
+          <div v-else class="other-resume-content">
+            <el-scrollbar height="500px">
+              <pre>{{ selectedResume.content }}</pre>
+            </el-scrollbar>
           </div>
         </div>
-        
-        <!-- 其他类型简历 -->
-        <div v-else>
-          <el-scrollbar height="500px">
-            <pre>{{ selectedResume.content }}</pre>
-          </el-scrollbar>
-        </div>
+        <el-empty v-else description="暂无简历内容" />
       </div>
-      <el-empty v-else description="暂无简历内容" />
-    </div>
-    
-    <template #footer>
-      <el-button @click="dialogVisible = false">返回</el-button>
-    </template>
-  </el-dialog>
+
+      <template #footer>
+        <el-button @click="dialogVisible = false">返回</el-button>
+      </template>
+    </el-dialog>
 
       <el-pagination
         style="margin-top: 20px; text-align: center"
@@ -127,7 +120,7 @@
 </template>
 
 <script setup>
-import{ ref , computed , onMounted }from 'vue'
+import{ ref , computed , onMounted, watch }from 'vue'
 import { getUser } from '../../api/user';
 import { getAllResumes , deleteResume } from '../../api/resume';
 import { ElMessage ,ElMessageBox } from 'element-plus';
@@ -149,6 +142,7 @@ const selectedResume = ref(null)
 const resumeType = ref(''); // 'pdf', 'template', 'other'
 const pdfUrl = ref('');
 const resumeTemplate = ref('');
+const isMobile = ref(window.innerWidth < 768);
 
 // 解析简历内容
 const parseResumeContent = () => {
@@ -377,6 +371,12 @@ function formatDate(datetime) {
 onMounted(()=>{
   loadResumes();
 })
+
+watch(resumeType, (val) => {
+  if (val === 'template') {
+    isMobile.value = true
+  }
+})
 </script>
 
 
@@ -453,24 +453,41 @@ onMounted(()=>{
 }
 }
 
-/* 简历弹窗样式 */
+/* 弹窗内容 */
 .resume-dialog :deep(.el-dialog) {
-  display: flex;
-  flex-direction: column;
-  max-width: 1000px;
+  height: auto !important; /* 自动高度由内容决定 */
+  max-height: none !important;
 }
 
 .resume-dialog :deep(.el-dialog__body) {
-  padding: 10px 20px;
-  flex: 1;
-  display: flex;
+  padding: 0 !important;
+  margin: 0 !important;
+  background: white;
+  overflow: unset !important; /* 禁止 dialog body 的内滚动 */
+  display: block;
+}
+
+
+.resume-dialog :deep(.el-dialog__body) {
+  padding: 0 !important;
+  margin: 0 !important;
+  background: transparent;
+  overflow: unset; /* 防止内部自己滚动 */
+  display: block;
+}
+
+.resume-dialog :deep(.el-dialog__footer) {
+  background: white;
+  padding: 16px 20px;
+  border-top: 1px solid #eee;
 }
 
 .resume-dialog-content {
-  display: flex;
-  flex-direction: column;
   width: 100%;
-  height: 100%;
+  padding: 0;
+  margin: 0;
+  background: white;
+  overflow: hidden;
 }
 
 .resume-a4-container {
@@ -490,34 +507,84 @@ onMounted(()=>{
   max-width: 900px;
 }
 
-.resume-a4-paper {
+.resume-template-wrapper {
   width: 100%;
-  max-width: 794px; /* A4纸宽度 */
-  min-height: 1123px; /* A4纸高度 */
+  margin: 0;
+  padding: 0;
   background: white;
-  box-shadow: 0 2px 12px rgba(0, 0, 0, 0.1);
-  padding: 40px;
-  box-sizing: border-box;
-  margin: 0 auto;
+  display: flex;
+  justify-content: center;
+  align-items: flex-start;
+}
+
+.resume-template-wrapper .resume-a4-paper {
+  background: white;
+  box-shadow: none;
+  width: auto;
+  max-width: 794px;
+  min-height: 1123px;
+  margin: 0 !important;
+  padding: 0 !important;
+}
+
+/* PDF简历容器样式 */
+.pdf-preview-wrapper {
+  width: 100%;
+  background: white;
+  overflow: hidden;
+}
+
+.pdf-preview-wrapper iframe {
+  width: 100%;
+  min-height: 1200px; /* 保证 iframe 初始能撑高显示 */
+  border: none;
+  display: block;
+}
+
+.pdf-preview-wrapper,
+.resume-template-wrapper {
+  width: 100%;
+  margin: 0;
+  padding: 0;
+  background: white;
+  overflow: unset; /* 禁用内层滚动 */
 }
 
 /* 响应式调整 */
+@media (max-width: 1200px) {
+  .resume-template-wrapper .resume-a4-paper {
+    width: 100%;
+    min-height: auto;
+    aspect-ratio: 1/1.414; /* 保持A4比例 */
+  }
+}
+
 @media (max-width: 992px) {
   .resume-dialog {
     width: 95% !important;
   }
   
-  .resume-a4-paper {
-    padding: 20px;
-    min-height: auto;
-    max-width: 100%;
+  .pdf-preview-wrapper {
+    height: calc(100vh - 180px);
   }
 }
 
 @media (max-width: 768px) {
-  .resume-a4-paper {
-    padding: 15px;
+  .resume-dialog {
+    width: 100% !important;
+    margin: 0 !important;
+  }
+  
+  .resume-dialog :deep(.el-dialog) {
+    width: 100vw;
+  }
+  
+  .resume-template-wrapper .resume-a4-paper {
     font-size: 14px;
+  }
+  
+  .pdf-preview-wrapper {
+    height: calc(100vh - 160px);
   }
 }
 
