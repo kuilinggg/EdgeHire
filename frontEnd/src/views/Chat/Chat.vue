@@ -578,7 +578,6 @@ function getResumeId(content) {
 
 // 处理简历点击事件
 async function handleResumeClick(resumeId) {
-  console.log('点击了简历，ID:', resumeId)
   
   resumeDialogLoading.value = true
   resumeDialogVisible.value = true
