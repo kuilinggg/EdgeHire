@@ -30,11 +30,15 @@ public class MessageService {
                 }));
     }
 
-    public Map<Integer, Integer> getUnreadCountByUserId(int userId) {
+    public Map<Integer, Integer> getUnreadCountMapByUserId(int userId) {
         List<Message> unreadMessages = messageRepository.findByReceiverIdAndIsRead(userId, 0);
 
         return unreadMessages.stream()
                 .collect(Collectors.groupingBy(Message::getSenderId, Collectors.summingInt(m -> 1)));
+    }
+
+    public long getUnReadCountByUserId(int userId) {
+        return messageRepository.countByReceiverIdAndIsRead(userId, 0);
     }
 
     public void markConversationAsRead(int user1, int user2) {

@@ -4,7 +4,9 @@
     <div class="page-header">
       <div class="header-content">
         <h1 class="page-title">
-          <el-icon><Edit /></el-icon>
+          <el-icon>
+            <Edit />
+          </el-icon>
           简历编辑器
         </h1>
         <p class="page-subtitle">创建专业简历，展现最好的自己</p>
@@ -17,95 +19,90 @@
         <div class="ai-sidebar-header">
           <span class="ai-sidebar-title">AI 助手</span>
           <el-button type="text" @click="closeAiSidebar" class="close-btn">
-            <el-icon><Close /></el-icon>
+            <el-icon>
+              <Close />
+            </el-icon>
           </el-button>
         </div>
-      <div class="ai-chat-container">
-        <div class="ai-messages" ref="messagesContainer">
-          <div v-for="(message, index) in aiMessages" :key="index" 
-               :class="['message', message.type === 'user' ? 'user-message' : 'ai-message', 
-                       { 'streaming': message.type === 'ai' && isAiTyping && index === aiMessages.length - 1 }]">
-            <div class="message-content">
-              <div v-if="message.type === 'ai'" class="ai-content" v-html="renderMarkdown(message.content)"></div>
-              <div v-else class="user-content">{{ message.content }}</div>
+        <div class="ai-chat-container">
+          <div class="ai-messages" ref="messagesContainer">
+            <div v-for="(message, index) in aiMessages" :key="index" :class="['message', message.type === 'user' ? 'user-message' : 'ai-message',
+              { 'streaming': message.type === 'ai' && isAiTyping && index === aiMessages.length - 1 }]">
+              <div class="message-content">
+                <div v-if="message.type === 'ai'" class="ai-content" v-html="renderMarkdown(message.content)"></div>
+                <div v-else class="user-content">{{ message.content }}</div>
+              </div>
+              <div class="message-time">{{ message.time }}</div>
+              <!-- 如果是AI消息且包含错误信息，显示重试按钮 -->
+              <div v-if="message.type === 'ai' && message.content.includes('抱歉') && !isAiTyping"
+                class="message-actions">
+                <el-button size="small" type="text" @click="retryLastMessage" class="retry-btn">
+                  <el-icon>
+                    <Refresh />
+                  </el-icon>
+                  重试
+                </el-button>
+              </div>
             </div>
-            <div class="message-time">{{ message.time }}</div>
-            <!-- 如果是AI消息且包含错误信息，显示重试按钮 -->
-            <div v-if="message.type === 'ai' && message.content.includes('抱歉') && !isAiTyping" class="message-actions">
-              <el-button size="small" type="text" @click="retryLastMessage" class="retry-btn">
-                <el-icon><Refresh /></el-icon>
-                重试
+            <div v-if="isAiTyping && aiMessages.length === 0" class="typing-indicator">
+              <div class="typing-dots">
+                <span></span>
+                <span></span>
+                <span></span>
+              </div>
+            </div>
+          </div>
+          <div class="ai-input-area">
+            <div class="input-controls">
+              <el-button size="small" @click="newConversation" class="new-chat-btn">
+                <el-icon>
+                  <Plus />
+                </el-icon>
+                新建对话
+              </el-button>
+              <!-- 中止按钮 -->
+              <el-button v-if="isAiTyping" size="small" @click="stopAiResponse" class="stop-btn" circle>
+                <div class="stop-icon"></div>
               </el-button>
             </div>
-          </div>
-          <div v-if="isAiTyping && aiMessages.length === 0" class="typing-indicator">
-            <div class="typing-dots">
-              <span></span>
-              <span></span>
-              <span></span>
-            </div>
-          </div>
-        </div>
-        <div class="ai-input-area">
-          <div class="input-controls">
-            <el-button size="small" @click="newConversation" class="new-chat-btn">
-              <el-icon><Plus /></el-icon>
-              新建对话
-            </el-button>
-            <!-- 中止按钮 -->
-            <el-button 
-              v-if="isAiTyping" 
-              size="small" 
-              @click="stopAiResponse" 
-              class="stop-btn"
-              circle
-            >
-              <div class="stop-icon"></div>
-            </el-button>
-          </div>
-          <div class="input-wrapper">
-            <div class="input-container">
-              <el-input
-                v-model="userInput"
-                type="textarea"
-                :rows="3"
-                placeholder="输入您的问题，比如：优化我的简历内容、改进自我评价等..."
-                @keydown.ctrl.enter="sendMessage"
-                @keydown.meta.enter="sendMessage"
-                class="user-input"
-              />
-              <el-button 
-                type="primary" 
-                @click="sendMessage" 
-                :disabled="!userInput.trim() || isAiTyping"
-                class="send-btn"
-              >
-                <el-icon><Promotion /></el-icon>
-              </el-button>
+            <div class="input-wrapper">
+              <div class="input-container">
+                <el-input v-model="userInput" type="textarea" :rows="3" placeholder="输入您的问题，比如：优化我的简历内容、改进自我评价等..."
+                  @keydown.ctrl.enter="sendMessage" @keydown.meta.enter="sendMessage" class="user-input" />
+                <el-button type="primary" @click="sendMessage" :disabled="!userInput.trim() || isAiTyping"
+                  class="send-btn">
+                  <el-icon>
+                    <Promotion />
+                  </el-icon>
+                </el-button>
+              </div>
             </div>
           </div>
         </div>
       </div>
-    </div>
     </transition>
-    
+
     <el-card :class="{ 'with-ai-sidebar': showAiSidebar }" class="main-content">
       <template #header>
         <div class="header-bar">
           <span class="resume-title">编辑简历内容</span>
           <div class="header-buttons">
             <el-button type="default" @click="onClearAll" size="medium" class="clear-btn">
-              <el-icon style="margin-right:4px;"><Refresh /></el-icon>
+              <el-icon style="margin-right:4px;">
+                <Refresh />
+              </el-icon>
               清空重置
             </el-button>
             <el-button @click="onAiOptimize" type="primary" size="medium" class="ai-btn">
-              <el-icon style="margin-right:4px;"><Promotion /></el-icon>
+              <el-icon style="margin-right:4px;">
+                <Promotion />
+              </el-icon>
               AI优化
             </el-button>
           </div>
         </div>
       </template>
-      <el-form :model="form.Resume" :rules="rules" ref="formRef" label-width="100px" class="resume-form"
+      <el-form :model="form.Resume" :rules="rules" ref="formRef" label-width="100px" class="resume-form" :key="formKey"
         @change="autoSave">
         <el-row :gutter="24">
           <el-col :span="24">
@@ -118,7 +115,8 @@
               </el-select>
               <el-button size="small" style="margin-left:12px;" @click="previewDialogVisible = true">预览</el-button>
             </el-form-item>
-            <el-dialog v-model="previewDialogVisible" title="简历预览" width="850px" top="40px" :close-on-click-modal="false">
+            <el-dialog v-model="previewDialogVisible" title="简历预览" width="850px" top="40px"
+              :close-on-click-modal="false">
               <component :is="currentPreviewComponent" :content="form.Resume" :avatar="form.avatar" />
             </el-dialog>
             <el-row>
@@ -135,7 +133,8 @@
                 <div class="avatar-box">
                   <ImgCutter v-on:cutDown="onAvatarCrop" rate="3:4" size-change="false">
                     <template #open>
-                      <el-avatar v-if="form.avatar" :src="form.avatar" size="large" shape="square" class="resume-avatar"/>
+                      <el-avatar v-if="form.avatar" :src="form.avatar" size="large" shape="square"
+                        class="resume-avatar" />
                       <div v-if="!form.avatar" class="el-upload__text">点击上传头像</div>
                     </template>
                   </ImgCutter>
@@ -253,7 +252,7 @@
         </el-row>
       </el-form>
     </el-card>
-</div>
+  </div>
 </template>
 
 <script setup>
@@ -300,6 +299,7 @@ const defaultForm = {
   },
   avatar: ''
 }
+const formKey = ref(Date.now())
 const form = ref(JSON.parse(JSON.stringify(defaultForm)))
 const resumeId = ref(null)
 const router = useRouter()
@@ -546,7 +546,7 @@ const onSubmit = async () => {
       return
     }
     //照片上传
-      if (form.value.avatar && form.value.avatar.startsWith('data:image')) {
+    if (form.value.avatar && form.value.avatar.startsWith('data:image')) {
       //解析base64字符串
       const arr = form.value.avatar.split(',')
       const mime = arr[0].match(/:(.*?);/)[1]
@@ -613,10 +613,10 @@ const onSubmit = async () => {
 
 const onAiOptimize = () => {
   showAiSidebar.value = true
-  
+
   // 尝试加载缓存的对话
   const hasLoadedMessages = loadAiMessages()
-  
+
   // 如果没有缓存的对话或加载失败，添加欢迎消息
   if (!hasLoadedMessages && aiMessages.value.length === 0) {
     aiMessages.value.push({
@@ -626,7 +626,7 @@ const onAiOptimize = () => {
     })
     saveAiMessages() // 保存欢迎消息
   }
-  
+
   nextTick(() => {
     scrollToBottom()
   })
@@ -644,7 +644,7 @@ const closeAiSidebar = () => {
 // 清理累积内容中的冗余data:前缀
 const cleanAccumulatedContent = (content) => {
   if (!content) return ''
-  
+
   return content
     .replace(/data:\s*\n/g, '\n') // 移除单独行的data:
     .replace(/\ndata:\s*\n/g, '\n\n') // 秘除换行间的data:
@@ -662,7 +662,7 @@ const stopAiResponse = () => {
     abortController.value = null
   }
   isAiTyping.value = false
-  
+
   // 如果有正在输出的AI消息，添加中止提示
   if (aiMessages.value.length > 0) {
     const lastMessage = aiMessages.value[aiMessages.value.length - 1]
@@ -674,12 +674,12 @@ const stopAiResponse = () => {
       lastMessage.content += '\n\n<div class="abort-notice">⚠️ 输出已中止</div>'
     }
   }
-  
+
   // 保存状态到缓存
   saveAiMessages()
-  
+
   ElMessage.info('已中止AI输出')
-  
+
   nextTick(() => {
     scrollToBottom()
   })
@@ -688,17 +688,17 @@ const stopAiResponse = () => {
 const newConversation = () => {
   // 清空对话记录和缓存
   clearAiMessages()
-  
+
   // 生成新的对话ID
   var conversationId = generateConversationId()
   localStorage.setItem('conversationId', conversationId)
-  
+
   // 添加新的欢迎消息
-  
-  
+
+
   // 保存新的对话状态
   saveAiMessages()
-  
+
   nextTick(() => {
     scrollToBottom()
   })
@@ -712,7 +712,7 @@ const sendMessage = async () => {
     conversationId = generateConversationId()
     localStorage.setItem('conversationId', conversationId)
   }
-  
+
   // 添加用户消息
   const userMessage = {
     type: 'user',
@@ -720,17 +720,17 @@ const sendMessage = async () => {
     time: new Date().toLocaleTimeString()
   }
   aiMessages.value.push(userMessage)
-  
+
   // 保存用户消息到缓存
   saveAiMessages()
-  
+
   const currentInput = userInput.value.trim()
   userInput.value = ''
   isAiTyping.value = true
-  
+
   // 创建新的AbortController用于控制请求中止
   abortController.value = new AbortController()
-  
+
   // 创建AI消息占位符
   const aiMessageIndex = aiMessages.value.length
   const aiMessage = {
@@ -739,11 +739,11 @@ const sendMessage = async () => {
     time: new Date().toLocaleTimeString()
   }
   aiMessages.value.push(aiMessage)
-  
+
   nextTick(() => {
     scrollToBottom()
   })
-  
+
   try {
     // 调用流式AI接口
     const stream = await resumeOptimizeStream(
@@ -752,10 +752,10 @@ const sendMessage = async () => {
       currentInput,
       abortController.value.signal // 传递中止信号
     )
-    
+
     let accumulatedContent = ''
     let lastUpdateTime = Date.now()
-    
+
     await parseStreamResponse(
       stream,
       // onChunk: 接收到数据块时
@@ -764,7 +764,7 @@ const sendMessage = async () => {
         if (!isAiTyping.value || abortController.value?.signal.aborted) {
           return
         }
-        
+
         // 清理chunk中可能残留的data:前缀，但保留内容和换行
         let cleanChunk = chunk
         if (typeof cleanChunk === 'string') {
@@ -779,12 +779,12 @@ const sendMessage = async () => {
             cleanChunk = '\n'
           }
         }
-        
+
         accumulatedContent += cleanChunk
-        
+
         // 实时清理累积内容中的冗余data:，但保留换行结构
         const cleanedContent = cleanAccumulatedContent(accumulatedContent)
-        
+
         // 节流更新，避免过于频繁的DOM操作
         const now = Date.now()
         if (now - lastUpdateTime > 50) { // 最多每50ms更新一次
@@ -799,15 +799,15 @@ const sendMessage = async () => {
       () => {
         isAiTyping.value = false
         abortController.value = null // 清理AbortController
-        
+
         // 最终清理并确保内容正确显示
         const finalContent = cleanAccumulatedContent(accumulatedContent)
-        
+
         aiMessages.value[aiMessageIndex].content = finalContent
-        
+
         // 保存完整的对话记录到缓存
         saveAiMessages()
-        
+
         nextTick(() => {
           scrollToBottom()
         })
@@ -817,14 +817,14 @@ const sendMessage = async () => {
         console.error('AI流式响应错误:', error)
         isAiTyping.value = false
         abortController.value = null // 清理AbortController
-        
+
         // 检查是否是用户主动中止
         if (error.name === 'AbortError') {
           return // 用户主动中止，不显示错误消息
         }
-        
+
         let errorMessage = '抱歉，AI服务暂时不可用，请稍后再试。'
-        
+
         // 根据错误类型提供更具体的错误信息
         if (error.message.includes('404')) {
           errorMessage = '抱歉，AI服务接口不存在，请联系管理员。'
@@ -835,40 +835,40 @@ const sendMessage = async () => {
         } else if (error.message.includes('timeout')) {
           errorMessage = '请求超时，请检查网络连接后重试。'
         }
-        
+
         aiMessages.value[aiMessageIndex].content = errorMessage
-        
+
         // 保存错误消息到缓存
         saveAiMessages()
-        
+
         ElMessage.error('AI服务连接失败')
         nextTick(() => {
           scrollToBottom()
         })
       }
     )
-    
+
   } catch (error) {
     console.error('发送消息失败:', error)
     isAiTyping.value = false
     abortController.value = null // 清理AbortController
-    
+
     // 检查是否是用户主动中止
     if (error.name === 'AbortError') {
       return // 用户主动中止，不显示错误消息
     }
-    
+
     let errorMessage = '抱歉，发送消息失败，请检查网络连接后重试。'
-    
+
     if (error.message.includes('Failed to fetch')) {
       errorMessage = '网络连接失败，请检查您的网络连接。'
     }
-    
+
     aiMessages.value[aiMessageIndex].content = errorMessage
-    
+
     // 保存错误消息到缓存
     saveAiMessages()
-    
+
     ElMessage.error('发送失败')
     nextTick(() => {
       scrollToBottom()
@@ -878,7 +878,7 @@ const sendMessage = async () => {
 
 const renderMarkdown = (content) => {
   if (!content) return ''
-  
+
   // 首先清理内容中可能残留的data:前缀
   let cleanContent = content
     .replace(/^data:\s*/gm, '') // 移除行首的data:前缀
@@ -886,7 +886,7 @@ const renderMarkdown = (content) => {
     .replace(/data:\s*$/gm, '') // 移除行尾的data:
     .replace(/\n{3,}/g, '\n\n') // 合并多个连续换行符
     .trim()
-  
+
   // 简单的Markdown渲染，使用较小的字体和黑色文字，优化换行显示
   return cleanContent
     .replace(/\{\{(.*?)\}\}/g, '<span class="highlight-tag">$1</span>') // 处理{{优化}}等双大括号内容
@@ -917,13 +917,13 @@ const scrollToBottom = () => {
 
 const retryLastMessage = () => {
   if (isAiTyping.value) return
-  
+
   // 找到最后一条用户消息
   const lastUserMessage = aiMessages.value
     .slice()
     .reverse()
     .find(msg => msg.type === 'user')
-  
+
   if (lastUserMessage) {
     // 移除最后一条AI错误消息
     if (aiMessages.value.length > 0 && aiMessages.value[aiMessages.value.length - 1].type === 'ai') {
@@ -931,7 +931,7 @@ const retryLastMessage = () => {
       // 保存移除错误消息后的状态
       saveAiMessages()
     }
-    
+
     // 重新发送最后一条用户消息
     userInput.value = lastUserMessage.content
     sendMessage()
@@ -973,7 +973,9 @@ const onClearAll = () => {
     cancelButtonText: '取消',
     type: 'warning',
   }).then(() => {
-    clearDraft()
+    clearDraft() // 彻底重置 form.value
+    resumeId.value = null
+    formKey.value++ // 强制刷新 el-form
     router.replace({ path: router.currentRoute.value.path, query: {} })
     ElMessage.success('内容已清空')
   })
@@ -1048,7 +1050,7 @@ const currentPreviewComponent = computed(() => {
     max-width: calc(100vw - 432px);
     padding: 16px;
   }
-  
+
   .ai-sidebar {
     width: 380px;
   }
@@ -1060,7 +1062,7 @@ const currentPreviewComponent = computed(() => {
     max-width: calc(100vw - 382px);
     padding: 12px;
   }
-  
+
   .ai-sidebar {
     width: 350px;
   }
@@ -1247,7 +1249,8 @@ const currentPreviewComponent = computed(() => {
   font-size: 13px;
   line-height: 1.5;
   word-wrap: break-word;
-  white-space: pre-wrap; /* 保留换行和空格 */
+  white-space: pre-wrap;
+  /* 保留换行和空格 */
 }
 
 .user-message .message-content {
@@ -1268,8 +1271,10 @@ const currentPreviewComponent = computed(() => {
   animation: fadeInContent 0.3s ease-in-out;
   font-size: 13px;
   color: #333;
-  white-space: pre-wrap; /* 保留换行和空格 */
-  word-wrap: break-word; /* 自动换行 */
+  white-space: pre-wrap;
+  /* 保留换行和空格 */
+  word-wrap: break-word;
+  /* 自动换行 */
 }
 
 @keyframes fadeInContent {
@@ -1277,13 +1282,15 @@ const currentPreviewComponent = computed(() => {
     opacity: 0;
     transform: translateY(10px);
   }
+
   to {
     opacity: 1;
     transform: translateY(0);
   }
 }
 
-.ai-content h2, .ai-content h3 {
+.ai-content h2,
+.ai-content h3 {
   margin: 12px 0 8px 0;
 }
 
@@ -1357,9 +1364,11 @@ const currentPreviewComponent = computed(() => {
     transform: scale(0.8) translateY(10px);
     opacity: 0;
   }
+
   50% {
     transform: scale(1.05) translateY(-2px);
   }
+
   100% {
     transform: scale(1) translateY(0);
     opacity: 1;
@@ -1370,6 +1379,7 @@ const currentPreviewComponent = computed(() => {
   0% {
     left: -100%;
   }
+
   100% {
     left: 100%;
   }
@@ -1380,9 +1390,11 @@ const currentPreviewComponent = computed(() => {
     transform: scale(0.8);
     opacity: 0.7;
   }
+
   50% {
     transform: scale(1.05);
   }
+
   100% {
     transform: scale(1);
     opacity: 1;
@@ -1398,10 +1410,14 @@ const currentPreviewComponent = computed(() => {
 }
 
 @keyframes blink {
-  0%, 50% {
+
+  0%,
+  50% {
     opacity: 1;
   }
-  51%, 100% {
+
+  51%,
+  100% {
     opacity: 0;
   }
 }
@@ -1446,10 +1462,14 @@ const currentPreviewComponent = computed(() => {
 }
 
 @keyframes typing {
-  0%, 80%, 100% {
+
+  0%,
+  80%,
+  100% {
     transform: scale(0.8);
     opacity: 0.5;
   }
+
   40% {
     transform: scale(1);
     opacity: 1;
@@ -1545,10 +1565,13 @@ const currentPreviewComponent = computed(() => {
 }
 
 @keyframes stopIconPulse {
-  0%, 100% {
+
+  0%,
+  100% {
     transform: scale(1);
     opacity: 0.6;
   }
+
   50% {
     transform: scale(1.2);
     opacity: 0.3;
@@ -1560,6 +1583,7 @@ const currentPreviewComponent = computed(() => {
     transform: translate(-50%, -50%) scale(0.8);
     opacity: 1;
   }
+
   100% {
     transform: translate(-50%, -50%) scale(1.4);
     opacity: 0;
@@ -1585,7 +1609,8 @@ const currentPreviewComponent = computed(() => {
 .user-input .el-textarea__inner {
   resize: none;
   border-radius: 18px;
-  padding-right: 50px !important; /* 为按钮留出空间 */
+  padding-right: 50px !important;
+  /* 为按钮留出空间 */
   font-size: 14px;
   transition: all 0.3s;
   box-shadow: 0 1px 4px rgba(0, 0, 0, 0.05);
