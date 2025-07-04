@@ -37,14 +37,10 @@
       <el-row :gutter="32" class="resume-main-row">
         <template v-if="resumeList.length > 0">
           <el-col :span="5" class="resume-list-col">
-            <el-menu :default-active="selectedIndex" @select="handleSelect" class="resume-list-menu"
-              style="height: 100%">
-              <el-menu-item v-for="(item, idx) in resumeList" :key="item.id" :index="String(idx)"
-                class="resume-menu-item">
+            <el-menu :default-active="selectedIndex" @select="handleSelect" class="resume-list-menu">
+              <el-menu-item v-for="(item, idx) in resumeList" :key="item.id" :index="String(idx)" class="resume-menu-item">
                 <div class="menu-item-flex">
-                  <el-icon style="margin-right: 4px;">
-                    <Document />
-                  </el-icon>
+                  <el-icon style="margin-right: 4px;"><Document /></el-icon>
                   <span>简历{{ idx + 1 }}</span>
                 </div>
               </el-menu-item>
@@ -494,7 +490,6 @@ async function downloadImportedPdf() {
 .resume-list-col {
   min-width: 180px;
   max-width: 260px;
-  height: 900px;
   background: transparent;
   display: flex;
   flex-direction: column;
@@ -502,51 +497,58 @@ async function downloadImportedPdf() {
 }
 
 .resume-list-menu {
-  border-radius: 14px;
-  background: #f7f8fa;
-  box-shadow: 0 1px 4px rgba(99,102,241,0.03);
-  padding: 0;
+  border-radius: 12px;
+  background: #f8fafe;
+  box-shadow: 0 2px 8px rgba(102, 126, 234, 0.08);
+  padding: 8px;
   height: 100%;
-  border: none;
-  transition: background 0.2s, box-shadow 0.2s;
+  border: 1px solid #e8f2ff;
+  overflow: hidden;
 }
 
 .resume-menu-item {
-  border-radius: 0 8px 8px 0;
-  margin: 2px 0;
+  border-radius: 8px;
+  margin: 4px 0;
   font-size: 16px;
-  transition: background 0.2s, color 0.2s;
-  padding: 8px 12px 8px 0;
+  transition: all 0.3s ease;
+  padding: 12px 16px;
   color: #333;
   position: relative;
-  overflow: visible;
+  background: transparent;
+  border: 1px solid transparent;
 }
 
-.resume-menu-item.is-active,
 .resume-menu-item:hover {
   background: linear-gradient(90deg, #e6eaff 0%, #f4f6fb 100%);
-  color: #4f46e5;
-  font-weight: 600;
-  box-shadow: 0 2px 8px rgba(99,102,241,0.06);
+  color: #667eea;
+  border-color: #c7d2fe;
+  transform: translateX(4px);
 }
 
-.resume-menu-item.is-active::before,
-.resume-menu-item:hover::before {
+.resume-menu-item.is-active {
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  color: #fff;
+  font-weight: 600;
+  box-shadow: 0 4px 12px rgba(102, 126, 234, 0.3);
+  border-color: #667eea;
+}
+
+.resume-menu-item.is-active::before {
   content: '';
   position: absolute;
-  left: 0;
-  top: 8px;
-  bottom: 8px;
+  left: -8px;
+  top: 50%;
+  transform: translateY(-50%);
   width: 4px;
-  border-radius: 4px;
-  background: #6366f1;
-  z-index: 1;
+  height: 20px;
+  border-radius: 2px;
+  background: #fff;
 }
 
 .menu-item-flex {
-  padding-left: 16px;
   display: flex;
   align-items: center;
+  gap: 8px;
 }
 
 .resume-a4-col {
