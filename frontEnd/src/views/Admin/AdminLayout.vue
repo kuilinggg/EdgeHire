@@ -41,11 +41,11 @@
           </span>
           <template #dropdown>
             <el-dropdown-menu>
-              <el-dropdown-item divided @click="logout">退出登录</el-dropdown-item>
+              <el-dropdown-item @click="logout">退出登录</el-dropdown-item>
             </el-dropdown-menu>
           </template>
         </el-dropdown>
-      </header>
+    </header>
       <!-- 内容区域 -->
       <main class="content">
         <router-view />
