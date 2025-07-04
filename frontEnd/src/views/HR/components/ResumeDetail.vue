@@ -75,6 +75,9 @@ const emit = defineEmits(['start-chat'])
 const router = useRouter()
 const authStore = useAuthStore()
 
+// HR公司信息
+const hrCompany = ref('公司')
+
 // 解析简历内容（严格仿照JobSeeker/ResumeView.vue）
 const parsedResumeContent = computed(() => {
   if (!props.resume || !props.resume.content) return {}
@@ -154,10 +157,28 @@ watch(importedPdfUrl, (url) => {
     setTimeout(() => renderPdfToCanvas(url), 0)
   }
 })
+// 获取HR公司信息
+const loadHrCompany = async () => {
+  try {
+    const userId = authStore.userId
+    if (!userId) return
+
+    const response = await hrApi.getHrInfo(userId)
+    if (response.data && response.data.company) {
+      hrCompany.value = response.data.company
+    }
+  } catch (error) {
+    console.error('获取HR公司信息失败:', error)
+    // 保持默认值 '公司'
+  }
+}
+
 onMounted(() => {
   if (isImportedResume.value && importedPdfUrl.value) {
     setTimeout(() => renderPdfToCanvas(importedPdfUrl.value), 0)
   }
+  // 加载HR公司信息
+  loadHrCompany()
 })
 
 const formatDate = (dateStr) => {
@@ -203,7 +224,7 @@ const startChat = async () => {
     })
 
     // 构建自定义消息，包含简历ID
-    const customMessage = `你好，我是腾讯的HR，对你的这份简历很感兴趣，希望能和你聊一聊。resume:${resumeId}`
+    const customMessage = `你好，我是${hrCompany.value}的HR，对你的这份简历很感兴趣，希望能和你聊一聊。resume:${resumeId}`
 
     // 调用发起沟通API，传递自定义消息
     const response = await hrApi.initiateChat(hrUserId, targetUserId, customMessage)
