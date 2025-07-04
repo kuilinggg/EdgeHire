@@ -29,10 +29,6 @@
             <el-icon><EditPen /></el-icon>
             <span>求职指导请求</span>
           </el-menu-item>
-          <el-menu-item index="/chat">
-            <el-icon><ChatDotRound /></el-icon>
-            <span>私聊</span>
-          </el-menu-item>
         </el-menu>
       </nav>
     </div>
@@ -62,7 +58,7 @@
 <script setup>
 import { ref, computed,onMounted } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
-import { User, Document, EditPen, ChatDotRound, Setting } from '@element-plus/icons-vue'
+import { User, Document, EditPen, Setting } from '@element-plus/icons-vue'
 import { ElMessage } from 'element-plus'
 import { authApi } from '../../api/auth'
 import { getAvatarUrl } from '../../api/info'
