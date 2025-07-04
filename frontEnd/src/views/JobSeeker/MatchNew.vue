@@ -519,7 +519,6 @@ onMounted(() => {
 .resume-sidebar {
   min-width: 240px;
   max-width: 280px;
-  height: 700px;
   flex-shrink: 0;
 }
 

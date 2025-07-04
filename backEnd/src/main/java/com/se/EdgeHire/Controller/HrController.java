@@ -120,13 +120,6 @@ public class HrController {
                 return ResponseEntity.badRequest().body(Map.of("error", "用户不是HR角色"));
             }
 
-            if(messageService.doesConversationExist(hrUserId, targetUserId)) {
-                return ResponseEntity.ok(Map.of(
-                    "success", true,
-                    "message", "已存在与该求职者的沟通"
-                ));
-            }
-
             // 构造消息内容
             String greetingMessage;
             if (requestBody != null && requestBody.containsKey("customMessage") &&
