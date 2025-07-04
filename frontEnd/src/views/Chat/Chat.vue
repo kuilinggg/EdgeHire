@@ -53,7 +53,15 @@
               />
             </div>
             <!-- 文字消息 -->
-            <div v-else class="msg-content">{{ msg.content }}</div>
+            <div v-else class="msg-content">
+              <template v-if="hasResumeLink(msg.content)">
+                {{ getMessageText(msg.content) }}
+                <span class="resume-link" @click="handleResumeClick(getResumeId(msg.content))">[简历]</span>
+              </template>
+              <template v-else>
+                {{ msg.content }}
+              </template>
+            </div>
           </div>
         </div>
       </div>
@@ -99,6 +107,45 @@
         </div>
       </div>
     </div>
+    
+    <!-- 简历预览弹窗 -->
+    <el-dialog 
+      v-model="resumeDialogVisible" 
+      title="简历预览" 
+      width="1200px" 
+      :close-on-click-modal="false"
+      class="resume-dialog"
+    >
+      <div v-if="resumeDialogLoading" class="dialog-loading">
+        <el-icon class="is-loading"><Loading /></el-icon>
+        <span>加载中...</span>
+      </div>
+      <div v-else-if="currentResumeData" class="resume-preview-container">
+        <template v-if="isDialogImportedResume">
+          <!-- PDF简历显示 -->
+          <div class="pdf-preview-wrapper">
+            <canvas ref="dialogPdfCanvasRef" class="pdf-preview-canvas"></canvas>
+            <div v-if="pdfDialogLoading" class="pdf-loading-mask">PDF加载中...</div>
+          </div>
+        </template>
+        <template v-else>
+          <!-- 普通简历显示 -->
+          <component
+            :is="dialogResumeComponent"
+            :content="parsedDialogResumeContent"
+            :avatar="currentResumeData.avatar"
+            class="resume-preview-paper"
+          />
+        </template>
+      </div>
+      <div v-else class="dialog-error">
+        <el-icon><Warning /></el-icon>
+        <span>简历加载失败</span>
+      </div>
+      <template #footer>
+        <el-button @click="resumeDialogVisible = false">关闭</el-button>
+      </template>
+    </el-dialog>
   </div>
 </template>
 
@@ -109,9 +156,13 @@ import { ref, computed, nextTick, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import axios from 'axios'
 import { ElMessage } from 'element-plus'
-import { Picture } from '@element-plus/icons-vue'
+import { Picture, Loading, Warning } from '@element-plus/icons-vue'
 import { getAvatarUrl } from '../../api/info'
 import { authApi } from "../../api/auth"
+import { getResumeById } from "../../api/resume"
+import ResumeA4Paper from '../../components/ResumeA4Paper.vue'
+import ResumeA4PaperBlueLeft from '../../components/ResumeA4PaperBlueLeft.vue'
+import ResumeA4PaperBlueTopBar from '../../components/ResumeA4PaperBlueTopBar.vue'
 
 
 const router = useRouter()
@@ -119,6 +170,14 @@ const search = ref('')
 const inputMsg = ref('')
 const activeUser = ref('0')
 const uploading = ref(false) 
+
+// 简历弹窗相关
+const resumeDialogVisible = ref(false)
+const resumeDialogLoading = ref(false)
+const currentResumeData = ref(null)
+const pdfDialogLoading = ref(false)
+const dialogPdfCanvasRef = ref(null)
+const pdfDocCache = new Map() // PDF缓存 
 
 const speaker = localStorage.getItem('userId')
 const users = ref([
@@ -129,6 +188,32 @@ var messageMap = ref(null) // 用于接收服务器推送的消息
 
 const myAvatar = ref('') // 当前用户头像
 const currentUser = computed(() => users.value.find(u => u.id.toString() === activeUser.value) || {})
+
+// 弹窗简历相关计算属性
+const parsedDialogResumeContent = computed(() => {
+  if (!currentResumeData.value || !currentResumeData.value.content) return {}
+  try {
+    const obj = JSON.parse(currentResumeData.value.content)
+    return obj && typeof obj === 'object' ? obj : {}
+  } catch {
+    return { 内容: currentResumeData.value.content }
+  }
+})
+
+const isDialogImportedResume = computed(() => {
+  return parsedDialogResumeContent.value && parsedDialogResumeContent.value.importType === 'pdf' && parsedDialogResumeContent.value.pdfUrl
+})
+
+const dialogResumeComponent = computed(() => {
+  const template = parsedDialogResumeContent.value.template || '1'
+  if (template === '2') return ResumeA4PaperBlueLeft
+  else if (template === '3') return ResumeA4PaperBlueTopBar
+  return ResumeA4Paper
+})
+
+const dialogImportedPdfUrl = computed(() => {
+  return isDialogImportedResume.value ? parsedDialogResumeContent.value.pdfUrl : ''
+})
 
 onMounted(async () => {
   try {
@@ -142,6 +227,9 @@ onMounted(async () => {
   } catch (e) {
     myAvatar.value = `https://api.dicebear.com/7.x/miniavs/svg?seed=jobseeker`
   }
+  
+  // 预加载PDF.js脚本
+  loadPdfJsScript().catch(e => console.warn('PDF.js加载失败:', e))
 })
 
 const usersLoaded = ref(false)
@@ -440,6 +528,112 @@ function handleImageError(event) {
 function handleShiftEnter(event) {
   // Shift+Enter时允许换行，不阻止默认行为
   // 这样用户可以正常换行
+}
+
+// 检测消息是否包含简历链接
+function hasResumeLink(content) {
+  return /resume:\d+$/.test(content)
+}
+
+// 获取消息文本（去除简历链接部分）
+function getMessageText(content) {
+  return content.replace(/resume:\d+$/, '').trim()
+}
+
+// 获取简历ID
+function getResumeId(content) {
+  const match = content.match(/resume:(\d+)$/)
+  return match ? parseInt(match[1]) : null
+}
+
+// 处理简历点击事件
+async function handleResumeClick(resumeId) {
+  console.log('点击了简历，ID:', resumeId)
+  
+  resumeDialogLoading.value = true
+  resumeDialogVisible.value = true
+  currentResumeData.value = null
+  
+  try {
+    const res = await getResumeById(resumeId)
+    if (res && res.data) {
+      currentResumeData.value = res.data
+      
+      // 如果是PDF简历，需要渲染PDF
+      setTimeout(() => {
+        if (isDialogImportedResume.value && dialogImportedPdfUrl.value) {
+          renderDialogPdfToCanvas(dialogImportedPdfUrl.value)
+        }
+      }, 100)
+    } else {
+      ElMessage.error('简历不存在或已被删除')
+      resumeDialogVisible.value = false
+    }
+  } catch (error) {
+    console.error('获取简历失败:', error)
+    ElMessage.error('获取简历失败')
+    resumeDialogVisible.value = false
+  } finally {
+    resumeDialogLoading.value = false
+  }
+}
+
+// 动态加载PDF.js脚本
+function loadPdfJsScript() {
+  return new Promise((resolve, reject) => {
+    if (window.pdfjsLib) return resolve(window.pdfjsLib)
+    const script = document.createElement('script')
+    script.src = '/libs/pdf.min.js'
+    script.onload = () => {
+      window.pdfjsLib.GlobalWorkerOptions.workerSrc = '/libs/pdf.worker.min.js'
+      resolve(window.pdfjsLib)
+    }
+    script.onerror = reject
+    document.head.appendChild(script)
+  })
+}
+
+// 在弹窗中渲染PDF
+async function renderDialogPdfToCanvas(url) {
+  pdfDialogLoading.value = true
+  await loadPdfJsScript()
+  const pdfjsLib = window.pdfjsLib
+  
+  try {
+    let pdf
+    if (pdfDocCache.has(url)) {
+      pdf = pdfDocCache.get(url)
+    } else {
+      const loadingTask = pdfjsLib.getDocument(url)
+      pdf = await loadingTask.promise
+      pdfDocCache.set(url, pdf)
+    }
+    
+    const page = await pdf.getPage(1)
+    const viewport = page.getViewport({ scale: 1 })
+    
+    // 使用更大的固定缩放比例，而不是根据容器大小计算
+    const scale = 1.33  // 从2.0缩小到1.33（缩小1/3）
+    const scaledViewport = page.getViewport({ scale })
+    
+    const canvas = dialogPdfCanvasRef.value
+    if (!canvas) return
+    
+    const context = canvas.getContext('2d')
+    canvas.width = scaledViewport.width
+    canvas.height = scaledViewport.height
+    
+    // 清空画布
+    context.clearRect(0, 0, canvas.width, canvas.height)
+    
+    // 渲染PDF页面
+    await page.render({ canvasContext: context, viewport: scaledViewport }).promise
+  } catch (e) {
+    console.error('PDF渲染失败', e)
+    ElMessage.error('PDF加载失败')
+  } finally {
+    pdfDialogLoading.value = false
+  }
 }
 function goToProfile() {
   // 角色数字：0-管理员 1-求职者 2-HR
@@ -1006,5 +1200,133 @@ onMounted(() => {
 /* 我发送的图片消息样式 */
 .chat-message.from-me .msg-image {
   margin: 0 12px;
+}
+
+/* 简历链接样式 */
+.resume-link {
+  color: #3a36db;
+  cursor: pointer;
+  font-weight: 500;
+  text-decoration: underline;
+  padding: 2px 6px;
+  border-radius: 4px;
+  background: rgba(58, 54, 219, 0.1);
+  transition: all 0.3s ease;
+  margin-left: 8px;
+  display: inline-block;
+}
+
+.resume-link:hover {
+  background: rgba(58, 54, 219, 0.2);
+  transform: scale(1.05);
+  text-decoration: underline;
+}
+
+.resume-link:active {
+  transform: scale(0.95);
+}
+
+/* 简历弹窗样式 */
+.resume-dialog :deep(.el-dialog) {
+  border-radius: 12px;
+  overflow: hidden;
+}
+
+.resume-dialog :deep(.el-dialog__header) {
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  color: white;
+  padding: 20px 24px;
+  margin: 0;
+}
+
+.resume-dialog :deep(.el-dialog__title) {
+  color: white;
+  font-weight: 600;
+}
+
+.resume-dialog :deep(.el-dialog__headerbtn .el-dialog__close) {
+  color: white;
+  font-size: 18px;
+}
+
+.resume-dialog :deep(.el-dialog__body) {
+  padding: 0;
+  max-height: 80vh;  /* 从70vh增加到80vh */
+  overflow-y: auto;
+}
+
+.dialog-loading {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 60px 20px;
+  color: #409eff;
+  font-size: 16px;
+}
+
+.dialog-loading .el-icon {
+  font-size: 32px;
+  margin-bottom: 12px;
+}
+
+.dialog-error {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 60px 20px;
+  color: #f56c6c;
+  font-size: 16px;
+}
+
+.dialog-error .el-icon {
+  font-size: 32px;
+  margin-bottom: 12px;
+}
+
+.resume-preview-container {
+  display: flex;
+  justify-content: center;
+  padding: 20px;
+  background: #f8fafe;
+}
+
+.resume-preview-paper {
+  transform: scale(0.8);
+  transform-origin: top center;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.1);
+}
+
+.pdf-preview-wrapper {
+  display: flex;
+  justify-content: center;
+  align-items: flex-start;  /* 改为flex-start，避免垂直居中导致的尺寸问题 */
+  position: relative;
+  background: #fff;
+  border-radius: 8px;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.1);
+  overflow: auto;  /* 改为auto，允许滚动查看大尺寸PDF */
+  max-height: 75vh;  /* 添加最大高度限制 */
+}
+
+.pdf-preview-canvas {
+  display: block;
+  /* 移除尺寸限制，让PDF以实际渲染尺寸显示 */
+}
+
+.pdf-loading-mask {
+  position: absolute;
+  left: 0;
+  top: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(255, 255, 255, 0.8);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 16px;
+  color: #409eff;
+  z-index: 10;
 }
 </style>
