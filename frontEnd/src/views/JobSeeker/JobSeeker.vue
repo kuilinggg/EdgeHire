@@ -178,7 +178,7 @@ function startUnreadCountTimer() {
   // 立即获取一次
   fetchUnreadCount()
   // 每30秒获取一次未读消息数量
-  unreadCountTimer = setInterval(fetchUnreadCount, 30000)
+  unreadCountTimer = setInterval(fetchUnreadCount, 10000)
 }
 
 // 停止定时器
