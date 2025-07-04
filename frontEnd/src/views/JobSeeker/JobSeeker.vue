@@ -78,18 +78,29 @@
     </div>
     <div class="main-content">
       <header class="header">
-        <el-dropdown trigger="hover">
-          <span class="user-info">
-            <img class="avatar" :src="avatarUrl" alt="avatar" />
-          </span>
-          <template #dropdown>
-            <el-dropdown-menu>
-              <el-dropdown-item @click="showChange = true">修改密码</el-dropdown-item>
-              <el-dropdown-item divided @click="goToChat">我的私聊</el-dropdown-item>
-              <el-dropdown-item divided @click="logout">退出登录</el-dropdown-item>
-            </el-dropdown-menu>
-          </template>
-        </el-dropdown>
+        <div class="header-right">
+          <div class="message-container" @click="goToChat">
+            <el-badge v-if="unreadCount > 0" :value="unreadCount" :max="99" class="message-badge">
+              <el-icon class="message-icon">
+                <Bell />
+              </el-icon>
+            </el-badge>
+            <el-icon v-else class="message-icon">
+              <Bell />
+            </el-icon>
+          </div>
+          <el-dropdown trigger="hover">
+            <span class="user-info">
+              <img class="avatar" :src="avatarUrl" alt="avatar" />
+            </span>
+            <template #dropdown>
+              <el-dropdown-menu>
+                <el-dropdown-item @click="showChange = true">修改密码</el-dropdown-item>
+                <el-dropdown-item divided @click="logout">退出登录</el-dropdown-item>
+              </el-dropdown-menu>
+            </template>
+          </el-dropdown>
+        </div>
         <ChangePasswordDialog v-model:visible="showChange" />
       </header>
       <main class="content">
@@ -100,18 +111,21 @@
 </template>
 
 <script setup>
-import { ref, computed, onMounted } from 'vue'
+import { ref, computed, onMounted, onUnmounted } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
-import { User, Document, EditPen, View, Search, Star } from '@element-plus/icons-vue'
+import { User, Document, EditPen, View, Search, Star, Bell } from '@element-plus/icons-vue'
 import { ElMessage } from 'element-plus'
 import { authApi } from '../../api/auth'
 import { useAuthStore } from '../../stores/authStore'
 import { getAvatarUrl } from '../../api/info'
+import { getUnreadCount } from '../../api/chat'
 import ChangePasswordDialog from '../../components/ChangePasswordDialog.vue'
 const router = useRouter()
 const route = useRoute()
 
 const showChange = ref(false)
+const unreadCount = ref(0) // 未读消息数量
+let unreadCountTimer = null // 定时器用于定期获取未读消息数量
 
 const authStore = useAuthStore()
 const userId = authStore.userId
@@ -135,6 +149,8 @@ function logout() {
   }
 }
 function goToChat() {
+  // 点击进入聊天时清除未读消息数量
+  unreadCount.value = 0
   localStorage.setItem('activeUser', null) // 清除当前活跃用户
   router.push('/chat') // 假设私聊页面路由为 /chat
 }
@@ -143,8 +159,42 @@ function toggleResumeMenu() {
   resumeMenuOpen.value = !resumeMenuOpen.value
 }
 
+// 获取未读消息数量
+async function fetchUnreadCount() {
+  if (!userId) return
+  try {
+    const response = await getUnreadCount(userId)
+    if (response && response.data !== undefined) {
+      unreadCount.value = response.data
+    }
+  } catch (e) {
+    console.log('获取未读消息数量失败:', e)
+  }
+}
+
+// 启动定时器定期获取未读消息数量
+function startUnreadCountTimer() {
+  if (unreadCountTimer) return
+  // 立即获取一次
+  fetchUnreadCount()
+  // 每30秒获取一次未读消息数量
+  unreadCountTimer = setInterval(fetchUnreadCount, 30000)
+}
+
+// 停止定时器
+function stopUnreadCountTimer() {
+  if (unreadCountTimer) {
+    clearInterval(unreadCountTimer)
+    unreadCountTimer = null
+  }
+}
+
 onMounted(async () => {
   if (userId) {
+    // 启动未读消息数量定时器
+    startUnreadCountTimer()
+    
+    // 获取用户头像
     try {
       const url = await getAvatarUrl(userId)
       if (url) avatarUrl.value = url
@@ -153,6 +203,11 @@ onMounted(async () => {
       // 保持默认头像
     }
   }
+})
+
+// 组件卸载时清理定时器
+onUnmounted(() => {
+  stopUnreadCountTimer()
 })
 </script>
 
@@ -270,6 +325,68 @@ onMounted(async () => {
   background: #fff;
   border-bottom: 1px solid #f0f0f0;
   padding: 0 32px;
+}
+
+.header-right {
+  display: flex;
+  align-items: center;
+  gap: 24px;
+}
+
+.message-container {
+  display: flex;
+  align-items: center;
+  cursor: pointer;
+  padding: 8px 12px;
+  border-radius: 6px;
+  transition: background-color 0.2s;
+  position: relative;
+}
+
+.message-container:hover {
+  background-color: #f5f5ff;
+}
+
+.message-icon {
+  font-size: 22px;
+  color: #333;
+  transition: color 0.2s;
+}
+
+.message-container:hover .message-icon {
+  color: #3a36db;
+}
+
+.message-text {
+  font-size: 14px;
+  color: #333;
+  font-weight: 500;
+}
+
+.message-badge {
+  display: inline-block;
+  position: relative;
+}
+
+.message-badge :deep(.el-badge__content) {
+  background-color: #ff4757 !important;
+  border: 2px solid #fff !important;
+  font-size: 10px !important;
+  min-width: 14px !important;
+  width: 14px !important;
+  height: 14px !important;
+  padding: 0 !important;
+  border-radius: 50% !important;
+  box-shadow: 0 1px 3px rgba(255, 71, 87, 0.3) !important;
+  font-weight: 600 !important;
+  position: absolute !important;
+  top: -7px !important;
+  right: -7px !important;
+  transform: none !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  z-index: 10 !important;
 }
 
 .user-info {

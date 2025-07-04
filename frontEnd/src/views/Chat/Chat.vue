@@ -642,7 +642,7 @@ async function renderDialogPdfToCanvas(url) {
     const viewport = page.getViewport({ scale: 1 })
     
     // 使用更大的固定缩放比例，而不是根据容器大小计算
-    const scale = 1.33  // 从2.0缩小到1.33（缩小1/3）
+    const scale = 1.33  
     const scaledViewport = page.getViewport({ scale })
     
     const canvas = dialogPdfCanvasRef.value

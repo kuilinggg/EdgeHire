@@ -10,7 +10,6 @@ import com.se.EdgeHire.Repository.UserRepository;
 import com.se.EdgeHire.Service.MessageService;
 import lombok.AllArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.http.RequestEntity;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
@@ -40,7 +39,7 @@ public class MessageController {
         Map<Integer, Message> latestMessagesMap = messageService.getLatestMessagesMap(id);
         List<ChatUser> chatUsers = new ArrayList<>();
 
-        Map<Integer, Integer> unreadCountMap = messageService.getUnreadCountByUserId(id);
+        Map<Integer, Integer> unreadCountMap = messageService.getUnreadCountMapByUserId(id);
 
         for(var i : userIds) {
             Optional<User> temp = userRepository.findById(i);
@@ -80,6 +79,11 @@ public class MessageController {
         return ResponseEntity.ok(chatUsers);
     }
 
+    @GetMapping("/unReadCount/{id}")
+    public ResponseEntity<?> getUnreadCount(@PathVariable Integer id) {
+        return ResponseEntity.ok(messageService.getUnReadCountByUserId(id));
+    }
+
     @GetMapping("/messages/{id}")
     public ResponseEntity<?> getMessages(@PathVariable Integer id) {
         Map<Integer, List<Message>> messages = messageService.getConversationByUserId(id);
@@ -99,7 +103,7 @@ public class MessageController {
     @GetMapping("/newChatUser/{id}")
     public ResponseEntity<?> getNewChatUser(@PathVariable Integer id) {
         Optional<User> userOpt = userRepository.findById(id);
-        Map<Integer, Integer> unreadCountMap = messageService.getUnreadCountByUserId(id);
+        Map<Integer, Integer> unreadCountMap = messageService.getUnreadCountMapByUserId(id);
 
         if (userOpt.isEmpty()) {
             log.warn("User with ID {} not found", id);
