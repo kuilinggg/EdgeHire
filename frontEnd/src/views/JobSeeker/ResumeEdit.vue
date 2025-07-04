@@ -104,7 +104,6 @@
       </template>
       <el-form :model="form.Resume" :rules="rules" ref="formRef" label-width="100px" class="resume-form" :key="formKey"
         @change="autoSave">
-        >
         <el-row :gutter="24">
           <el-col :span="24">
             <!-- 模板选择下拉框 -->
