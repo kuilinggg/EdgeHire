@@ -50,7 +50,7 @@
             <div v-if="selectedResume" class="resume-a4-wrapper">
               <template v-if="isImportedResume">
                 <div class="pdf-a4-fixed-wrapper">
-                  <canvas ref="pdfCanvasRef" class="pdf-a4-canvas"></canvas>
+                  <div ref="pdfCanvasWrapper" class="pdf-a4-canvas"></div>
                   <div v-if="pdfLoading" class="pdf-loading-mask">PDF加载中...</div>
                 </div>
                 <div class="resume-a4-ops-bar">
@@ -131,6 +131,7 @@ const router = useRouter()
 const importDialogVisible = ref(false)
 const importFile = ref(null)
 const importLoading = ref(false)
+const pdfCanvasWrapper = ref(null)
 
 const handleSelect = (idx) => {
   selectedIndex.value = idx
@@ -338,7 +339,6 @@ function handleFileChange(e) {
 }
 
 // PDF.js渲染相关
-const pdfCanvasRef = ref(null)
 const pdfLoading = ref(false)
 const pdfDocCache = new Map() // url => pdf对象
 
@@ -380,13 +380,24 @@ async function renderPdfToCanvas(url) {
     const targetHeight = 1123
     const scale = Math.min(targetWidth / viewport.width, targetHeight / viewport.height)
     const scaledViewport = page.getViewport({ scale })
-    const canvas = pdfCanvasRef.value
-    const context = canvas.getContext('2d')
+    // 新建canvas
+    const canvas = document.createElement('canvas')
     canvas.width = scaledViewport.width
     canvas.height = scaledViewport.height
-    // 清空
+    canvas.style.width = '794px'
+    canvas.style.height = '1123px'
+    canvas.style.background = '#fff'
+    canvas.style.display = 'block'
+    const context = canvas.getContext('2d')
+    context.setTransform(1, 0, 0, 1, 0, 0)
     context.clearRect(0, 0, canvas.width, canvas.height)
+    // 渲染PDF
     await page.render({ canvasContext: context, viewport: scaledViewport }).promise
+    // 替换展示canvas
+    if (pdfCanvasWrapper.value) {
+      pdfCanvasWrapper.value.innerHTML = ''
+      pdfCanvasWrapper.value.appendChild(canvas)
+    }
   } catch (e) {
     console.error('PDF渲染失败', e)
   } finally {
