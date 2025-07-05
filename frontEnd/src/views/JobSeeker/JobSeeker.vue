@@ -461,4 +461,19 @@ onUnmounted(() => {
   display: flex;
   align-items: center;
 }
+
+/* 只让菜单项高亮，子菜单标题不主色高亮 */
+::v-deep(.el-menu-vertical-demo .el-menu-item.is-active) {
+  background: #f0f0ff !important;
+  color: #3a36db !important;
+  font-weight: 600;
+  box-shadow: 0 2px 8px 0 rgba(58, 54, 219, 0.04);
+}
+::v-deep(.el-menu-vertical-demo .el-sub-menu__title.is-active),
+::v-deep(.el-menu-vertical-demo .el-sub-menu.is-opened > .el-sub-menu__title) {
+  background: #fff !important;
+  color: #333 !important;
+  font-weight: 600;
+  box-shadow: none !important;
+}
 </style>
