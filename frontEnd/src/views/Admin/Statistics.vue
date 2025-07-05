@@ -179,7 +179,7 @@ const load = async () => {
     const genderStats = { 男: 0, 女: 0,未知: 0};
     rawData.value.forEach(item => {
       if (item.gender === 1) genderStats['男']++;
-      else if (item.gender === 0) genderStats['女']++;
+      else if (item.gender === 2) genderStats['女']++;
       else genderStats['未知']++;
     });
     genderData.value = [
