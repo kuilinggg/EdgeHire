@@ -115,9 +115,16 @@
               </el-select>
               <el-button size="small" style="margin-left:12px;" @click="previewDialogVisible = true">预览</el-button>
             </el-form-item>
-            <el-dialog v-model="previewDialogVisible" title="简历预览" width="850px" top="40px"
-              :close-on-click-modal="false">
-              <component :is="currentPreviewComponent" :content="form.Resume" :avatar="form.avatar" />
+            <el-dialog v-model="previewDialogVisible" title="简历预览" width="850px" top="40px">
+              <div style="display: flex; align-items: center; gap: 16px; margin-bottom: 16px;">
+                <span style="font-weight: 500; color: #333;">切换模板：</span>
+                <el-select v-model="form.Resume.template" style="width: 180px;" size="small">
+                  <el-option label="模板一" value="1" />
+                  <el-option label="模板二" value="2" />
+                  <el-option label="模板三" value="3" />
+                </el-select>
+              </div>
+              <component :is="currentPreviewComponent" :content="form.Resume" :avatar="form.avatar" class="resume-a4-paper" />
             </el-dialog>
             <el-row>
               <el-col :span="18">

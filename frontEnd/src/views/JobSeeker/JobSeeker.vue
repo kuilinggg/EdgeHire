@@ -107,6 +107,7 @@
         <router-view></router-view>
       </main>
     </div>
+    <el-backtop :right="40" :bottom="40" />
   </div>
 </template>
 
