@@ -35,7 +35,7 @@
             <el-button size="mini" @click="
               infoList=[],detailInfoList=[],
               handleCheck(scope.row.id,scope.row.role)"
-              >查看用户</el-button>
+              >查看详细信息</el-button>
             <el-button 
             v-if="scope.row.role !== 0"
             size="mini" 
