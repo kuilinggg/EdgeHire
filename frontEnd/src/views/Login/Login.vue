@@ -45,6 +45,7 @@ import { useRoute,useRouter } from 'vue-router'
 import { ElMessage } from 'element-plus'
 import { User, Lock } from '@element-plus/icons-vue'
 import { authApi } from '../../api/auth'
+import md5 from 'crypto-js/md5'
 
 const route = useRoute()
 const router = useRouter()
@@ -73,7 +74,7 @@ const onLogin = async () => {
     }
     loading.value = true
     try {
-        const res = await authApi.login(form.username, form.password)
+        const res = await authApi.login(form.username, md5(form.password).toString())
         if (res.data && res.data.id) {
             // 校验后端返回的role和当前选择的role是否一致
             if (res.data.role !== roleMap[role.value]) {

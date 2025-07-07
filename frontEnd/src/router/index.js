@@ -126,11 +126,6 @@ const routes = [
         name: 'Statistics',
         component: () => import('../views/Admin/Statistics.vue')
       },
-      {
-        path:'algo',
-        name:"Algorithm",
-        component: () => import('../views/Admin/Algorithm.vue')
-      }
     ]  
   },
   {

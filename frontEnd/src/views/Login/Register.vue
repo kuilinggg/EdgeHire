@@ -44,6 +44,7 @@ import { useRoute,useRouter } from 'vue-router'
 import { ElMessage } from 'element-plus'
 import { User, Lock, Message, Key } from '@element-plus/icons-vue'
 import { authApi } from '../../api/auth'
+import md5 from 'crypto-js/md5'
 
 const route = useRoute()
 const router = useRouter()
@@ -96,7 +97,7 @@ const onRegister = async () => {
     }
     loading.value = true
     try {
-        await authApi.register(form.username, form.password, roleMap[role.value])
+        await authApi.register(form.username, md5(form.password).toString(), roleMap[role.value])
         ElMessage.success('注册成功，请登录')
         router.push('/login')
     } catch (err) {
