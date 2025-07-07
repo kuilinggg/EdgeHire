@@ -3,7 +3,9 @@
     <h2>用户信息管理</h2>
     <div class="card">
       <div class="search-bar">
-        <el-input v-model="searchKeyword" placeholder="搜索用户...(用户名)" style="width: 300px" />
+        <el-input v-model="searchKeyword" placeholder="搜索用户...(用户名)" 
+        style="width: 300px; margin-left: 10px; font-family: 'Microsoft YaHei', Arial, sans-serif; font-size: 16px;"
+        />
         <el-button type="primary" @click="loadUsers">搜索</el-button>
         <el-select v-model="filterRole" placeholder="筛选角色" style="width: 150px; margin-left: 10px;" @change="loadUsers">
         <el-option
