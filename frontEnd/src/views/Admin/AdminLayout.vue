@@ -25,10 +25,6 @@
           <el-icon><DataAnalysis /></el-icon>
           <span>数据统计分析</span>
         </el-menu-item>
-        <el-menu-item index="/adminlayout/algo">
-          <el-icon><Monitor /></el-icon>
-          <span>算法监控</span>
-        </el-menu-item>
       </el-menu>
     </div>
     <!-- 主内容区 -->

@@ -33,7 +33,7 @@
     <el-row :gutter="20" class="chart-container">
       <el-col :span="12">
         <el-card class="chart-card">
-          <h3>近12个月月简历成功投递数</h3>
+          <h3>近15日简历成功投递数</h3>
           <div ref="resumeChartRef" style="height: 300px;"></div>
         </el-card>
       </el-col>
@@ -58,8 +58,8 @@
       </el-col>
       <el-col :span="12">
         <el-card class="chart-card">
-          <h3>核心算法效果图</h3>
-          <div ref="" style="height: 300px;"></div>
+          <h3>会员开通情况图</h3>
+          <div ref="membershipChartRef" style="height: 300px;"></div>
         </el-card>
       </el-col>
     </el-row>
@@ -89,6 +89,7 @@ const activeChart = ref('role'); // 'role', 'gender', 'age'
 const resumeChartRef = ref(null);
 const userChartRef = ref(null);
 const educationChartRef = ref(null);
+const membershipChartRef = ref(null);
 const rawData = ref([]);
 const seekerData = ref([]);
 
@@ -126,6 +127,13 @@ const educationData = ref([
   {name: '未知', value: 0}
 ])
 
+//会员数据
+const membershipData = ref([
+  { name: '普通会员', value: 0 },
+  { name: '高级会员', value: 0 },
+  { name: '未开通', value: 0 }
+]);
+
 // 初始化图表
 const { 
   initChart: initUserChart, 
@@ -147,6 +155,18 @@ const {
 } = usePieChart({
   el: educationChartRef,
   dataRef: educationData,
+  legendPosition: 'right',
+  isDonut: true
+});
+
+const { 
+  initChart: initMembershipChart, 
+  updateChart: updateMembershipChart,
+  resizeChart: resizeMembershipChart,
+  disposeChart: disposeMembershipChart 
+} = usePieChart({
+  el: membershipChartRef,
+  dataRef: membershipData,
   legendPosition: 'right',
   isDonut: true
 });
@@ -234,9 +254,23 @@ const load = async () => {
     });
     educationData.value = Object.entries(educationStats).map(([name, value]) => ({ name, value }));
 
+    const membershipStats={
+      '普通会员': 0,
+      '高级会员': 0,
+      '未开通': 0
+    };
+    seekerData.value.forEach(item=>{
+      const membership=item.membership ;
+      if (membership === 0) membershipStats['普通会员']++;
+      else if (membership === 1) membershipStats['高级会员']++;
+      else membershipStats['未开通']++;
+    });
+    membershipData.value = Object.entries(membershipStats).map(([name, value]) => ({ name, value }));
+
     // 初始化图表
     initUserChart();
     initEducationChart();
+    initMembershipChart();
     updateCurrentChart();
   } catch (e) {
     ElMessage.error('加载失败');
@@ -261,78 +295,87 @@ const updateCurrentChart = () => {
   updateUserChart(currentData);
 };
 
-// 加载柱状图
+// 加载近15日简历投递柱状图
 const loadBarChart = async () => {
   const { data } = await getAllResumes();
 
-  // 获取当前日期和12个月前的日期
+  // 获取当前日期和15天前的日期
   const now = new Date();
-  const twelveMonthsAgo = new Date();
-  twelveMonthsAgo.setMonth(now.getMonth() - 11);
+  const fifteenDaysAgo = new Date();
+  fifteenDaysAgo.setDate(now.getDate() - 14);
   
-  // 初始化最近12个月的数据结构
-  const monthCountMap = {};
-  for (let i = 0; i < 12; i++) {
-    const date = new Date(twelveMonthsAgo);
-    date.setMonth(date.getMonth() + i);
-    const yearMonth = `${date.getFullYear()}-${(date.getMonth() + 1).toString().padStart(2, '0')}`;
-    monthCountMap[yearMonth] = 0;
+  // 初始化最近15天的数据结构
+  const dayCountMap = {};
+  for (let i = 0; i < 15; i++) {
+    const date = new Date(fifteenDaysAgo);
+    date.setDate(date.getDate() + i);
+    const dateStr = date.toISOString().split('T')[0]; // YYYY-MM-DD格式
+    dayCountMap[dateStr] = 0;
   }
 
   // 统计符合条件的简历
   data.forEach(resume => {
     const resumeDate = new Date(resume.createTime);
-    if (resumeDate >= twelveMonthsAgo) {
-      const yearMonth = `${resumeDate.getFullYear()}-${(resumeDate.getMonth() + 1).toString().padStart(2, '0')}`;
-      if (monthCountMap.hasOwnProperty(yearMonth)) {
-        monthCountMap[yearMonth]++;
+    if (resumeDate >= fifteenDaysAgo) {
+      const dateStr = resumeDate.toISOString().split('T')[0];
+      if (dayCountMap.hasOwnProperty(dateStr)) {
+        dayCountMap[dateStr]++;
       }
     }
   });
 
   // 准备图表数据
-  const months = Object.keys(monthCountMap);
+  const days = Object.keys(dayCountMap);
   const colors = ['#5470C6', '#91CC75', '#FAC858', '#EE6666', '#73C0DE', '#3BA272', '#FC8452', '#9A60B4', '#ea7ccc'];
-  const barData = months.map((month, index) => ({
-    value: monthCountMap[month],
+  const barData = days.map((day, index) => ({
+    value: dayCountMap[day],
     itemStyle: {
       color: colors[index % colors.length]
     }
   }));
 
-  // 格式化月份显示
-  const formattedMonths = months.map(month => {
-    const [year, m] = month.split('-');
-    return `${year}年${m}月`;
+  // 格式化日期显示 (MM-DD)
+  const formattedDays = days.map(day => {
+    const [, month, date] = day.split('-');
+    return `${month}-${date}`;
   });
 
-  const chart = echarts.init(resumeChartRef.value);
-  chart.setOption({
-    tooltip: {
-      trigger: 'axis',
-      formatter: '{b}<br/>简历数: {c}'
-    },
-    xAxis: {
-      type: 'category',
-      data: formattedMonths,
-      axisLabel: {
-        rotate: 30
-      }
-    },
-    yAxis: {
-      type: 'value',
-      name: '简历数'
-    },
-    series: [{
-      name: '简历数',
-      type: 'bar',
-      data: barData,
-      label: {
-        show: true,
-        position: 'top'
-      }
-    }]
-  });
+   const chart = echarts.init(resumeChartRef.value);
+   chart.setOption({
+     tooltip: {
+       trigger: 'axis',
+       formatter: '{b}<br/>简历数: {c}'
+     },
+     grid: {
+       left: '3%',
+       right: '4%',
+       bottom: '15%',
+       containLabel: true
+     },
+     xAxis: {
+       type: 'category',
+       data: formattedDays,
+       boundaryGap: false,
+       axisLabel: {
+         rotate: 30,
+         align: 'center',
+         margin: 20
+       }
+     },
+     yAxis: {
+       type: 'value',
+       name: '简历数'
+     },
+     series: [{
+       name: '简历数',
+       type: 'bar',
+       data: barData,
+       label: {
+         show: true,
+         position: 'top'
+       }
+     }]
+   });
 };
 
 // 获取在线人数
@@ -356,13 +399,16 @@ onMounted(async () => {
   fetchOnlineCount();
   window.addEventListener('resize', resizeUserChart);
   window.addEventListener('resize', resizeEducationChart);
+  window.addEventListener('resize', resizeMembershipChart);
 });
 
 onBeforeUnmount(() => {
   disposeUserChart();
   disposeEducationChart();
+  disposeMembershipChart();
   window.removeEventListener('resize', resizeUserChart);
   window.removeEventListener('resize', resizeEducationChart);
+  window.removeEventListener('resize', resizeMembershipChart);
 });
 
 </script>
