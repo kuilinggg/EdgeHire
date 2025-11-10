@@ -1,5 +1,6 @@
 package com.se.EdgeHire.Controller;
 
+import com.se.EdgeHire.DTO.PostDTO;
 import com.se.EdgeHire.Entity.Post;
 import com.se.EdgeHire.Service.PostService;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -46,8 +47,17 @@ public class PostController {
     }
 
     // 根据条件筛选投递记录
+    /**
+     * 根据条件筛选投递记录（带缓存）
+     * 
+     * 注意：这个接口现在返回的是 PostDTO 而不是 Post 实体
+     * 原因：
+     * 1. DTO 是专门为数据传输设计的，字段更清晰
+     * 2. 避免将 JPA 实体直接暴露给前端
+     * 3. 可以安全地缓存到 Redis
+     */
     @GetMapping("/filter")
-    public List<Post> getPostsByFilter(
+    public List<PostDTO> getPostsByFilter(
             @RequestParam(required = false) String keyword,
             @RequestParam(required = false) Integer education,
             @RequestParam(required = false) Integer membership) {
