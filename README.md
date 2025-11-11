@@ -1,4 +1,6 @@
-
+本仓库为 EdgeHire 项目的 GitHub 镜像
+我负责 HR 模块，并在 feature/hr-enhancement-syf 分支持续新增工程化优化、系统性能优化相关功能
+Gitee 原团队仓库链接：https://gitee.com/dipper_room/edge-hire.git
 
 # EdgeHire
 
