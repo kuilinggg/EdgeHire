@@ -2,10 +2,12 @@ package com.se.EdgeHire.Controller;
 
 import com.se.EdgeHire.DTO.OfferAgentChatRequest;
 import com.se.EdgeHire.DTO.OfferAgentKnowledgeSearchResponse;
+import com.se.EdgeHire.DTO.OfferAgentToolResult;
 import com.se.EdgeHire.DTO.OfferAgentUserContext;
 import com.se.EdgeHire.Service.OfferAgentContextService;
 import com.se.EdgeHire.Service.OfferAgentKnowledgeService;
 import com.se.EdgeHire.Service.OfferAgentService;
+import com.se.EdgeHire.Service.OfferAgentToolExecutionService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
@@ -25,6 +27,7 @@ public class OfferAgentController {
     private final OfferAgentService offerAgentService;
     private final OfferAgentContextService contextService;
     private final OfferAgentKnowledgeService knowledgeService;
+    private final OfferAgentToolExecutionService toolExecutionService;
 
     @PostMapping(value = "/chat/stream", produces = MediaType.TEXT_EVENT_STREAM_VALUE)
     public Flux<String> chatStream(@RequestBody OfferAgentChatRequest request) {
@@ -69,6 +72,18 @@ public class OfferAgentController {
                 "vector",
                 indexed,
                 java.util.List.of()
+        ));
+    }
+
+    @PostMapping("/tools/execute")
+    public ResponseEntity<java.util.List<OfferAgentToolResult>> executeTools(@RequestBody OfferAgentChatRequest request) {
+        if (request.getUserId() == null) {
+            return ResponseEntity.badRequest().build();
+        }
+        return ResponseEntity.ok(toolExecutionService.execute(
+                request.getUserId(),
+                request.getConversationId(),
+                request.getMessage()
         ));
     }
 }

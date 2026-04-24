@@ -35,3 +35,19 @@ CREATE TABLE IF NOT EXISTS offer_agent_retrieval_log (
   INDEX idx_user_id (user_id),
   INDEX idx_created_at (created_at)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='OfferAgent RAG retrieval log';
+
+CREATE TABLE IF NOT EXISTS offer_agent_tool_call_log (
+  id BIGINT AUTO_INCREMENT PRIMARY KEY,
+  user_id INT NOT NULL,
+  conversation_id VARCHAR(100) DEFAULT NULL,
+  message TEXT,
+  tool_name VARCHAR(100) NOT NULL,
+  input_json TEXT,
+  output_json MEDIUMTEXT,
+  success TINYINT(1) NOT NULL DEFAULT 1,
+  error_message TEXT,
+  created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  INDEX idx_user_id (user_id),
+  INDEX idx_tool_name (tool_name),
+  INDEX idx_created_at (created_at)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='OfferAgent deterministic tool call log';

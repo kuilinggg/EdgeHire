@@ -59,6 +59,18 @@
           <p>{{ item.summary || item.contentPreview }}</p>
         </div>
       </div>
+
+      <div class="tool-calls">
+        <div class="trace-title">工具调用</div>
+        <div v-if="toolCalls.length === 0" class="trace-item">发送问题后展示本轮工具调用</div>
+        <div v-for="tool in toolCalls" :key="tool.toolName" class="tool-call-item">
+          <div class="source-title">{{ tool.toolName }}</div>
+          <div class="source-meta">
+            <span>{{ tool.success ? 'success' : 'failed' }}</span>
+          </div>
+          <p>{{ tool.summary || tool.errorMessage }}</p>
+        </div>
+      </div>
     </section>
 
     <section class="chat-panel">
@@ -128,7 +140,7 @@ import { ElMessage } from 'element-plus'
 import { Refresh } from '@element-plus/icons-vue'
 import { useAuthStore } from '../../stores/authStore'
 import { parseStreamResponse } from '../../api/ai'
-import { getOfferAgentContext, offerAgentChatStream } from '../../api/offerAgent'
+import { executeOfferAgentTools, getOfferAgentContext, offerAgentChatStream } from '../../api/offerAgent'
 
 const authStore = useAuthStore()
 const userId = computed(() => authStore.userId || localStorage.getItem('userId'))
@@ -139,6 +151,7 @@ const input = ref('')
 const isStreaming = ref(false)
 const abortController = ref(null)
 const messagesContainer = ref(null)
+const toolCalls = ref([])
 
 const quickPrompts = [
   '分析我适合投哪些岗位',
@@ -197,6 +210,12 @@ async function sendMessage() {
   await scrollToBottom()
 
   try {
+    toolCalls.value = await executeOfferAgentTools(
+      Number(userId.value),
+      getConversationId(),
+      text
+    )
+
     const stream = await offerAgentChatStream(
       Number(userId.value),
       getConversationId(),
@@ -363,6 +382,13 @@ onMounted(() => {
   margin-top: 18px;
 }
 
+.tool-calls {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-top: 18px;
+}
+
 .trace-title {
   font-weight: 700;
   color: #374151;
@@ -380,6 +406,13 @@ onMounted(() => {
 .source-item {
   border: 1px solid #e4eaf5;
   background: #fbfdff;
+  border-radius: 8px;
+  padding: 10px;
+}
+
+.tool-call-item {
+  border: 1px solid #e6f4ea;
+  background: #fbfffc;
   border-radius: 8px;
   padding: 10px;
 }

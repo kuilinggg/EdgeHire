@@ -49,3 +49,23 @@ export async function getOfferAgentContext(userId) {
   }
   return response.json()
 }
+
+export async function executeOfferAgentTools(userId, conversationId, message) {
+  const authStore = useAuthStore()
+  const headers = {
+    'Content-Type': 'application/json'
+  }
+  if (authStore.token) {
+    headers.Authorization = `Bearer ${authStore.token}`
+  }
+
+  const response = await fetch(`${API_BASE_URL}/offer-agent/tools/execute`, {
+    method: 'POST',
+    headers,
+    body: JSON.stringify({ userId, conversationId, message })
+  })
+  if (!response.ok) {
+    throw new Error(`HTTP error! status: ${response.status}`)
+  }
+  return response.json()
+}

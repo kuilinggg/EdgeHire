@@ -21,6 +21,7 @@ public class OfferAgentUserContext {
     private List<PostSnapshot> posts = new ArrayList<>();
     private List<GuidanceSnapshot> guidanceRequests = new ArrayList<>();
     private List<KnowledgeSnapshot> retrievedKnowledge = new ArrayList<>();
+    private List<OfferAgentToolResult> toolCalls = new ArrayList<>();
     private List<String> toolTrace = new ArrayList<>();
 
     @Data

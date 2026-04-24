@@ -70,6 +70,19 @@ public class OfferAgentContextService {
             builder.append("- ").append(trace).append('\n');
         }
 
+        builder.append("\n## Deterministic Tool Calls\n");
+        if (context.getToolCalls().isEmpty()) {
+            builder.append("- No deterministic tool was executed for this turn.\n");
+        }
+        for (var toolCall : context.getToolCalls()) {
+            builder.append("- tool=").append(defaultText(toolCall.getToolName()))
+                    .append(", success=").append(defaultText(toolCall.getSuccess()))
+                    .append(", summary=").append(defaultText(toolCall.getSummary()))
+                    .append('\n')
+                    .append("input=").append(defaultText(toolCall.getInputJson())).append('\n')
+                    .append("output=").append(defaultText(toolCall.getOutputJson())).append("\n\n");
+        }
+
         builder.append("\n## User Profile\n");
         appendLine(builder, "userId", context.getUserId());
         appendLine(builder, "username", context.getUsername());
