@@ -30,6 +30,9 @@ public class OfferAgentRetrievalLog {
     @Column(name = "top_score")
     private Integer topScore;
 
+    @Column(name = "retrieval_mode", length = 50)
+    private String retrievalMode = "hybrid";
+
     @Column(name = "created_at", nullable = false)
     private LocalDateTime createdAt = LocalDateTime.now();
 }

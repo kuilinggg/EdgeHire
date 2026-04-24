@@ -18,8 +18,9 @@ class OfferAgentKnowledgeServiceTest {
         OfferAgentKnowledgeChunkRepository chunkRepository = mock(OfferAgentKnowledgeChunkRepository.class);
         OfferAgentRetrievalLogRepository logRepository = mock(OfferAgentRetrievalLogRepository.class);
         when(chunkRepository.findAllWithDocument()).thenReturn(List.of());
+        OfferAgentVectorStoreService vectorStoreService = new OfferAgentVectorStoreService(new LocalHashEmbeddingService());
 
-        OfferAgentKnowledgeService service = new OfferAgentKnowledgeService(chunkRepository, logRepository);
+        OfferAgentKnowledgeService service = new OfferAgentKnowledgeService(chunkRepository, logRepository, vectorStoreService);
 
         List<OfferAgentKnowledgeResult> results = service.retrieve(
                 7,
@@ -32,5 +33,8 @@ class OfferAgentKnowledgeServiceTest {
                 .map(OfferAgentKnowledgeResult::getTitle)
                 .anyMatch(title -> title.contains("RAG"))).isTrue();
         assertThat(results.get(0).getScore()).isGreaterThan(0);
+        assertThat(results.get(0).getRetrievalMode()).isIn("hybrid", "vector", "keyword");
+        assertThat(results.stream().anyMatch(result -> result.getVectorScore() != null && result.getVectorScore() > 0))
+                .isTrue();
     }
 }

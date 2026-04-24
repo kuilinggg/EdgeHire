@@ -36,6 +36,9 @@ public class OfferAgentKnowledgeChunk {
     @Column(length = 500)
     private String summary;
 
+    @Column(name = "embedding_json", columnDefinition = "MEDIUMTEXT")
+    private String embeddingJson;
+
     @Column(name = "created_at", nullable = false)
     private LocalDateTime createdAt = LocalDateTime.now();
 

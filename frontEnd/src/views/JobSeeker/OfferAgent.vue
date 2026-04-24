@@ -50,7 +50,11 @@
           <div class="source-title">{{ item.title }}</div>
           <div class="source-meta">
             <span>{{ item.category || '知识库' }}</span>
-            <span>score {{ item.score || 0 }}</span>
+            <span>{{ item.retrievalMode || 'hybrid' }} · score {{ item.score || 0 }}</span>
+          </div>
+          <div class="source-score">
+            <span>keyword {{ item.keywordScore || 0 }}</span>
+            <span>vector {{ formatVectorScore(item.vectorScore) }}</span>
           </div>
           <p>{{ item.summary || item.contentPreview }}</p>
         </div>
@@ -245,6 +249,11 @@ function renderMarkdown(value) {
   return marked.parse(value || '')
 }
 
+function formatVectorScore(score) {
+  if (score === null || score === undefined) return '0.00'
+  return Number(score).toFixed(2)
+}
+
 async function scrollToBottom() {
   await nextTick()
   if (messagesContainer.value) {
@@ -389,6 +398,15 @@ onMounted(() => {
   margin: 5px 0;
   color: #667085;
   font-size: 12px;
+}
+
+.source-score {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+  color: #2f5bea;
+  font-size: 12px;
+  margin-bottom: 6px;
 }
 
 .source-item p {

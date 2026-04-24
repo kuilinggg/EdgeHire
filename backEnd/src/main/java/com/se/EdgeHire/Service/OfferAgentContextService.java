@@ -128,6 +128,9 @@ public class OfferAgentContextService {
                     .append(", tags=").append(defaultText(knowledge.getTags()))
                     .append(", targetPosition=").append(defaultText(knowledge.getTargetPosition()))
                     .append(", score=").append(defaultText(knowledge.getScore()))
+                    .append(", mode=").append(defaultText(knowledge.getRetrievalMode()))
+                    .append(", keywordScore=").append(defaultText(knowledge.getKeywordScore()))
+                    .append(", vectorScore=").append(defaultText(knowledge.getVectorScore()))
                     .append(", source=").append(defaultText(knowledge.getSource()))
                     .append('\n')
                     .append("summary=").append(defaultText(knowledge.getSummary())).append('\n')
@@ -222,6 +225,10 @@ public class OfferAgentContextService {
             snapshot.setSummary(result.getSummary());
             snapshot.setContentPreview(clip(result.getContent(), 900));
             snapshot.setScore(result.getScore());
+            snapshot.setKeywordScore(result.getKeywordScore());
+            snapshot.setVectorScore(result.getVectorScore());
+            snapshot.setHybridScore(result.getHybridScore());
+            snapshot.setRetrievalMode(result.getRetrievalMode());
             context.getRetrievedKnowledge().add(snapshot);
         }
         context.getToolTrace().add("retrieveKnowledgeTool: matched " + results.size() + " knowledge chunk(s)");

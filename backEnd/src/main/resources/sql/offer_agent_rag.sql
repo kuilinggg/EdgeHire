@@ -17,6 +17,7 @@ CREATE TABLE IF NOT EXISTS offer_agent_knowledge_chunk (
   content TEXT NOT NULL,
   keywords VARCHAR(500) DEFAULT NULL,
   summary VARCHAR(500) DEFAULT NULL,
+  embedding_json MEDIUMTEXT DEFAULT NULL COMMENT 'Optional serialized embedding for external vector stores',
   created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
   INDEX idx_doc_id (doc_id),
   FULLTEXT INDEX ft_content (content, keywords, summary),
@@ -29,6 +30,7 @@ CREATE TABLE IF NOT EXISTS offer_agent_retrieval_log (
   query_text TEXT NOT NULL,
   matched_chunk_ids VARCHAR(500) DEFAULT NULL,
   top_score INT DEFAULT 0,
+  retrieval_mode VARCHAR(50) DEFAULT 'hybrid',
   created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
   INDEX idx_user_id (user_id),
   INDEX idx_created_at (created_at)

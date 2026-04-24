@@ -61,5 +61,9 @@ public class OfferAgentUserContext {
         private String summary;
         private String contentPreview;
         private Integer score;
+        private Integer keywordScore;
+        private Double vectorScore;
+        private Double hybridScore;
+        private String retrievalMode;
     }
 }

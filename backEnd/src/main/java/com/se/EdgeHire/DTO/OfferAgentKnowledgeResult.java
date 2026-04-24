@@ -18,4 +18,8 @@ public class OfferAgentKnowledgeResult {
     private String summary;
     private String content;
     private Integer score;
+    private Integer keywordScore;
+    private Double vectorScore;
+    private Double hybridScore;
+    private String retrievalMode;
 }

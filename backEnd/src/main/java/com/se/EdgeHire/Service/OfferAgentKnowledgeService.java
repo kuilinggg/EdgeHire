@@ -1,6 +1,7 @@
 package com.se.EdgeHire.Service;
 
 import com.se.EdgeHire.DTO.OfferAgentKnowledgeResult;
+import com.se.EdgeHire.DTO.OfferAgentVectorSearchResult;
 import com.se.EdgeHire.Entity.OfferAgentKnowledgeChunk;
 import com.se.EdgeHire.Entity.OfferAgentKnowledgeDoc;
 import com.se.EdgeHire.Entity.OfferAgentRetrievalLog;
@@ -11,9 +12,11 @@ import org.springframework.stereotype.Service;
 
 import java.util.ArrayList;
 import java.util.Comparator;
+import java.util.HashMap;
 import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Locale;
+import java.util.Map;
 import java.util.Set;
 import java.util.stream.Collectors;
 
@@ -21,9 +24,13 @@ import java.util.stream.Collectors;
 @RequiredArgsConstructor
 public class OfferAgentKnowledgeService {
     private static final int DEFAULT_TOP_K = 5;
+    private static final int CANDIDATE_TOP_K = 10;
+    private static final double VECTOR_WEIGHT = 0.7;
+    private static final double KEYWORD_WEIGHT = 0.3;
 
     private final OfferAgentKnowledgeChunkRepository chunkRepository;
     private final OfferAgentRetrievalLogRepository retrievalLogRepository;
+    private final OfferAgentVectorStoreService vectorStoreService;
 
     public List<OfferAgentKnowledgeResult> retrieve(Integer userId, String queryText) {
         List<OfferAgentKnowledgeResult> results = retrieve(queryText, DEFAULT_TOP_K);
@@ -32,22 +39,118 @@ public class OfferAgentKnowledgeService {
     }
 
     public List<OfferAgentKnowledgeResult> retrieve(String queryText, int topK) {
-        List<String> queryTerms = extractTerms(queryText);
-        List<OfferAgentKnowledgeResult> candidates = new ArrayList<>();
+        List<OfferAgentKnowledgeResult> candidates = loadKnowledgeCandidates();
+        ensureVectorIndex(candidates);
 
-        for (OfferAgentKnowledgeResult result : loadKnowledgeCandidates()) {
-            int score = score(result, queryTerms);
-            if (score > 0) {
-                result.setScore(score);
-                candidates.add(result);
+        Map<Long, OfferAgentKnowledgeResult> merged = new HashMap<>();
+        List<OfferAgentKnowledgeResult> keywordResults = keywordRetrieve(candidates, queryText, CANDIDATE_TOP_K);
+        List<OfferAgentKnowledgeResult> vectorResults = vectorRetrieve(candidates, queryText, CANDIDATE_TOP_K);
+
+        for (OfferAgentKnowledgeResult result : keywordResults) {
+            merged.put(result.getChunkId(), copy(result));
+        }
+        for (OfferAgentKnowledgeResult result : vectorResults) {
+            OfferAgentKnowledgeResult existing = merged.get(result.getChunkId());
+            if (existing == null) {
+                merged.put(result.getChunkId(), copy(result));
+            } else {
+                existing.setVectorScore(result.getVectorScore());
             }
         }
 
-        return candidates.stream()
-                .sorted(Comparator.comparing(OfferAgentKnowledgeResult::getScore).reversed()
+        return merged.values().stream()
+                .peek(this::calculateHybridScore)
+                .sorted(Comparator.comparing(OfferAgentKnowledgeResult::getHybridScore).reversed()
                         .thenComparing(OfferAgentKnowledgeResult::getTitle))
                 .limit(topK)
                 .collect(Collectors.toList());
+    }
+
+    public int rebuildVectorIndex() {
+        return vectorStoreService.rebuild(loadKnowledgeCandidates());
+    }
+
+    public int vectorIndexSize() {
+        if (vectorStoreService.size() == 0) {
+            rebuildVectorIndex();
+        }
+        return vectorStoreService.size();
+    }
+
+    private List<OfferAgentKnowledgeResult> keywordRetrieve(
+            List<OfferAgentKnowledgeResult> candidates,
+            String queryText,
+            int topK
+    ) {
+        List<String> queryTerms = extractTerms(queryText);
+        return candidates.stream()
+                .map(candidate -> {
+                    OfferAgentKnowledgeResult result = copy(candidate);
+                    int keywordScore = keywordScore(result, queryTerms);
+                    result.setKeywordScore(keywordScore);
+                    result.setRetrievalMode("keyword");
+                    return result;
+                })
+                .filter(result -> result.getKeywordScore() != null && result.getKeywordScore() > 0)
+                .sorted(Comparator.comparing(OfferAgentKnowledgeResult::getKeywordScore).reversed()
+                        .thenComparing(OfferAgentKnowledgeResult::getTitle))
+                .limit(topK)
+                .collect(Collectors.toList());
+    }
+
+    private List<OfferAgentKnowledgeResult> vectorRetrieve(
+            List<OfferAgentKnowledgeResult> candidates,
+            String queryText,
+            int topK
+    ) {
+        Map<Long, OfferAgentKnowledgeResult> candidateMap = candidates.stream()
+                .collect(Collectors.toMap(OfferAgentKnowledgeResult::getChunkId, this::copy, (left, right) -> left));
+        try {
+            return vectorStoreService.search(queryText, topK).stream()
+                    .map(vectorResult -> toVectorResult(candidateMap, vectorResult))
+                    .filter(result -> result != null && result.getVectorScore() != null && result.getVectorScore() > 0)
+                    .collect(Collectors.toList());
+        } catch (Exception ignored) {
+            return List.of();
+        }
+    }
+
+    private OfferAgentKnowledgeResult toVectorResult(
+            Map<Long, OfferAgentKnowledgeResult> candidateMap,
+            OfferAgentVectorSearchResult vectorResult
+    ) {
+        OfferAgentKnowledgeResult result = candidateMap.get(vectorResult.getChunkId());
+        if (result == null) {
+            return null;
+        }
+        result.setVectorScore(vectorResult.getSimilarity());
+        result.setRetrievalMode("vector");
+        return result;
+    }
+
+    private void calculateHybridScore(OfferAgentKnowledgeResult result) {
+        int keywordScore = result.getKeywordScore() == null ? 0 : result.getKeywordScore();
+        double normalizedKeywordScore = Math.min(keywordScore / 20.0, 1.0);
+        double vectorScore = result.getVectorScore() == null ? 0.0 : result.getVectorScore();
+        double hybridScore = vectorScore > 0
+                ? vectorScore * VECTOR_WEIGHT + normalizedKeywordScore * KEYWORD_WEIGHT
+                : normalizedKeywordScore;
+
+        result.setHybridScore(hybridScore);
+        result.setScore((int) Math.round(hybridScore * 100));
+        if (keywordScore > 0 && vectorScore > 0) {
+            result.setRetrievalMode("hybrid");
+        } else if (vectorScore > 0) {
+            result.setRetrievalMode("vector");
+        } else {
+            result.setRetrievalMode("keyword");
+        }
+    }
+
+    private void ensureVectorIndex(List<OfferAgentKnowledgeResult> candidates) {
+        if (vectorStoreService.size() == 0) {
+            vectorStoreService.rebuild(candidates);
+        }
     }
 
     private List<OfferAgentKnowledgeResult> loadKnowledgeCandidates() {
@@ -86,13 +189,14 @@ public class OfferAgentKnowledgeService {
                     .map(result -> String.valueOf(result.getChunkId()))
                     .collect(Collectors.joining(",")));
             log.setTopScore(results.isEmpty() ? 0 : results.get(0).getScore());
+            log.setRetrievalMode("hybrid");
             retrievalLogRepository.save(log);
         } catch (Exception ignored) {
             // Retrieval logging is useful, but a missing log table must not block the assistant.
         }
     }
 
-    private int score(OfferAgentKnowledgeResult result, List<String> queryTerms) {
+    private int keywordScore(OfferAgentKnowledgeResult result, List<String> queryTerms) {
         String title = lower(result.getTitle());
         String tags = lower(result.getTags());
         String target = lower(result.getTargetPosition());
@@ -143,8 +247,8 @@ public class OfferAgentKnowledgeService {
 
         List<String> domainTerms = List.of(
                 "AI Agent", "Agent", "RAG", "Tool Calling", "Spring Boot", "Java",
-                "后端", "实习", "简历", "面试", "项目", "STAR", "向量", "多Agent",
-                "武汉大学", "软件工程"
+                "后端", "实习", "简历", "面试", "项目", "STAR", "向量", "Embedding",
+                "VectorStore", "多Agent", "武汉大学", "软件工程", "工具调用", "知识库"
         );
         String lowerQuery = queryText.toLowerCase(Locale.ROOT);
         for (String term : domainTerms) {
@@ -156,71 +260,102 @@ public class OfferAgentKnowledgeService {
         return new ArrayList<>(terms);
     }
 
+    private OfferAgentKnowledgeResult copy(OfferAgentKnowledgeResult source) {
+        OfferAgentKnowledgeResult result = new OfferAgentKnowledgeResult();
+        result.setChunkId(source.getChunkId());
+        result.setDocId(source.getDocId());
+        result.setTitle(source.getTitle());
+        result.setCategory(source.getCategory());
+        result.setTags(source.getTags());
+        result.setTargetPosition(source.getTargetPosition());
+        result.setSource(source.getSource());
+        result.setSummary(source.getSummary());
+        result.setContent(source.getContent());
+        result.setScore(source.getScore());
+        result.setKeywordScore(source.getKeywordScore());
+        result.setVectorScore(source.getVectorScore());
+        result.setHybridScore(source.getHybridScore());
+        result.setRetrievalMode(source.getRetrievalMode());
+        return result;
+    }
+
     private String lower(String value) {
         return value == null ? "" : value.toLowerCase(Locale.ROOT);
     }
 
+    private OfferAgentKnowledgeResult builtin(
+            Long chunkId,
+            String title,
+            String category,
+            String tags,
+            String targetPosition,
+            String summary,
+            String content
+    ) {
+        OfferAgentKnowledgeResult result = new OfferAgentKnowledgeResult();
+        result.setChunkId(chunkId);
+        result.setDocId(chunkId);
+        result.setTitle(title);
+        result.setCategory(category);
+        result.setTags(tags);
+        result.setTargetPosition(targetPosition);
+        result.setSource("builtin");
+        result.setSummary(summary);
+        result.setContent(content);
+        result.setScore(0);
+        result.setKeywordScore(0);
+        result.setVectorScore(0.0);
+        result.setHybridScore(0.0);
+        result.setRetrievalMode("none");
+        return result;
+    }
+
     private List<OfferAgentKnowledgeResult> builtinKnowledge() {
         return List.of(
-                new OfferAgentKnowledgeResult(
+                builtin(
                         -1L,
-                        -1L,
-                        "AI Agent 实习岗位能力模型",
-                        "岗位能力模型",
-                        "AI Agent,RAG,Tool Calling,多Agent,实习",
-                        "AI Agent 实习生",
-                        "builtin",
-                        "AI Agent 实习通常关注大模型应用开发、工具调用、RAG、Agent 编排和工程落地能力。",
-                        "AI Agent 实习岗位一般要求候选人理解大模型应用链路，能够使用 Java 或 Python 完成业务系统集成，熟悉 RAG 检索增强、Tool Calling、Prompt 编排、多 Agent 工作流、流式输出和基础评测。简历中应突出项目如何读取业务数据、如何检索知识、如何调用工具、如何形成可执行计划，以及如何处理错误、权限和日志。",
-                        0
+                        "AI Agent internship competency model",
+                        "role-model",
+                        "AI Agent,RAG,Tool Calling,multi-agent,internship",
+                        "AI Agent intern",
+                        "AI Agent roles value LLM application engineering, RAG, tool calling, workflow orchestration, streaming output, and evaluation.",
+                        "An AI Agent intern should understand LLM application pipelines and be able to integrate model calls with business systems. Strong projects explain how user data is retrieved, how knowledge is searched, how tools map to business APIs, how multiple agents divide responsibilities, how errors are handled, and how logs or evaluations prove the workflow is reliable."
                 ),
-                new OfferAgentKnowledgeResult(
+                builtin(
                         -2L,
-                        -2L,
-                        "软件工程学生简历优化规则",
-                        "简历优化",
-                        "简历,软件工程,项目经历,STAR,实习",
-                        "软件工程实习生",
-                        "builtin",
-                        "学生简历要把课程、项目和实习意向转成可验证的工程能力证据。",
-                        "软件工程学生投实习时，简历重点不应只写技术栈列表，而要写清楚项目背景、本人负责模块、技术方案、遇到的问题和结果。项目描述建议使用 STAR：场景、任务、行动、结果。没有真实业务指标时，可以写清楚功能规模、接口数量、数据表设计、测试覆盖、响应方式和可演示页面。",
-                        0
+                        "Software engineering student resume rules",
+                        "resume",
+                        "resume,software engineering,project experience,STAR,internship",
+                        "software engineering intern",
+                        "Student resumes should turn courses, projects, and internship goals into verifiable engineering evidence.",
+                        "A software engineering student resume should not only list technology stacks. It should explain the project background, owned module, technical design, hard problem, and result. STAR is useful: situation, task, action, result. If there are no business metrics, mention feature scope, API count, database tables, test coverage, response mode, and demo pages."
                 ),
-                new OfferAgentKnowledgeResult(
+                builtin(
                         -3L,
-                        -3L,
-                        "RAG 项目简历表达建议",
+                        "RAG project resume expression guide",
                         "RAG",
-                        "RAG,知识库,检索,Embedding,向量数据库,关键词检索",
-                        "AI Agent 实习生",
-                        "builtin",
-                        "RAG 项目表达要覆盖文档切分、召回、排序、上下文注入和引用来源展示。",
-                        "RAG 项目可以分阶段表达：第一阶段使用 MySQL 文档表和关键词/标签召回，完成检索增强闭环；第二阶段加入 Embedding 和 VectorStore，提高语义召回能力；第三阶段增加检索日志、引用来源和评测集。面试时应说明为什么先做轻量关键词 RAG，以及如何演进到向量检索。",
-                        0
+                        "RAG,knowledge base,retrieval,Embedding,VectorStore,keyword retrieval",
+                        "AI Agent intern",
+                        "A RAG project should describe chunking, recall, ranking, context injection, retrieval logs, and source display.",
+                        "A RAG project can be described in stages: first use MySQL document tables plus keyword and tag retrieval to complete the retrieval augmented generation loop; then add Embedding and VectorStore to improve semantic recall; finally add retrieval logs, cited sources, and evaluation sets. Explain why lightweight keyword RAG was implemented first and how the architecture can evolve to vector retrieval."
                 ),
-                new OfferAgentKnowledgeResult(
+                builtin(
                         -4L,
-                        -4L,
-                        "Java 后端实习岗位能力模型",
-                        "岗位能力模型",
-                        "Java,Spring Boot,JPA,Redis,MySQL,后端,实习",
-                        "Java 后端实习生",
-                        "builtin",
-                        "Java 后端实习关注接口设计、数据库建模、缓存、事务和可维护性。",
-                        "Java 后端实习岗位通常关注 Spring Boot、RESTful API、JPA/MyBatis、MySQL 表设计、Redis 缓存、鉴权、异常处理和测试。简历项目中应说明 Controller-Service-Repository 分层、DTO 的作用、为什么避免直接暴露实体、如何做流式接口和如何保证原有功能不被新模块影响。",
-                        0
+                        "Java backend internship competency model",
+                        "role-model",
+                        "Java,Spring Boot,JPA,Redis,MySQL,backend,internship",
+                        "Java backend intern",
+                        "Java backend roles focus on API design, database modeling, caching, transactions, and maintainability.",
+                        "Java backend intern projects should explain Spring Boot REST APIs, Controller-Service-Repository layering, JPA or MyBatis usage, MySQL table design, Redis caching, authentication, error handling, and tests. For this project, mention DTOs, why entities are not directly exposed in cache, stream endpoints, and how the new OfferAgent module avoids breaking original resume optimization."
                 ),
-                new OfferAgentKnowledgeResult(
+                builtin(
                         -5L,
-                        -5L,
-                        "AI Agent 面试准备清单",
-                        "面试准备",
-                        "面试,AI Agent,RAG,Tool Calling,Prompt,评测",
-                        "AI Agent 实习生",
-                        "builtin",
-                        "面试准备应覆盖项目架构、Agent 分工、RAG 召回、工具安全和效果评估。",
-                        "AI Agent 项目面试常见问题包括：为什么需要 RAG，如何切分文档，如何决定 Top-K，如何处理检索不到内容，Tool Calling 如何和业务接口对应，多 Agent 是否真的并行，Prompt 如何约束幻觉，如何记录检索日志，如何评估回答质量。回答时要结合系统中的真实数据流说明。",
-                        0
+                        "AI Agent interview preparation checklist",
+                        "interview",
+                        "interview,AI Agent,RAG,Tool Calling,Prompt,evaluation",
+                        "AI Agent intern",
+                        "Interview preparation should cover architecture, agent responsibilities, RAG retrieval, tool safety, and quality evaluation.",
+                        "Common AI Agent interview questions include: why RAG is needed, how documents are chunked, how Top-K is chosen, what happens when retrieval misses, how Tool Calling maps to business APIs, whether multi-agent execution is actually parallel, how prompts reduce hallucination, how retrieval logs are recorded, and how answer quality is evaluated."
                 )
         );
     }

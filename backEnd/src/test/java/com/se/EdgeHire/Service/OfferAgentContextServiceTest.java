@@ -81,18 +81,7 @@ class OfferAgentContextServiceTest {
         when(guidanceRequestRepository.findByUserIdAndDeletedAtIsNullOrderByRequestTimeDesc(7L))
                 .thenReturn(List.of(guidanceRequest));
         when(knowledgeService.retrieve(eq(7), contains("AI Agent")))
-                .thenReturn(List.of(new com.se.EdgeHire.DTO.OfferAgentKnowledgeResult(
-                        -1L,
-                        -1L,
-                        "AI Agent 实习岗位能力模型",
-                        "岗位能力模型",
-                        "AI Agent,RAG,Tool Calling",
-                        "AI Agent 实习生",
-                        "builtin",
-                        "AI Agent internships value RAG and tool calling.",
-                        "RAG and Tool Calling are important for AI Agent internships.",
-                        25
-                )));
+                .thenReturn(List.of(knowledgeResult()));
 
         OfferAgentContextService service = new OfferAgentContextService(
                 userRepository,
@@ -117,5 +106,24 @@ class OfferAgentContextServiceTest {
         assertThat(context.getRetrievedKnowledge()).hasSize(1);
         assertThat(context.getToolTrace()).anyMatch(trace -> trace.contains("getResumeTool"));
         assertThat(promptContext).contains("Tool Calling Results", "Retrieved Knowledge", "AI Agent Intern", "Java, Spring Boot");
+    }
+
+    private com.se.EdgeHire.DTO.OfferAgentKnowledgeResult knowledgeResult() {
+        com.se.EdgeHire.DTO.OfferAgentKnowledgeResult result = new com.se.EdgeHire.DTO.OfferAgentKnowledgeResult();
+        result.setChunkId(-1L);
+        result.setDocId(-1L);
+        result.setTitle("AI Agent internship competency model");
+        result.setCategory("role-model");
+        result.setTags("AI Agent,RAG,Tool Calling");
+        result.setTargetPosition("AI Agent intern");
+        result.setSource("builtin");
+        result.setSummary("AI Agent internships value RAG and tool calling.");
+        result.setContent("RAG and Tool Calling are important for AI Agent internships.");
+        result.setScore(86);
+        result.setKeywordScore(18);
+        result.setVectorScore(0.81);
+        result.setHybridScore(0.86);
+        result.setRetrievalMode("hybrid");
+        return result;
     }
 }
