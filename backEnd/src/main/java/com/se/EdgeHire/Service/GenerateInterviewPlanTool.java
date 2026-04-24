@@ -1,6 +1,7 @@
 package com.se.EdgeHire.Service;
 
 import com.se.EdgeHire.DTO.OfferAgentToolContext;
+import com.se.EdgeHire.DTO.OfferAgentToolParameter;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Component;
 
@@ -22,9 +23,17 @@ public class GenerateInterviewPlanTool implements OfferAgentTool {
     }
 
     @Override
+    public List<OfferAgentToolParameter> parameters() {
+        return List.of(
+                new OfferAgentToolParameter("targetPosition", "string", "Target role for interview preparation.", false),
+                new OfferAgentToolParameter("days", "integer", "Preparation plan length in days.", false)
+        );
+    }
+
+    @Override
     public Map<String, Object> execute(OfferAgentToolContext context) {
         Map<String, Object> output = new LinkedHashMap<>();
-        output.put("targetRole", "AI Agent intern");
+        output.put("targetRole", context.getArguments().getOrDefault("targetPosition", "AI Agent intern"));
         output.put("focusAreas", List.of("RAG retrieval flow", "Tool Calling safety", "Agent workflow design", "Spring Boot integration"));
         output.put("questions", List.of(
                 "为什么 OfferAgent 需要 RAG，而不是直接把用户问题交给大模型？",

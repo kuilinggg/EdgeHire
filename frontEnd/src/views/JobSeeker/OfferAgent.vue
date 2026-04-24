@@ -67,6 +67,7 @@
           <div class="source-title">{{ tool.toolName }}</div>
           <div class="source-meta">
             <span>{{ tool.success ? 'success' : 'failed' }}</span>
+            <span>{{ tool.planSource || 'rule_fallback' }}</span>
           </div>
           <p>{{ tool.summary || tool.errorMessage }}</p>
         </div>

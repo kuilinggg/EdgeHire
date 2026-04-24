@@ -1,7 +1,11 @@
 package com.se.ai_module.controller;
 
 import com.se.ai_module.dto.OfferAgentChatRequest;
+import com.se.ai_module.dto.OfferAgentToolPlan;
+import com.se.ai_module.dto.OfferAgentToolPlanRequest;
 import com.se.ai_module.service.OfferAgentPromptBuilder;
+import com.se.ai_module.service.OfferAgentToolPlanParser;
+import com.se.ai_module.service.OfferAgentToolPlanPromptBuilder;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.ai.chat.client.ChatClient;
@@ -23,12 +27,18 @@ public class OfferAgentController {
 
     private final ChatClient offerAgentChatClient;
     private final OfferAgentPromptBuilder promptBuilder;
+    private final OfferAgentToolPlanPromptBuilder toolPlanPromptBuilder;
+    private final OfferAgentToolPlanParser toolPlanParser;
 
     public OfferAgentController(
             @Qualifier("offerAgentChatClient") ChatClient offerAgentChatClient,
-            OfferAgentPromptBuilder promptBuilder) {
+            OfferAgentPromptBuilder promptBuilder,
+            OfferAgentToolPlanPromptBuilder toolPlanPromptBuilder,
+            OfferAgentToolPlanParser toolPlanParser) {
         this.offerAgentChatClient = offerAgentChatClient;
         this.promptBuilder = promptBuilder;
+        this.toolPlanPromptBuilder = toolPlanPromptBuilder;
+        this.toolPlanParser = toolPlanParser;
     }
 
     @PostMapping("/chat/stream")
@@ -53,5 +63,22 @@ public class OfferAgentController {
                     logger.warn("OfferAgent failed: {}", e.getMessage(), e);
                     return Flux.just("Error: offer agent service is unavailable");
                 });
+    }
+
+    @PostMapping("/tool-plan")
+    public OfferAgentToolPlan toolPlan(@RequestBody OfferAgentToolPlanRequest request) {
+        try {
+            String content = offerAgentChatClient
+                    .prompt(toolPlanPromptBuilder.build(request))
+                    .call()
+                    .content();
+            return toolPlanParser.parse(content);
+        } catch (Exception e) {
+            logger.warn("OfferAgent tool planning failed: {}", e.getMessage(), e);
+            OfferAgentToolPlan fallback = new OfferAgentToolPlan();
+            fallback.setSource("llm");
+            fallback.setFallbackReason("llm planner failed: " + e.getMessage());
+            return fallback;
+        }
     }
 }

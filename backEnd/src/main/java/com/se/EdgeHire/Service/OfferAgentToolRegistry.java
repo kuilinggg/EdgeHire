@@ -1,5 +1,6 @@
 package com.se.EdgeHire.Service;
 
+import com.se.EdgeHire.DTO.OfferAgentToolDefinition;
 import org.springframework.stereotype.Service;
 
 import java.util.List;
@@ -21,7 +22,18 @@ public class OfferAgentToolRegistry {
         return Optional.ofNullable(tools.get(name));
     }
 
+    public boolean contains(String name) {
+        return tools.containsKey(name);
+    }
+
     public List<String> names() {
         return tools.keySet().stream().sorted().toList();
+    }
+
+    public List<OfferAgentToolDefinition> definitions() {
+        return tools.values().stream()
+                .map(OfferAgentTool::definition)
+                .sorted(java.util.Comparator.comparing(OfferAgentToolDefinition::getName))
+                .toList();
     }
 }

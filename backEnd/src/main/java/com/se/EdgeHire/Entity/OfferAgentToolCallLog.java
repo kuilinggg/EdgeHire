@@ -42,6 +42,9 @@ public class OfferAgentToolCallLog {
     @Column(name = "error_message", columnDefinition = "TEXT")
     private String errorMessage;
 
+    @Column(name = "plan_source", length = 40)
+    private String planSource;
+
     @Column(name = "created_at", nullable = false)
     private LocalDateTime createdAt = LocalDateTime.now();
 }

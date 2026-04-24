@@ -46,6 +46,7 @@ CREATE TABLE IF NOT EXISTS offer_agent_tool_call_log (
   output_json MEDIUMTEXT,
   success TINYINT(1) NOT NULL DEFAULT 1,
   error_message TEXT,
+  plan_source VARCHAR(40) DEFAULT NULL,
   created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
   INDEX idx_user_id (user_id),
   INDEX idx_tool_name (tool_name),

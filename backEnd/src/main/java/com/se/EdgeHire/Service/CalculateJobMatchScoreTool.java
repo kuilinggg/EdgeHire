@@ -1,6 +1,7 @@
 package com.se.EdgeHire.Service;
 
 import com.se.EdgeHire.DTO.OfferAgentToolContext;
+import com.se.EdgeHire.DTO.OfferAgentToolParameter;
 import com.se.EdgeHire.Entity.Resume;
 import com.se.EdgeHire.Repository.ResumeRepository;
 import lombok.RequiredArgsConstructor;
@@ -31,6 +32,13 @@ public class CalculateJobMatchScoreTool implements OfferAgentTool {
     }
 
     @Override
+    public List<OfferAgentToolParameter> parameters() {
+        return List.of(
+                new OfferAgentToolParameter("targetPosition", "string", "Target role or internship position to score against.", false)
+        );
+    }
+
+    @Override
     public Map<String, Object> execute(OfferAgentToolContext context) {
         String resumeText = resumeRepository.findByUserId(context.getUserId()).stream()
                 .map(Resume::getContent)
@@ -45,7 +53,7 @@ public class CalculateJobMatchScoreTool implements OfferAgentTool {
         int score = Math.min(100, 35 + matched.size() * 8);
 
         Map<String, Object> output = new LinkedHashMap<>();
-        output.put("targetRole", inferTargetRole(context.getMessage()));
+        output.put("targetRole", inferTargetRole(context));
         output.put("score", score);
         output.put("matchedKeywords", matched);
         output.put("missingKeywords", missing);
@@ -53,7 +61,12 @@ public class CalculateJobMatchScoreTool implements OfferAgentTool {
         return output;
     }
 
-    private String inferTargetRole(String message) {
+    private String inferTargetRole(OfferAgentToolContext context) {
+        Object targetPosition = context.getArguments().get("targetPosition");
+        if (targetPosition != null && !String.valueOf(targetPosition).isBlank()) {
+            return String.valueOf(targetPosition);
+        }
+        String message = context.getMessage();
         if (message != null && message.toLowerCase(Locale.ROOT).contains("agent")) {
             return "AI Agent intern";
         }

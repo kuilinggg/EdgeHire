@@ -1,8 +1,10 @@
 package com.se.EdgeHire.Service;
 
+import com.se.EdgeHire.DTO.OfferAgentPlannedToolCall;
 import org.springframework.stereotype.Service;
 
 import java.util.ArrayList;
+import java.util.LinkedHashMap;
 import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Locale;
@@ -27,6 +29,35 @@ public class OfferAgentToolPlanner {
         }
 
         return new ArrayList<>(tools);
+    }
+
+    public List<OfferAgentPlannedToolCall> planCalls(String message) {
+        return plan(message).stream()
+                .map(toolName -> new OfferAgentPlannedToolCall(toolName, defaultArguments(toolName, message)))
+                .toList();
+    }
+
+    private LinkedHashMap<String, Object> defaultArguments(String toolName, String message) {
+        LinkedHashMap<String, Object> arguments = new LinkedHashMap<>();
+        if ("retrieve_knowledge".equals(toolName)) {
+            arguments.put("query", message == null ? "" : message);
+            arguments.put("topK", 5);
+        }
+        if ("calculate_job_match_score".equals(toolName) || "generate_interview_plan".equals(toolName)) {
+            arguments.put("targetPosition", inferTargetPosition(message));
+        }
+        if ("generate_interview_plan".equals(toolName)) {
+            arguments.put("days", 7);
+        }
+        return arguments;
+    }
+
+    private String inferTargetPosition(String message) {
+        String text = message == null ? "" : message.toLowerCase(Locale.ROOT);
+        if (text.contains("agent")) {
+            return "AI Agent intern";
+        }
+        return "target role from user message";
     }
 
     private boolean containsAny(String text, String... keywords) {

@@ -19,7 +19,8 @@ public class OfferAgentService {
 
     public Flux<String> chatStream(Integer userId, String conversationId, String message) {
         OfferAgentUserContext context = contextService.buildUserContext(userId, message);
-        List<OfferAgentToolResult> toolResults = toolExecutionService.execute(userId, conversationId, message);
+        String plannerContext = contextService.toPromptContext(context);
+        List<OfferAgentToolResult> toolResults = toolExecutionService.execute(userId, conversationId, message, plannerContext);
         context.setToolCalls(toolResults);
         String promptContext = contextService.toPromptContext(context);
         OfferAgentAiRequest request = new OfferAgentAiRequest(conversationId, message, promptContext);

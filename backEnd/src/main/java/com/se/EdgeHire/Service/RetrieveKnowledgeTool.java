@@ -2,6 +2,7 @@ package com.se.EdgeHire.Service;
 
 import com.se.EdgeHire.DTO.OfferAgentKnowledgeResult;
 import com.se.EdgeHire.DTO.OfferAgentToolContext;
+import com.se.EdgeHire.DTO.OfferAgentToolParameter;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Component;
 
@@ -25,8 +26,20 @@ public class RetrieveKnowledgeTool implements OfferAgentTool {
     }
 
     @Override
+    public List<OfferAgentToolParameter> parameters() {
+        return List.of(
+                new OfferAgentToolParameter("query", "string", "Search query for job-search knowledge retrieval.", false),
+                new OfferAgentToolParameter("topK", "integer", "Maximum number of knowledge chunks to return.", false)
+        );
+    }
+
+    @Override
     public Map<String, Object> execute(OfferAgentToolContext context) {
-        List<OfferAgentKnowledgeResult> results = knowledgeService.retrieve(context.getUserId(), context.getMessage());
+        String query = String.valueOf(context.getArguments().getOrDefault("query", context.getMessage()));
+        Integer topK = parseTopK(context.getArguments().get("topK"));
+        List<OfferAgentKnowledgeResult> results = topK == null
+                ? knowledgeService.retrieve(context.getUserId(), query)
+                : knowledgeService.retrieve(query, topK);
         List<Map<String, Object>> sources = results.stream()
                 .map(result -> {
                     Map<String, Object> item = new LinkedHashMap<>();
@@ -43,5 +56,15 @@ public class RetrieveKnowledgeTool implements OfferAgentTool {
         output.put("sources", sources);
         output.put("summary", "hybrid RAG retrieved " + results.size() + " knowledge chunk(s)");
         return output;
+    }
+
+    private Integer parseTopK(Object value) {
+        if (value == null) return null;
+        try {
+            int parsed = Integer.parseInt(String.valueOf(value));
+            return Math.max(1, Math.min(8, parsed));
+        } catch (Exception ignored) {
+            return null;
+        }
     }
 }

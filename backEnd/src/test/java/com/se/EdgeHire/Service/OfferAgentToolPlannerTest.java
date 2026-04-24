@@ -22,5 +22,9 @@ class OfferAgentToolPlannerTest {
                 "calculate_job_match_score",
                 "generate_interview_plan"
         );
+
+        assertThat(planner.planCalls("plan my AI Agent interview"))
+                .extracting("toolName")
+                .contains("retrieve_knowledge", "generate_interview_plan");
     }
 }
