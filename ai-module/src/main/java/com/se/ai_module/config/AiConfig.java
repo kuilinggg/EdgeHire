@@ -8,6 +8,7 @@ import org.springframework.ai.openai.OpenAiChatModel;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.context.annotation.Primary;
 import org.springframework.core.io.Resource;
 
 import java.io.IOException;
@@ -29,9 +30,17 @@ public class AiConfig {
     }
 
     @Bean
+    @Primary
     public ChatClient chatClient(OpenAiChatModel model, ChatMemory chatMemory, String initialPrompt) {
         return ChatClient.builder(model)
                 .defaultSystem(initialPrompt)
+                .defaultAdvisors(MessageChatMemoryAdvisor.builder(chatMemory).build())
+                .build();
+    }
+
+    @Bean("offerAgentChatClient")
+    public ChatClient offerAgentChatClient(OpenAiChatModel model, ChatMemory chatMemory) {
+        return ChatClient.builder(model)
                 .defaultAdvisors(MessageChatMemoryAdvisor.builder(chatMemory).build())
                 .build();
     }

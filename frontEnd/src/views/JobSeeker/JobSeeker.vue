@@ -57,6 +57,18 @@
               <span>历史匹配</span>
             </el-menu-item>
           </el-sub-menu>
+          <el-sub-menu index="agent">
+            <template #title>
+              <el-icon>
+                <Promotion />
+              </el-icon>
+              <span>OfferAgent</span>
+            </template>
+            <el-menu-item index="/jobseeker/offer-agent">
+              <el-icon><Promotion /></el-icon>
+              <span>智能求职助手</span>
+            </el-menu-item>
+          </el-sub-menu>
           <el-sub-menu index="vip">
             <template #title>
               <el-icon>
@@ -114,7 +126,7 @@
 <script setup>
 import { ref, computed, onMounted, onUnmounted } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
-import { User, Document, EditPen, View, Search, Star, Bell } from '@element-plus/icons-vue'
+import { User, Document, EditPen, View, Search, Star, Bell, Promotion } from '@element-plus/icons-vue'
 import { ElMessage } from 'element-plus'
 import { authApi } from '../../api/auth'
 import { useAuthStore } from '../../stores/authStore'

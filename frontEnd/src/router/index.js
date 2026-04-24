@@ -65,6 +65,11 @@ const routes = [
         path: 'teach-vip',
         name: 'TeachVip',
         component: () => import('../views/JobSeeker/TeachVip.vue')
+      },
+      {
+        path: 'offer-agent',
+        name: 'OfferAgent',
+        component: () => import('../views/JobSeeker/OfferAgent.vue')
       }
     ],
     meta: { requiresAuth: true }
