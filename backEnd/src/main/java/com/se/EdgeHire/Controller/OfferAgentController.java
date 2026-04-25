@@ -2,12 +2,17 @@ package com.se.EdgeHire.Controller;
 
 import com.se.EdgeHire.DTO.OfferAgentChatRequest;
 import com.se.EdgeHire.DTO.OfferAgentKnowledgeSearchResponse;
-import com.se.EdgeHire.DTO.OfferAgentToolResult;
+import com.se.EdgeHire.DTO.OfferAgentToolCallLogResponse;
+import com.se.EdgeHire.DTO.OfferAgentToolExecutionReport;
 import com.se.EdgeHire.DTO.OfferAgentUserContext;
+import com.se.EdgeHire.DTO.OfferAgentWorkflowRequest;
+import com.se.EdgeHire.DTO.OfferAgentWorkflowResponse;
 import com.se.EdgeHire.Service.OfferAgentContextService;
 import com.se.EdgeHire.Service.OfferAgentKnowledgeService;
 import com.se.EdgeHire.Service.OfferAgentService;
 import com.se.EdgeHire.Service.OfferAgentToolExecutionService;
+import com.se.EdgeHire.Service.OfferAgentToolLogService;
+import com.se.EdgeHire.Service.OfferAgentWorkflowService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
@@ -28,6 +33,8 @@ public class OfferAgentController {
     private final OfferAgentContextService contextService;
     private final OfferAgentKnowledgeService knowledgeService;
     private final OfferAgentToolExecutionService toolExecutionService;
+    private final OfferAgentToolLogService toolLogService;
+    private final OfferAgentWorkflowService workflowService;
 
     @PostMapping(value = "/chat/stream", produces = MediaType.TEXT_EVENT_STREAM_VALUE)
     public Flux<String> chatStream(@RequestBody OfferAgentChatRequest request) {
@@ -76,14 +83,59 @@ public class OfferAgentController {
     }
 
     @PostMapping("/tools/execute")
-    public ResponseEntity<java.util.List<OfferAgentToolResult>> executeTools(@RequestBody OfferAgentChatRequest request) {
+    public ResponseEntity<OfferAgentToolExecutionReport> executeTools(@RequestBody OfferAgentChatRequest request) {
         if (request.getUserId() == null) {
             return ResponseEntity.badRequest().build();
         }
-        return ResponseEntity.ok(toolExecutionService.execute(
+        return ResponseEntity.ok(toolExecutionService.executeWithReport(
                 request.getUserId(),
                 request.getConversationId(),
-                request.getMessage()
+                request.getMessage(),
+                ""
+        ));
+    }
+
+    @GetMapping("/tools/logs")
+    public ResponseEntity<java.util.List<OfferAgentToolCallLogResponse>> getToolLogs(@RequestParam String conversationId) {
+        if (conversationId == null || conversationId.isBlank()) {
+            return ResponseEntity.badRequest().build();
+        }
+        return ResponseEntity.ok(toolLogService.findByConversationId(conversationId));
+    }
+
+    @PostMapping("/workflows/ai-agent-sprint")
+    public ResponseEntity<OfferAgentWorkflowResponse> runAiAgentSprint(@RequestBody OfferAgentWorkflowRequest request) {
+        if (request.getUserId() == null) {
+            return ResponseEntity.badRequest().build();
+        }
+        return ResponseEntity.ok(workflowService.runAiAgentSprint(
+                request.getUserId(),
+                request.getConversationId(),
+                request.getTargetPosition()
+        ));
+    }
+
+    @PostMapping("/workflows/resume-optimization")
+    public ResponseEntity<OfferAgentWorkflowResponse> runResumeOptimization(@RequestBody OfferAgentWorkflowRequest request) {
+        if (request.getUserId() == null) {
+            return ResponseEntity.badRequest().build();
+        }
+        return ResponseEntity.ok(workflowService.runResumeOptimization(
+                request.getUserId(),
+                request.getConversationId(),
+                request.getTargetPosition()
+        ));
+    }
+
+    @PostMapping("/workflows/mock-interview")
+    public ResponseEntity<OfferAgentWorkflowResponse> runMockInterview(@RequestBody OfferAgentWorkflowRequest request) {
+        if (request.getUserId() == null) {
+            return ResponseEntity.badRequest().build();
+        }
+        return ResponseEntity.ok(workflowService.runMockInterview(
+                request.getUserId(),
+                request.getConversationId(),
+                request.getTargetPosition()
         ));
     }
 }

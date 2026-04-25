@@ -49,6 +49,7 @@ CREATE TABLE IF NOT EXISTS offer_agent_tool_call_log (
   plan_source VARCHAR(40) DEFAULT NULL,
   created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
   INDEX idx_user_id (user_id),
+  INDEX idx_conversation_id (conversation_id),
   INDEX idx_tool_name (tool_name),
   INDEX idx_created_at (created_at)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='OfferAgent deterministic tool call log';

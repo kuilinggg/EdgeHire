@@ -2,6 +2,7 @@ package com.se.EdgeHire.Service;
 
 import com.se.EdgeHire.DTO.OfferAgentPlannedToolCall;
 import com.se.EdgeHire.DTO.OfferAgentToolContext;
+import com.se.EdgeHire.DTO.OfferAgentToolExecutionReport;
 import com.se.EdgeHire.DTO.OfferAgentToolPlan;
 import com.se.EdgeHire.DTO.OfferAgentToolResult;
 import com.se.EdgeHire.Repository.OfferAgentToolCallLogRepository;
@@ -12,13 +13,15 @@ import java.util.Map;
 import java.util.Optional;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.mockito.ArgumentMatchers.anyString;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
 class OfferAgentToolExecutionServiceTest {
 
     @Test
-    void executeRunsPlannedToolsAndReturnsDeterministicResults() {
+    void executeFallsBackToRulePlannerAndReturnsDeterministicResults() {
         OfferAgentToolRegistry registry = new OfferAgentToolRegistry(List.of(
                 fakeTool("get_user_profile"),
                 fakeTool("get_job_intention"),
@@ -28,8 +31,7 @@ class OfferAgentToolExecutionServiceTest {
                 fakeTool("generate_interview_plan")
         ));
         LlmOfferAgentToolPlanner llmPlanner = mock(LlmOfferAgentToolPlanner.class);
-        when(llmPlanner.plan("c1", "鎴戞兂鎶?AI Agent 瀹炰範宀楋紝璇峰垽鏂尮閰嶅害锛屽苟鍑嗗闈㈣瘯", ""))
-                .thenReturn(Optional.empty());
+        when(llmPlanner.plan(eq("c1"), anyString(), eq(""))).thenReturn(Optional.empty());
         OfferAgentToolExecutionService service = new OfferAgentToolExecutionService(
                 new OfferAgentToolPlanner(),
                 llmPlanner,
@@ -40,7 +42,7 @@ class OfferAgentToolExecutionServiceTest {
         List<OfferAgentToolResult> results = service.execute(
                 7,
                 "c1",
-                "我想投 AI Agent 实习岗，请判断匹配度，并准备面试"
+                "I want an AI Agent internship match score and interview plan."
         );
 
         assertThat(results).hasSize(6);
@@ -65,7 +67,10 @@ class OfferAgentToolExecutionServiceTest {
                         List.of(
                                 new OfferAgentPlannedToolCall("retrieve_knowledge", Map.of("query", "AI Agent interview")),
                                 new OfferAgentPlannedToolCall("unknown_tool", Map.of()),
-                                new OfferAgentPlannedToolCall("calculate_job_match_score", Map.of("targetPosition", "AI Agent intern"))
+                                new OfferAgentPlannedToolCall("calculate_job_match_score", Map.of(
+                                        "targetPosition", "AI Agent intern",
+                                        "ignored", "value"
+                                ))
                         )
                 )));
 
@@ -83,6 +88,41 @@ class OfferAgentToolExecutionServiceTest {
         assertThat(results)
                 .extracting(OfferAgentToolResult::getToolName)
                 .containsExactly("retrieve_knowledge", "calculate_job_match_score");
+        assertThat(results.get(0).getInputJson()).contains("\"topK\":5");
+        assertThat(results.get(1).getInputJson()).doesNotContain("ignored");
+    }
+
+    @Test
+    void executeWithReportReturnsTraceAndClampsToolArguments() {
+        OfferAgentToolRegistry registry = new OfferAgentToolRegistry(List.of(
+                fakeTool("retrieve_knowledge"),
+                fakeTool("generate_interview_plan")
+        ));
+        LlmOfferAgentToolPlanner llmPlanner = mock(LlmOfferAgentToolPlanner.class);
+        when(llmPlanner.plan("c3", "prepare", "ctx"))
+                .thenReturn(Optional.of(new OfferAgentToolPlan(
+                        "llm",
+                        null,
+                        List.of(
+                                new OfferAgentPlannedToolCall("retrieve_knowledge", Map.of("query", "AI Agent", "topK", 99)),
+                                new OfferAgentPlannedToolCall("generate_interview_plan", Map.of("targetPosition", "AI Agent intern", "days", 30))
+                        )
+                )));
+
+        OfferAgentToolExecutionService service = new OfferAgentToolExecutionService(
+                new OfferAgentToolPlanner(),
+                llmPlanner,
+                registry,
+                mock(OfferAgentToolCallLogRepository.class)
+        );
+
+        OfferAgentToolExecutionReport report = service.executeWithReport(7, "c3", "prepare", "ctx");
+
+        assertThat(report.getPlanSource()).isEqualTo("llm");
+        assertThat(report.getTrace()).contains("tool_plan_source=llm", "validated_tool_calls=2");
+        assertThat(report.getToolCalls()).hasSize(2);
+        assertThat(report.getToolCalls().get(0).getInputJson()).contains("\"topK\":8");
+        assertThat(report.getToolCalls().get(1).getInputJson()).contains("\"days\":14");
     }
 
     private OfferAgentTool fakeTool(String name) {

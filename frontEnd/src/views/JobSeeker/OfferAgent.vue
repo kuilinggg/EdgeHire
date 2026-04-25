@@ -61,6 +61,9 @@
       </div>
 
       <div class="tool-calls">
+        <div v-if="toolReport.trace?.length" class="agent-trace">
+          <div v-for="step in toolReport.trace" :key="step" class="trace-item">{{ step }}</div>
+        </div>
         <div class="trace-title">工具调用</div>
         <div v-if="toolCalls.length === 0" class="trace-item">发送问题后展示本轮工具调用</div>
         <div v-for="tool in toolCalls" :key="tool.toolName" class="tool-call-item">
@@ -117,6 +120,27 @@
     </section>
 
     <section class="plan-panel">
+      <el-button type="primary" class="workflow-button" :loading="workflowLoading" @click="runSprintWorkflow">
+        AI Agent Sprint
+      </el-button>
+      <el-button class="workflow-button" :loading="workflowLoading" @click="runResumeWorkflow">
+        Resume Optimize
+      </el-button>
+      <el-button class="workflow-button" :loading="workflowLoading" @click="runMockInterview">
+        Mock Interview
+      </el-button>
+      <div v-if="workflow.steps?.length" class="workflow-block">
+        <div class="trace-title">{{ workflow.workflowName }}</div>
+        <div v-for="step in workflow.steps" :key="step.agentName" class="workflow-step">
+          <div class="source-title">{{ step.agentName }}</div>
+          <div class="source-meta">
+            <span>{{ step.status }}</span>
+            <span>{{ step.toolCalls?.length || 0 }} tools</span>
+          </div>
+          <p>{{ step.summary }}</p>
+        </div>
+        <div class="workflow-report" v-html="renderMarkdown(workflow.finalReport || '')" />
+      </div>
       <div class="panel-heading">行动看板</div>
       <div class="plan-item">
         <span>1</span>
@@ -141,7 +165,15 @@ import { ElMessage } from 'element-plus'
 import { Refresh } from '@element-plus/icons-vue'
 import { useAuthStore } from '../../stores/authStore'
 import { parseStreamResponse } from '../../api/ai'
-import { executeOfferAgentTools, getOfferAgentContext, offerAgentChatStream } from '../../api/offerAgent'
+import {
+  executeOfferAgentTools,
+  getOfferAgentContext,
+  getOfferAgentToolLogs,
+  offerAgentChatStream,
+  runAiAgentSprintWorkflow,
+  runMockInterviewWorkflow,
+  runResumeOptimizationWorkflow
+} from '../../api/offerAgent'
 
 const authStore = useAuthStore()
 const userId = computed(() => authStore.userId || localStorage.getItem('userId'))
@@ -153,6 +185,10 @@ const isStreaming = ref(false)
 const abortController = ref(null)
 const messagesContainer = ref(null)
 const toolCalls = ref([])
+const toolReport = ref({ trace: [], toolCalls: [] })
+const toolLogs = ref([])
+const workflow = ref({})
+const workflowLoading = ref(false)
 
 const quickPrompts = [
   '分析我适合投哪些岗位',
@@ -197,6 +233,72 @@ function sendQuickPrompt(prompt) {
   sendMessage()
 }
 
+async function runSprintWorkflow() {
+  if (!userId.value || workflowLoading.value) return
+  workflowLoading.value = true
+  try {
+    workflow.value = await runAiAgentSprintWorkflow(
+      Number(userId.value),
+      getConversationId(),
+      'AI Agent intern'
+    )
+    messages.value.push({
+      role: 'assistant',
+      content: workflow.value.finalReport || 'AI Agent sprint workflow completed.'
+    })
+    await scrollToBottom()
+  } catch (error) {
+    console.error('AI Agent sprint workflow failed:', error)
+    ElMessage.error('AI Agent sprint workflow failed')
+  } finally {
+    workflowLoading.value = false
+  }
+}
+
+async function runResumeWorkflow() {
+  if (!userId.value || workflowLoading.value) return
+  workflowLoading.value = true
+  try {
+    workflow.value = await runResumeOptimizationWorkflow(
+      Number(userId.value),
+      getConversationId(),
+      'AI Agent intern'
+    )
+    messages.value.push({
+      role: 'assistant',
+      content: workflow.value.finalReport || 'Resume optimization workflow completed.'
+    })
+    await scrollToBottom()
+  } catch (error) {
+    console.error('Resume optimization workflow failed:', error)
+    ElMessage.error('Resume optimization workflow failed')
+  } finally {
+    workflowLoading.value = false
+  }
+}
+
+async function runMockInterview() {
+  if (!userId.value || workflowLoading.value) return
+  workflowLoading.value = true
+  try {
+    workflow.value = await runMockInterviewWorkflow(
+      Number(userId.value),
+      getConversationId(),
+      'AI Agent intern'
+    )
+    messages.value.push({
+      role: 'assistant',
+      content: workflow.value.finalReport || 'Mock interview workflow completed.'
+    })
+    await scrollToBottom()
+  } catch (error) {
+    console.error('Mock interview workflow failed:', error)
+    ElMessage.error('Mock interview workflow failed')
+  } finally {
+    workflowLoading.value = false
+  }
+}
+
 async function sendMessage() {
   const text = input.value.trim()
   if (!text || isStreaming.value || !userId.value) return
@@ -211,15 +313,19 @@ async function sendMessage() {
   await scrollToBottom()
 
   try {
-    toolCalls.value = await executeOfferAgentTools(
+    const conversationId = getConversationId()
+    const report = await executeOfferAgentTools(
       Number(userId.value),
-      getConversationId(),
+      conversationId,
       text
     )
+    toolReport.value = Array.isArray(report) ? { trace: [], toolCalls: report } : report
+    toolCalls.value = toolReport.value.toolCalls || []
+    loadToolLogs(conversationId)
 
     const stream = await offerAgentChatStream(
       Number(userId.value),
-      getConversationId(),
+      conversationId,
       text,
       abortController.value.signal
     )
@@ -259,6 +365,14 @@ function stopStream() {
   }
   isStreaming.value = false
   abortController.value = null
+}
+
+async function loadToolLogs(conversationId) {
+  try {
+    toolLogs.value = await getOfferAgentToolLogs(conversationId)
+  } catch (error) {
+    console.warn('OfferAgent tool logs failed:', error)
+  }
 }
 
 function cleanContent(value) {
@@ -388,6 +502,39 @@ onMounted(() => {
   flex-direction: column;
   gap: 8px;
   margin-top: 18px;
+}
+
+.agent-trace {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.workflow-button {
+  width: 100%;
+  margin-bottom: 14px;
+}
+
+.workflow-block {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-bottom: 18px;
+}
+
+.workflow-step {
+  border: 1px solid #e4eaf5;
+  background: #fbfdff;
+  border-radius: 8px;
+  padding: 10px;
+}
+
+.workflow-step p,
+.workflow-report {
+  margin: 0;
+  color: #4b5563;
+  font-size: 12px;
+  line-height: 1.6;
 }
 
 .trace-title {

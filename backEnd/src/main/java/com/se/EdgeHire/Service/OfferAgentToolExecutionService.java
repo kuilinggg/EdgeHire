@@ -3,6 +3,7 @@ package com.se.EdgeHire.Service;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.se.EdgeHire.DTO.OfferAgentPlannedToolCall;
 import com.se.EdgeHire.DTO.OfferAgentToolContext;
+import com.se.EdgeHire.DTO.OfferAgentToolExecutionReport;
 import com.se.EdgeHire.DTO.OfferAgentToolPlan;
 import com.se.EdgeHire.DTO.OfferAgentToolResult;
 import com.se.EdgeHire.Entity.OfferAgentToolCallLog;
@@ -33,10 +34,45 @@ public class OfferAgentToolExecutionService {
     }
 
     public List<OfferAgentToolResult> execute(Integer userId, String conversationId, String message, String userContext) {
+        return executeWithReport(userId, conversationId, message, userContext).getToolCalls();
+    }
+
+    public OfferAgentToolExecutionReport executeWithReport(
+            Integer userId,
+            String conversationId,
+            String message,
+            String userContext) {
         OfferAgentToolPlan plan = buildPlan(conversationId, message, userContext);
+        return executePlannedCalls(userId, conversationId, message, plan);
+    }
+
+    public OfferAgentToolExecutionReport executePlannedCalls(
+            Integer userId,
+            String conversationId,
+            String message,
+            List<OfferAgentPlannedToolCall> calls,
+            String planSource) {
+        OfferAgentToolPlan plan = new OfferAgentToolPlan(planSource, null, sanitize(calls));
+        return executePlannedCalls(userId, conversationId, message, plan);
+    }
+
+    private OfferAgentToolExecutionReport executePlannedCalls(
+            Integer userId,
+            String conversationId,
+            String message,
+            OfferAgentToolPlan plan) {
         List<OfferAgentToolResult> results = new ArrayList<>();
+        List<String> trace = new ArrayList<>();
+
+        trace.add("received_user_question");
+        trace.add("tool_plan_source=" + plan.getSource());
+        if (plan.getFallbackReason() != null && !plan.getFallbackReason().isBlank()) {
+            trace.add("fallback_reason=" + plan.getFallbackReason());
+        }
+        trace.add("validated_tool_calls=" + plan.getToolCalls().size());
 
         for (OfferAgentPlannedToolCall call : plan.getToolCalls()) {
+            trace.add("execute_tool=" + call.getToolName());
             OfferAgentToolContext context = new OfferAgentToolContext(
                     userId,
                     conversationId,
@@ -50,7 +86,8 @@ public class OfferAgentToolExecutionService {
             saveLog(context, result);
         }
 
-        return results;
+        trace.add("tool_execution_finished");
+        return new OfferAgentToolExecutionReport(plan.getSource(), plan.getFallbackReason(), trace, results);
     }
 
     private OfferAgentToolPlan buildPlan(String conversationId, String message, String userContext) {
@@ -85,12 +122,58 @@ public class OfferAgentToolExecutionService {
             Map<String, Object> arguments = call.getArguments() == null
                     ? new LinkedHashMap<>()
                     : new LinkedHashMap<>(call.getArguments());
+            arguments = sanitizeArguments(call.getToolName(), arguments);
             sanitized.add(new OfferAgentPlannedToolCall(call.getToolName(), arguments));
             if (sanitized.size() >= MAX_TOOL_CALLS_PER_TURN) {
                 break;
             }
         }
         return sanitized;
+    }
+
+    private Map<String, Object> sanitizeArguments(String toolName, Map<String, Object> arguments) {
+        LinkedHashMap<String, Object> sanitized = new LinkedHashMap<>();
+        if ("retrieve_knowledge".equals(toolName)) {
+            String query = readString(arguments.get("query"), 200);
+            if (!query.isBlank()) {
+                sanitized.put("query", query);
+            }
+            sanitized.put("topK", readInt(arguments.get("topK"), 5, 1, 8));
+            return sanitized;
+        }
+        if ("calculate_job_match_score".equals(toolName)) {
+            String targetPosition = readString(arguments.get("targetPosition"), 100);
+            if (!targetPosition.isBlank()) {
+                sanitized.put("targetPosition", targetPosition);
+            }
+            return sanitized;
+        }
+        if ("generate_interview_plan".equals(toolName)) {
+            String targetPosition = readString(arguments.get("targetPosition"), 100);
+            if (!targetPosition.isBlank()) {
+                sanitized.put("targetPosition", targetPosition);
+            }
+            sanitized.put("days", readInt(arguments.get("days"), 7, 1, 14));
+            return sanitized;
+        }
+        return sanitized;
+    }
+
+    private String readString(Object value, int maxLength) {
+        if (value == null) {
+            return "";
+        }
+        String text = String.valueOf(value).trim();
+        return text.length() > maxLength ? text.substring(0, maxLength) : text;
+    }
+
+    private int readInt(Object value, int defaultValue, int min, int max) {
+        try {
+            int parsed = Integer.parseInt(String.valueOf(value));
+            return Math.max(min, Math.min(max, parsed));
+        } catch (Exception ignored) {
+            return defaultValue;
+        }
     }
 
     private OfferAgentToolResult executeTool(OfferAgentTool tool, OfferAgentToolContext context, String planSource) {
