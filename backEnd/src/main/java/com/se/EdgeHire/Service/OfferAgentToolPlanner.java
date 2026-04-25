@@ -55,9 +55,9 @@ public class OfferAgentToolPlanner {
     private String inferTargetPosition(String message) {
         String text = message == null ? "" : message.toLowerCase(Locale.ROOT);
         if (text.contains("agent")) {
-            return "AI Agent intern";
+            return "AI Agent 实习生";
         }
-        return "target role from user message";
+        return "用户问题中的目标岗位";
     }
 
     private boolean containsAny(String text, String... keywords) {

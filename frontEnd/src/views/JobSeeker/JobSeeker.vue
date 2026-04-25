@@ -68,6 +68,18 @@
               <el-icon><Promotion /></el-icon>
               <span>智能求职助手</span>
             </el-menu-item>
+            <el-menu-item index="/jobseeker/offer-agent/sprint">
+              <el-icon><Promotion /></el-icon>
+              <span>实习冲刺规划</span>
+            </el-menu-item>
+            <el-menu-item index="/jobseeker/offer-agent/resume">
+              <el-icon><EditPen /></el-icon>
+              <span>简历优化</span>
+            </el-menu-item>
+            <el-menu-item index="/jobseeker/offer-agent/interview">
+              <el-icon><View /></el-icon>
+              <span>模拟面试</span>
+            </el-menu-item>
           </el-sub-menu>
           <el-sub-menu index="vip">
             <template #title>

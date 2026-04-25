@@ -70,6 +70,24 @@ const routes = [
         path: 'offer-agent',
         name: 'OfferAgent',
         component: () => import('../views/JobSeeker/OfferAgent.vue')
+      },
+      {
+        path: 'offer-agent/sprint',
+        name: 'OfferAgentSprint',
+        component: () => import('../views/JobSeeker/OfferAgentWorkflow.vue'),
+        meta: { workflowType: 'sprint' }
+      },
+      {
+        path: 'offer-agent/resume',
+        name: 'OfferAgentResume',
+        component: () => import('../views/JobSeeker/OfferAgentWorkflow.vue'),
+        meta: { workflowType: 'resume' }
+      },
+      {
+        path: 'offer-agent/interview',
+        name: 'OfferAgentInterview',
+        component: () => import('../views/JobSeeker/OfferAgentWorkflow.vue'),
+        meta: { workflowType: 'interview' }
       }
     ],
     meta: { requiresAuth: true }

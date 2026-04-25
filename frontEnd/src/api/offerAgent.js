@@ -85,7 +85,7 @@ export async function getOfferAgentToolLogs(conversationId) {
   return response.json()
 }
 
-export async function runAiAgentSprintWorkflow(userId, conversationId, targetPosition = 'AI Agent intern') {
+export async function runAiAgentSprintWorkflow(userId, conversationId, targetPosition = 'AI Agent 实习生') {
   const authStore = useAuthStore()
   const headers = {
     'Content-Type': 'application/json'
@@ -105,7 +105,7 @@ export async function runAiAgentSprintWorkflow(userId, conversationId, targetPos
   return response.json()
 }
 
-export async function runResumeOptimizationWorkflow(userId, conversationId, targetPosition = 'AI Agent intern') {
+export async function runResumeOptimizationWorkflow(userId, conversationId, targetPosition = 'AI Agent 实习生') {
   const authStore = useAuthStore()
   const headers = {
     'Content-Type': 'application/json'
@@ -125,7 +125,7 @@ export async function runResumeOptimizationWorkflow(userId, conversationId, targ
   return response.json()
 }
 
-export async function runMockInterviewWorkflow(userId, conversationId, targetPosition = 'AI Agent intern') {
+export async function runMockInterviewWorkflow(userId, conversationId, targetPosition = 'AI Agent 实习生') {
   const authStore = useAuthStore()
   const headers = {
     'Content-Type': 'application/json'

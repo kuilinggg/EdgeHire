@@ -68,8 +68,8 @@ public class CalculateJobMatchScoreTool implements OfferAgentTool {
         }
         String message = context.getMessage();
         if (message != null && message.toLowerCase(Locale.ROOT).contains("agent")) {
-            return "AI Agent intern";
+            return "AI Agent 实习生";
         }
-        return "target role from user message";
+        return "用户问题中的目标岗位";
     }
 }
