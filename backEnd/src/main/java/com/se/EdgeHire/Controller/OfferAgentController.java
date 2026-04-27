@@ -4,6 +4,7 @@ import com.se.EdgeHire.DTO.OfferAgentChatRequest;
 import com.se.EdgeHire.DTO.OfferAgentEvaluationRequest;
 import com.se.EdgeHire.DTO.OfferAgentEvaluationResponse;
 import com.se.EdgeHire.DTO.OfferAgentKnowledgeSearchResponse;
+import com.se.EdgeHire.DTO.OfferAgentMemoryResponse;
 import com.se.EdgeHire.DTO.OfferAgentToolCallLogResponse;
 import com.se.EdgeHire.DTO.OfferAgentToolExecutionReport;
 import com.se.EdgeHire.DTO.OfferAgentUserContext;
@@ -13,6 +14,7 @@ import com.se.EdgeHire.DTO.OfferAgentWorkflowStreamEvent;
 import com.se.EdgeHire.Service.OfferAgentContextService;
 import com.se.EdgeHire.Service.OfferAgentEvaluationService;
 import com.se.EdgeHire.Service.OfferAgentKnowledgeService;
+import com.se.EdgeHire.Service.OfferAgentMemoryService;
 import com.se.EdgeHire.Service.OfferAgentService;
 import com.se.EdgeHire.Service.OfferAgentToolExecutionService;
 import com.se.EdgeHire.Service.OfferAgentToolLogService;
@@ -40,6 +42,7 @@ public class OfferAgentController {
     private final OfferAgentToolLogService toolLogService;
     private final OfferAgentWorkflowService workflowService;
     private final OfferAgentEvaluationService evaluationService;
+    private final OfferAgentMemoryService memoryService;
 
     @PostMapping(value = "/chat/stream", produces = MediaType.TEXT_EVENT_STREAM_VALUE)
     public Flux<String> chatStream(@RequestBody OfferAgentChatRequest request) {
@@ -61,6 +64,11 @@ public class OfferAgentController {
     @GetMapping("/context/{userId}")
     public ResponseEntity<OfferAgentUserContext> getContext(@PathVariable Integer userId) {
         return ResponseEntity.ok(contextService.buildUserContext(userId));
+    }
+
+    @GetMapping("/memory/{userId}")
+    public ResponseEntity<OfferAgentMemoryResponse> getMemory(@PathVariable Integer userId) {
+        return ResponseEntity.ok(memoryService.findByUserId(userId));
     }
 
     @GetMapping("/knowledge/search")
@@ -113,7 +121,14 @@ public class OfferAgentController {
         if (request.getUserId() == null) {
             return ResponseEntity.badRequest().build();
         }
-        return ResponseEntity.ok(evaluationService.evaluate(request));
+        OfferAgentEvaluationResponse response = evaluationService.evaluate(request);
+        memoryService.updateFromInteraction(
+                request.getUserId(),
+                request.getMessage(),
+                request.getFinalAnswer(),
+                request.getToolReport()
+        );
+        return ResponseEntity.ok(response);
     }
 
     @PostMapping("/workflows/ai-agent-sprint")

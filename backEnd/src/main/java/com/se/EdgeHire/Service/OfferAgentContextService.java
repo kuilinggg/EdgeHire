@@ -35,6 +35,7 @@ public class OfferAgentContextService {
     private final PostRepository postRepository;
     private final GuidanceRequestRepository guidanceRequestRepository;
     private final OfferAgentKnowledgeService knowledgeService;
+    private final OfferAgentMemoryService memoryService;
     private final ObjectMapper objectMapper = new ObjectMapper();
 
     public OfferAgentUserContext buildUserContext(Integer userId) {
@@ -51,6 +52,7 @@ public class OfferAgentContextService {
         loadPostHistory(context, userId);
         loadGuidanceHistory(context, userId);
         loadRetrievedKnowledge(context, userId, message);
+        loadMemory(context, userId);
 
         return context;
     }
@@ -150,6 +152,22 @@ public class OfferAgentContextService {
                     .append("content=").append(defaultText(knowledge.getContentPreview())).append("\n\n");
         }
 
+        builder.append("\n## Long Term Agent Memory\n");
+        if (context.getMemory() == null) {
+            builder.append("- No long-term memory found.\n");
+        } else {
+            OfferAgentUserContext.MemorySnapshot memory = context.getMemory();
+            appendLine(builder, "targetPosition", memory.getTargetPosition());
+            appendLine(builder, "profileSummary", memory.getProfileSummary());
+            appendLine(builder, "skillTags", String.join(", ", memory.getSkillTags()));
+            appendLine(builder, "gapTags", String.join(", ", memory.getGapTags()));
+            appendLine(builder, "preferenceTags", String.join(", ", memory.getPreferenceTags()));
+            appendLine(builder, "suggestionSummary", memory.getSuggestionSummary());
+            appendLine(builder, "evidenceSummary", memory.getEvidenceSummary());
+            appendLine(builder, "source", memory.getSource());
+            appendLine(builder, "lastInteractionAt", memory.getLastInteractionAt());
+        }
+
         return builder.toString();
     }
 
@@ -245,6 +263,26 @@ public class OfferAgentContextService {
             context.getRetrievedKnowledge().add(snapshot);
         }
         context.getToolTrace().add("retrieveKnowledgeTool: matched " + results.size() + " knowledge chunk(s)");
+    }
+
+    private void loadMemory(OfferAgentUserContext context, Integer userId) {
+        var memory = memoryService.findByUserId(userId);
+        if (memory.getLastInteractionAt() == null) {
+            context.getToolTrace().add("agentMemoryTool: no long-term memory found");
+            return;
+        }
+        OfferAgentUserContext.MemorySnapshot snapshot = new OfferAgentUserContext.MemorySnapshot();
+        snapshot.setTargetPosition(memory.getTargetPosition());
+        snapshot.setProfileSummary(memory.getProfileSummary());
+        snapshot.setSkillTags(memory.getSkillTags());
+        snapshot.setGapTags(memory.getGapTags());
+        snapshot.setPreferenceTags(memory.getPreferenceTags());
+        snapshot.setSuggestionSummary(memory.getSuggestionSummary());
+        snapshot.setEvidenceSummary(memory.getEvidenceSummary());
+        snapshot.setSource(memory.getSource());
+        snapshot.setLastInteractionAt(memory.getLastInteractionAt());
+        context.setMemory(snapshot);
+        context.getToolTrace().add("agentMemoryTool: loaded long-term user memory");
     }
 
     private String buildRetrievalQuery(OfferAgentUserContext context, String message) {

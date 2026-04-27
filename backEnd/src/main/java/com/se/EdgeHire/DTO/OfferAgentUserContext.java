@@ -23,6 +23,7 @@ public class OfferAgentUserContext {
     private List<KnowledgeSnapshot> retrievedKnowledge = new ArrayList<>();
     private List<OfferAgentToolResult> toolCalls = new ArrayList<>();
     private List<String> toolTrace = new ArrayList<>();
+    private MemorySnapshot memory;
 
     @Data
     public static class ResumeSnapshot {
@@ -66,5 +67,18 @@ public class OfferAgentUserContext {
         private Double vectorScore;
         private Double hybridScore;
         private String retrievalMode;
+    }
+
+    @Data
+    public static class MemorySnapshot {
+        private String targetPosition;
+        private String profileSummary;
+        private List<String> skillTags = new ArrayList<>();
+        private List<String> gapTags = new ArrayList<>();
+        private List<String> preferenceTags = new ArrayList<>();
+        private String suggestionSummary;
+        private String evidenceSummary;
+        private String source;
+        private LocalDateTime lastInteractionAt;
     }
 }

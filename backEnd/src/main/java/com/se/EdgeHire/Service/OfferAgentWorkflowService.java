@@ -32,6 +32,7 @@ public class OfferAgentWorkflowService {
     private final OfferAgentToolExecutionService toolExecutionService;
     private final OfferAgentWorkflowReportGenerator reportGenerator;
     private final SeekerInfoRepository seekerInfoRepository;
+    private final OfferAgentMemoryService memoryService;
     private final ObjectMapper objectMapper = new ObjectMapper();
 
     public OfferAgentWorkflowResponse runAiAgentSprint(Integer userId, String conversationId, String targetPosition) {
@@ -60,12 +61,14 @@ public class OfferAgentWorkflowService {
         )));
 
         String fallbackReport = buildSprintFinalReport(profile, steps);
+        String finalReport = reportGenerator.generate(workflowConversationId, SPRINT_WORKFLOW_NAME, profile.target(), steps, fallbackReport);
+        memoryService.updateFromWorkflow(userId, profile.target(), finalReport, steps);
         return new OfferAgentWorkflowResponse(
                 SPRINT_WORKFLOW_NAME,
                 profile.target(),
                 workflowConversationId,
                 steps,
-                reportGenerator.generate(workflowConversationId, SPRINT_WORKFLOW_NAME, profile.target(), steps, fallbackReport)
+                finalReport
         );
     }
 
@@ -96,12 +99,14 @@ public class OfferAgentWorkflowService {
         )));
 
         String fallbackReport = buildResumeOptimizationReport(profile, steps);
+        String finalReport = reportGenerator.generate(workflowConversationId, RESUME_WORKFLOW_NAME, profile.target(), steps, fallbackReport);
+        memoryService.updateFromWorkflow(userId, profile.target(), finalReport, steps);
         return new OfferAgentWorkflowResponse(
                 RESUME_WORKFLOW_NAME,
                 profile.target(),
                 workflowConversationId,
                 steps,
-                reportGenerator.generate(workflowConversationId, RESUME_WORKFLOW_NAME, profile.target(), steps, fallbackReport)
+                finalReport
         );
     }
 
@@ -132,12 +137,14 @@ public class OfferAgentWorkflowService {
         )));
 
         String fallbackReport = buildMockInterviewReport(profile, steps);
+        String finalReport = reportGenerator.generate(workflowConversationId, MOCK_INTERVIEW_WORKFLOW_NAME, profile.target(), steps, fallbackReport);
+        memoryService.updateFromWorkflow(userId, profile.target(), finalReport, steps);
         return new OfferAgentWorkflowResponse(
                 MOCK_INTERVIEW_WORKFLOW_NAME,
                 profile.target(),
                 workflowConversationId,
                 steps,
-                reportGenerator.generate(workflowConversationId, MOCK_INTERVIEW_WORKFLOW_NAME, profile.target(), steps, fallbackReport)
+                finalReport
         );
     }
 
@@ -252,6 +259,7 @@ public class OfferAgentWorkflowService {
                             sink.complete();
                         })
                         .doOnComplete(() -> {
+                            memoryService.updateFromWorkflow(userId, profile.target(), finalReport.toString(), steps);
                             sink.next(event("workflow_done", workflowName, profile.target(), conversationId, null, null, finalReport.toString(), "工作流执行完成", true));
                             sink.complete();
                         })

@@ -36,6 +36,7 @@ class OfferAgentContextServiceTest {
         PostRepository postRepository = mock(PostRepository.class);
         GuidanceRequestRepository guidanceRequestRepository = mock(GuidanceRequestRepository.class);
         OfferAgentKnowledgeService knowledgeService = mock(OfferAgentKnowledgeService.class);
+        OfferAgentMemoryService memoryService = mock(OfferAgentMemoryService.class);
 
         User user = new User();
         user.setId(7);
@@ -82,6 +83,7 @@ class OfferAgentContextServiceTest {
                 .thenReturn(List.of(guidanceRequest));
         when(knowledgeService.retrieve(eq(7), contains("AI Agent")))
                 .thenReturn(List.of(knowledgeResult()));
+        when(memoryService.findByUserId(7)).thenReturn(new com.se.EdgeHire.DTO.OfferAgentMemoryResponse());
 
         OfferAgentContextService service = new OfferAgentContextService(
                 userRepository,
@@ -90,7 +92,8 @@ class OfferAgentContextServiceTest {
                 resumeRepository,
                 postRepository,
                 guidanceRequestRepository,
-                knowledgeService
+                knowledgeService,
+                memoryService
         );
 
         OfferAgentUserContext context = service.buildUserContext(7, "I want an AI Agent internship plan.");

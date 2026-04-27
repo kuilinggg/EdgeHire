@@ -3,7 +3,7 @@
     <section class="summary-panel">
       <div class="panel-heading">
         <span>OfferAgent</span>
-        <el-button :icon="Refresh" circle :loading="contextLoading" @click="loadContext" />
+        <el-button :icon="Refresh" circle :loading="contextLoading || memoryLoading" @click="loadContext" />
       </div>
 
       <div class="profile-block">
@@ -34,6 +34,37 @@
           <strong>{{ context.guidanceRequests?.length || 0 }}</strong>
           <span>指导</span>
         </div>
+      </div>
+
+      <div class="memory-panel">
+        <div class="trace-title">长期画像</div>
+        <div v-if="memoryLoading" class="trace-item">正在读取长期画像...</div>
+        <div v-else-if="!hasMemory" class="trace-item">
+          暂无长期画像，完成一次问答评测或工作流后自动沉淀。
+        </div>
+        <template v-else>
+          <div class="memory-card">
+            <div class="memory-label">目标方向</div>
+            <strong>{{ memory.targetPosition || '未识别' }}</strong>
+            <p>{{ memory.profileSummary || '画像摘要生成中' }}</p>
+          </div>
+          <div v-if="memory.skillTags?.length" class="memory-tags">
+            <span>技能</span>
+            <el-tag v-for="item in memory.skillTags" :key="`skill-${item}`" size="small" effect="plain">
+              {{ item }}
+            </el-tag>
+          </div>
+          <div v-if="memory.gapTags?.length" class="memory-tags">
+            <span>待补</span>
+            <el-tag v-for="item in memory.gapTags" :key="`gap-${item}`" size="small" type="warning" effect="plain">
+              {{ item }}
+            </el-tag>
+          </div>
+          <div v-if="memory.suggestionSummary" class="memory-summary">
+            {{ memory.suggestionSummary }}
+          </div>
+          <div class="memory-time">更新于 {{ formatDateTime(memory.lastInteractionAt) }}</div>
+        </template>
       </div>
 
       <div class="tool-trace">
@@ -191,6 +222,7 @@ import {
   evaluateOfferAgentAnswer,
   executeOfferAgentTools,
   getOfferAgentContext,
+  getOfferAgentMemory,
   getOfferAgentToolLogs,
   offerAgentChatStream
 } from '../../api/offerAgent'
@@ -199,6 +231,8 @@ const authStore = useAuthStore()
 const userId = computed(() => authStore.userId || localStorage.getItem('userId'))
 const context = ref({})
 const contextLoading = ref(false)
+const memory = ref({})
+const memoryLoading = ref(false)
 const messages = ref([])
 const input = ref('')
 const isStreaming = ref(false)
@@ -209,6 +243,7 @@ const toolReport = ref({ trace: [], toolCalls: [] })
 const toolLogs = ref([])
 const evaluation = ref(null)
 const evaluationLoading = ref(false)
+const hasMemory = computed(() => Boolean(memory.value?.lastInteractionAt))
 
 const quickPrompts = [
   '分析我适合投哪些岗位',
@@ -233,11 +268,25 @@ async function loadContext() {
   contextLoading.value = true
   try {
     context.value = await getOfferAgentContext(userId.value)
+    memory.value = context.value.memory || {}
+    loadMemory()
   } catch (error) {
     console.error('OfferAgent context failed:', error)
     ElMessage.error('加载 OfferAgent 上下文失败')
   } finally {
     contextLoading.value = false
+  }
+}
+
+async function loadMemory() {
+  if (!userId.value) return
+  memoryLoading.value = true
+  try {
+    memory.value = await getOfferAgentMemory(userId.value)
+  } catch (error) {
+    console.warn('OfferAgent memory failed:', error)
+  } finally {
+    memoryLoading.value = false
   }
 }
 
@@ -329,6 +378,7 @@ async function evaluateAnswer(conversationId, message, finalAnswer) {
       finalAnswer,
       toolReport: toolReport.value
     })
+    loadMemory()
   } catch (error) {
     console.warn('OfferAgent evaluation failed:', error)
   } finally {
@@ -380,6 +430,11 @@ function renderMarkdown(value) {
 function formatVectorScore(score) {
   if (score === null || score === undefined) return '0.00'
   return Number(score).toFixed(2)
+}
+
+function formatDateTime(value) {
+  if (!value) return '未知'
+  return String(value).replace('T', ' ').slice(0, 16)
 }
 
 function metricTagType(status) {
@@ -488,6 +543,71 @@ onMounted(() => {
   display: flex;
   flex-direction: column;
   gap: 8px;
+}
+
+.memory-panel {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-bottom: 18px;
+  padding-bottom: 18px;
+  border-bottom: 1px solid #edf0f5;
+}
+
+.memory-card {
+  border: 1px solid #dbe7ff;
+  background: #f7faff;
+  border-radius: 8px;
+  padding: 10px;
+}
+
+.memory-card strong {
+  display: block;
+  color: #1f2937;
+  font-size: 14px;
+  line-height: 1.5;
+}
+
+.memory-card p {
+  margin: 6px 0 0;
+  color: #4b5563;
+  font-size: 12px;
+  line-height: 1.6;
+}
+
+.memory-label {
+  color: #667085;
+  font-size: 12px;
+  margin-bottom: 4px;
+}
+
+.memory-tags {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.memory-tags span {
+  color: #667085;
+  font-size: 12px;
+}
+
+.memory-summary {
+  background: #f8fafc;
+  border: 1px solid #edf0f5;
+  border-radius: 6px;
+  color: #4b5563;
+  font-size: 12px;
+  line-height: 1.6;
+  max-height: 96px;
+  overflow: hidden;
+  padding: 8px;
+}
+
+.memory-time {
+  color: #98a2b3;
+  font-size: 12px;
 }
 
 .knowledge-sources {

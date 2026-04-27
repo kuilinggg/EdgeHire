@@ -42,6 +42,16 @@ export async function getOfferAgentContext(userId) {
   return response.json()
 }
 
+export async function getOfferAgentMemory(userId) {
+  const response = await fetch(`${API_BASE_URL}/offer-agent/memory/${userId}`, {
+    headers: authHeaders()
+  })
+  if (!response.ok) {
+    throw new Error(`HTTP error! status: ${response.status}`)
+  }
+  return response.json()
+}
+
 export async function executeOfferAgentTools(userId, conversationId, message) {
   const response = await fetch(`${API_BASE_URL}/offer-agent/tools/execute`, {
     method: 'POST',

@@ -21,7 +21,7 @@ class OfferAgentWorkflowServiceTest {
 
     @Test
     void runAiAgentSprintReturnsFiveAgentStepsAndFinalReport() {
-        OfferAgentWorkflowService workflowService = new OfferAgentWorkflowService(executionService(), fallbackReportGenerator(), emptySeekerInfoRepository());
+        OfferAgentWorkflowService workflowService = new OfferAgentWorkflowService(executionService(), fallbackReportGenerator(), emptySeekerInfoRepository(), memoryService());
 
         OfferAgentWorkflowResponse response = workflowService.runAiAgentSprint(
                 7,
@@ -43,7 +43,7 @@ class OfferAgentWorkflowServiceTest {
 
     @Test
     void runResumeOptimizationReturnsFiveAgentStepsAndRewriteReport() {
-        OfferAgentWorkflowService workflowService = new OfferAgentWorkflowService(executionService(), fallbackReportGenerator(), emptySeekerInfoRepository());
+        OfferAgentWorkflowService workflowService = new OfferAgentWorkflowService(executionService(), fallbackReportGenerator(), emptySeekerInfoRepository(), memoryService());
 
         OfferAgentWorkflowResponse response = workflowService.runResumeOptimization(
                 7,
@@ -65,7 +65,7 @@ class OfferAgentWorkflowServiceTest {
 
     @Test
     void runMockInterviewReturnsFiveAgentStepsAndCoachingReport() {
-        OfferAgentWorkflowService workflowService = new OfferAgentWorkflowService(executionService(), fallbackReportGenerator(), emptySeekerInfoRepository());
+        OfferAgentWorkflowService workflowService = new OfferAgentWorkflowService(executionService(), fallbackReportGenerator(), emptySeekerInfoRepository(), memoryService());
 
         OfferAgentWorkflowResponse response = workflowService.runMockInterview(
                 7,
@@ -87,7 +87,7 @@ class OfferAgentWorkflowServiceTest {
 
     @Test
     void targetPositionChangesReportContent() {
-        OfferAgentWorkflowService workflowService = new OfferAgentWorkflowService(executionService(), fallbackReportGenerator(), emptySeekerInfoRepository());
+        OfferAgentWorkflowService workflowService = new OfferAgentWorkflowService(executionService(), fallbackReportGenerator(), emptySeekerInfoRepository(), memoryService());
 
         OfferAgentWorkflowResponse frontend = workflowService.runResumeOptimization(
                 7,
@@ -117,7 +117,8 @@ class OfferAgentWorkflowServiceTest {
         OfferAgentWorkflowService workflowService = new OfferAgentWorkflowService(
                 executionService(),
                 fallbackReportGenerator(),
-                seekerInfoRepositoryWithFavor("[\"前端开发实习生\"]")
+                seekerInfoRepositoryWithFavor("[\"前端开发实习生\"]"),
+                memoryService()
         );
 
         OfferAgentWorkflowResponse response = workflowService.runAiAgentSprint(
@@ -139,7 +140,8 @@ class OfferAgentWorkflowServiceTest {
                 executionService(),
                 (conversationId, workflowName, targetPosition, steps, fallbackReport) ->
                         "\u5927\u6a21\u578b\u5b9e\u65f6\u62a5\u544a\uff1a" + workflowName + " / " + targetPosition + " / steps=" + steps.size(),
-                emptySeekerInfoRepository()
+                emptySeekerInfoRepository(),
+                memoryService()
         );
 
         OfferAgentWorkflowResponse response = workflowService.runMockInterview(
@@ -154,7 +156,7 @@ class OfferAgentWorkflowServiceTest {
 
     @Test
     void streamWorkflowEmitsStepAndReportEvents() {
-        OfferAgentWorkflowService workflowService = new OfferAgentWorkflowService(executionService(), fallbackReportGenerator(), emptySeekerInfoRepository());
+        OfferAgentWorkflowService workflowService = new OfferAgentWorkflowService(executionService(), fallbackReportGenerator(), emptySeekerInfoRepository(), memoryService());
 
         List<OfferAgentWorkflowStreamEvent> events = workflowService.streamResumeOptimization(
                         7,
@@ -225,6 +227,10 @@ class OfferAgentWorkflowServiceTest {
         SeekerInfoRepository repository = mock(SeekerInfoRepository.class);
         when(repository.findByUserId(7)).thenReturn(Optional.of(seekerInfo));
         return repository;
+    }
+
+    private OfferAgentMemoryService memoryService() {
+        return mock(OfferAgentMemoryService.class);
     }
 
     private OfferAgentTool fakeTool(String name, Map<String, Object> output) {
