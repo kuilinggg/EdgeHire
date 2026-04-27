@@ -23,7 +23,11 @@ public class OfferAgentService {
         List<OfferAgentToolResult> toolResults = toolExecutionService.execute(userId, conversationId, message, plannerContext);
         context.setToolCalls(toolResults);
         String promptContext = contextService.toPromptContext(context);
-        OfferAgentAiRequest request = new OfferAgentAiRequest(conversationId, message, promptContext);
+        OfferAgentAiRequest request = new OfferAgentAiRequest(
+                conversationId + "-chat-" + System.currentTimeMillis(),
+                message,
+                promptContext
+        );
 
         return webClient.post()
                 .uri("/api/offer-agent/chat/stream")

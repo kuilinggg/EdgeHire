@@ -75,6 +75,49 @@
           <p>{{ tool.summary || tool.errorMessage }}</p>
         </div>
       </div>
+
+      <div class="evaluation-panel">
+        <div class="trace-title">Agent 评测</div>
+        <div v-if="evaluationLoading" class="trace-item">正在评测本轮回答...</div>
+        <div v-else-if="!evaluation" class="trace-item">发送问题后展示本轮 RAG、工具和回答质量评分</div>
+        <template v-else>
+          <div class="evaluation-score">
+            <strong>{{ evaluation.overallScore }}</strong>
+            <span>综合等级 {{ evaluation.grade }}</span>
+          </div>
+          <div class="evaluation-breakdown">
+            <div>
+              <span>规则分</span>
+              <strong>{{ evaluation.ruleScore ?? evaluation.overallScore }}</strong>
+            </div>
+            <div>
+              <span>裁判分</span>
+              <strong>{{ evaluation.llmJudgeScore ?? '降级' }}</strong>
+            </div>
+          </div>
+          <div v-if="evaluation.llmJudge?.summary" class="judge-summary">
+            <div class="mini-title">LLM 裁判结论</div>
+            <p>{{ evaluation.llmJudge.summary }}</p>
+          </div>
+          <div v-for="metric in evaluation.metrics || []" :key="metric.name" class="metric-item">
+            <div class="metric-head">
+              <span>{{ metric.name }}</span>
+              <el-tag :type="metricTagType(metric.status)" size="small" effect="plain">
+                {{ metric.score }}
+              </el-tag>
+            </div>
+            <p>{{ metric.summary }}</p>
+          </div>
+          <div v-if="evaluation.risks?.length" class="evaluation-block">
+            <div class="mini-title">风险点</div>
+            <p v-for="item in evaluation.risks" :key="item">{{ item }}</p>
+          </div>
+          <div v-if="evaluation.suggestions?.length" class="evaluation-block">
+            <div class="mini-title">优化建议</div>
+            <p v-for="item in evaluation.suggestions" :key="item">{{ item }}</p>
+          </div>
+        </template>
+      </div>
     </section>
 
     <section class="chat-panel">
@@ -145,6 +188,7 @@ import { Refresh } from '@element-plus/icons-vue'
 import { useAuthStore } from '../../stores/authStore'
 import { parseStreamResponse } from '../../api/ai'
 import {
+  evaluateOfferAgentAnswer,
   executeOfferAgentTools,
   getOfferAgentContext,
   getOfferAgentToolLogs,
@@ -163,6 +207,8 @@ const messagesContainer = ref(null)
 const toolCalls = ref([])
 const toolReport = ref({ trace: [], toolCalls: [] })
 const toolLogs = ref([])
+const evaluation = ref(null)
+const evaluationLoading = ref(false)
 
 const quickPrompts = [
   '分析我适合投哪些岗位',
@@ -197,6 +243,7 @@ async function loadContext() {
 
 function newConversation() {
   messages.value = []
+  evaluation.value = null
   localStorage.removeItem(conversationKey.value)
   getConversationId()
   ElMessage.success('已开启新会话')
@@ -214,6 +261,8 @@ async function sendMessage() {
   messages.value.push({ role: 'user', content: text })
   input.value = ''
   isStreaming.value = true
+  evaluation.value = null
+  evaluationLoading.value = false
   abortController.value = new AbortController()
 
   const assistantIndex = messages.value.length
@@ -251,6 +300,7 @@ async function sendMessage() {
         isStreaming.value = false
         abortController.value = null
         messages.value[assistantIndex].content = cleanContent(accumulated)
+        evaluateAnswer(conversationId, text, messages.value[assistantIndex].content)
         scrollToBottom()
       },
       error => {
@@ -265,6 +315,34 @@ async function sendMessage() {
     messages.value[assistantIndex].content = 'OfferAgent 暂时不可用，请稍后重试。'
     ElMessage.error('OfferAgent 请求失败')
   }
+}
+
+async function evaluateAnswer(conversationId, message, finalAnswer) {
+  if (!userId.value || !finalAnswer.trim()) return
+  evaluationLoading.value = true
+  try {
+    evaluation.value = await evaluateOfferAgentAnswer({
+      userId: Number(userId.value),
+      conversationId,
+      message,
+      targetPosition: inferTargetPosition(message),
+      finalAnswer,
+      toolReport: toolReport.value
+    })
+  } catch (error) {
+    console.warn('OfferAgent evaluation failed:', error)
+  } finally {
+    evaluationLoading.value = false
+  }
+}
+
+function inferTargetPosition(message) {
+  if (/前端|Vue|React/i.test(message)) return '前端开发'
+  if (/后端|Java|Spring/i.test(message)) return 'Java 后端'
+  if (/数据|算法|Python|SQL/i.test(message)) return '数据算法'
+  if (/产品|运营|PM/i.test(message)) return '产品运营'
+  if (/Agent|RAG|大模型|LLM/i.test(message)) return 'AI Agent'
+  return ''
 }
 
 function stopStream() {
@@ -284,16 +362,30 @@ async function loadToolLogs(conversationId) {
 }
 
 function cleanContent(value) {
-  return value.replace(/^data:\s*/gm, '').replace(/\n{4,}/g, '\n\n\n').trim()
+  return (value || '')
+    .replace(/^data:\s*/gm, '')
+    .replace(/\r\n/g, '\n')
+    .replace(/([^\n])\s*(#{2,6}\s*)/g, '$1\n\n$2')
+    .replace(/(^|\n)(#{2,6})([^\s#])/g, '$1$2 $3')
+    .replace(/([。！？；:：])\s*[-*]\s+/g, '$1\n\n- ')
+    .replace(/([。！？；:：])\s*(\d+\.\s+)/g, '$1\n\n$2')
+    .replace(/(#{2,6}\s+[^\n]+)\n(?!\n)/g, '$1\n\n')
+    .replace(/\n{3,}/g, '\n\n')
 }
 
 function renderMarkdown(value) {
-  return marked.parse(value || '')
+  return marked.parse(cleanContent(value).trim())
 }
 
 function formatVectorScore(score) {
   if (score === null || score === undefined) return '0.00'
   return Number(score).toFixed(2)
+}
+
+function metricTagType(status) {
+  if (status === 'strong') return 'success'
+  if (status === 'medium') return 'warning'
+  return 'danger'
 }
 
 async function scrollToBottom() {
@@ -412,6 +504,13 @@ onMounted(() => {
   margin-top: 18px;
 }
 
+.evaluation-panel {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-top: 18px;
+}
+
 .agent-trace {
   display: flex;
   flex-direction: column;
@@ -444,6 +543,103 @@ onMounted(() => {
   background: #fbfffc;
   border-radius: 8px;
   padding: 10px;
+}
+
+.evaluation-score {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  border: 1px solid #dbe7ff;
+  background: #f7faff;
+  border-radius: 8px;
+  padding: 12px;
+}
+
+.evaluation-score strong {
+  color: #2f5bea;
+  font-size: 28px;
+  line-height: 1;
+}
+
+.evaluation-score span {
+  color: #667085;
+  font-size: 12px;
+}
+
+.evaluation-breakdown {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px;
+}
+
+.evaluation-breakdown div {
+  border: 1px solid #edf0f5;
+  background: #fff;
+  border-radius: 8px;
+  padding: 9px 10px;
+}
+
+.evaluation-breakdown span {
+  display: block;
+  color: #667085;
+  font-size: 12px;
+  margin-bottom: 4px;
+}
+
+.evaluation-breakdown strong {
+  color: #1f2937;
+  font-size: 16px;
+}
+
+.judge-summary {
+  border: 1px solid #e7e1ff;
+  background: #fbfaff;
+  border-radius: 8px;
+  padding: 10px;
+}
+
+.judge-summary p {
+  margin: 6px 0 0;
+  color: #4b5563;
+  font-size: 12px;
+  line-height: 1.6;
+}
+
+.metric-item {
+  border: 1px solid #edf0f5;
+  background: #fff;
+  border-radius: 8px;
+  padding: 10px;
+}
+
+.metric-head {
+  display: flex;
+  justify-content: space-between;
+  gap: 8px;
+  color: #1f2937;
+  font-size: 13px;
+  font-weight: 700;
+}
+
+.metric-item p,
+.evaluation-block p {
+  margin: 6px 0 0;
+  color: #4b5563;
+  font-size: 12px;
+  line-height: 1.6;
+}
+
+.evaluation-block {
+  background: #f8fafc;
+  border: 1px solid #edf0f5;
+  border-radius: 8px;
+  padding: 10px;
+}
+
+.mini-title {
+  color: #374151;
+  font-size: 12px;
+  font-weight: 700;
 }
 
 .source-title {

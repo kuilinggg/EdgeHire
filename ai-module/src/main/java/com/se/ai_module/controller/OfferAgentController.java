@@ -1,8 +1,12 @@
 package com.se.ai_module.controller;
 
 import com.se.ai_module.dto.OfferAgentChatRequest;
+import com.se.ai_module.dto.OfferAgentLlmJudgeRequest;
+import com.se.ai_module.dto.OfferAgentLlmJudgeResult;
 import com.se.ai_module.dto.OfferAgentToolPlan;
 import com.se.ai_module.dto.OfferAgentToolPlanRequest;
+import com.se.ai_module.service.OfferAgentEvaluationJudgeParser;
+import com.se.ai_module.service.OfferAgentEvaluationJudgePromptBuilder;
 import com.se.ai_module.service.OfferAgentPromptBuilder;
 import com.se.ai_module.service.OfferAgentToolPlanParser;
 import com.se.ai_module.service.OfferAgentToolPlanPromptBuilder;
@@ -26,19 +30,28 @@ public class OfferAgentController {
     private static final Logger logger = LoggerFactory.getLogger(OfferAgentController.class);
 
     private final ChatClient offerAgentChatClient;
+    private final ChatClient offerAgentJudgeChatClient;
     private final OfferAgentPromptBuilder promptBuilder;
     private final OfferAgentToolPlanPromptBuilder toolPlanPromptBuilder;
     private final OfferAgentToolPlanParser toolPlanParser;
+    private final OfferAgentEvaluationJudgePromptBuilder judgePromptBuilder;
+    private final OfferAgentEvaluationJudgeParser judgeParser;
 
     public OfferAgentController(
             @Qualifier("offerAgentChatClient") ChatClient offerAgentChatClient,
+            @Qualifier("offerAgentJudgeChatClient") ChatClient offerAgentJudgeChatClient,
             OfferAgentPromptBuilder promptBuilder,
             OfferAgentToolPlanPromptBuilder toolPlanPromptBuilder,
-            OfferAgentToolPlanParser toolPlanParser) {
+            OfferAgentToolPlanParser toolPlanParser,
+            OfferAgentEvaluationJudgePromptBuilder judgePromptBuilder,
+            OfferAgentEvaluationJudgeParser judgeParser) {
         this.offerAgentChatClient = offerAgentChatClient;
+        this.offerAgentJudgeChatClient = offerAgentJudgeChatClient;
         this.promptBuilder = promptBuilder;
         this.toolPlanPromptBuilder = toolPlanPromptBuilder;
         this.toolPlanParser = toolPlanParser;
+        this.judgePromptBuilder = judgePromptBuilder;
+        this.judgeParser = judgeParser;
     }
 
     @PostMapping("/chat/stream")
@@ -79,6 +92,20 @@ public class OfferAgentController {
             fallback.setSource("llm");
             fallback.setFallbackReason("llm planner failed: " + e.getMessage());
             return fallback;
+        }
+    }
+
+    @PostMapping("/evaluation/judge")
+    public OfferAgentLlmJudgeResult judge(@RequestBody OfferAgentLlmJudgeRequest request) {
+        try {
+            String content = offerAgentJudgeChatClient
+                    .prompt(judgePromptBuilder.build(request))
+                    .call()
+                    .content();
+            return judgeParser.parse(content);
+        } catch (Exception e) {
+            logger.warn("OfferAgent evaluation judge failed: {}", e.getMessage(), e);
+            return OfferAgentLlmJudgeResult.unavailable("llm judge failed: " + e.getMessage());
         }
     }
 }

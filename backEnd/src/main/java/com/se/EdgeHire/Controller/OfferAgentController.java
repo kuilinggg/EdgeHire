@@ -1,13 +1,17 @@
 package com.se.EdgeHire.Controller;
 
 import com.se.EdgeHire.DTO.OfferAgentChatRequest;
+import com.se.EdgeHire.DTO.OfferAgentEvaluationRequest;
+import com.se.EdgeHire.DTO.OfferAgentEvaluationResponse;
 import com.se.EdgeHire.DTO.OfferAgentKnowledgeSearchResponse;
 import com.se.EdgeHire.DTO.OfferAgentToolCallLogResponse;
 import com.se.EdgeHire.DTO.OfferAgentToolExecutionReport;
 import com.se.EdgeHire.DTO.OfferAgentUserContext;
 import com.se.EdgeHire.DTO.OfferAgentWorkflowRequest;
 import com.se.EdgeHire.DTO.OfferAgentWorkflowResponse;
+import com.se.EdgeHire.DTO.OfferAgentWorkflowStreamEvent;
 import com.se.EdgeHire.Service.OfferAgentContextService;
+import com.se.EdgeHire.Service.OfferAgentEvaluationService;
 import com.se.EdgeHire.Service.OfferAgentKnowledgeService;
 import com.se.EdgeHire.Service.OfferAgentService;
 import com.se.EdgeHire.Service.OfferAgentToolExecutionService;
@@ -35,6 +39,7 @@ public class OfferAgentController {
     private final OfferAgentToolExecutionService toolExecutionService;
     private final OfferAgentToolLogService toolLogService;
     private final OfferAgentWorkflowService workflowService;
+    private final OfferAgentEvaluationService evaluationService;
 
     @PostMapping(value = "/chat/stream", produces = MediaType.TEXT_EVENT_STREAM_VALUE)
     public Flux<String> chatStream(@RequestBody OfferAgentChatRequest request) {
@@ -103,6 +108,14 @@ public class OfferAgentController {
         return ResponseEntity.ok(toolLogService.findByConversationId(conversationId));
     }
 
+    @PostMapping("/evaluation/evaluate")
+    public ResponseEntity<OfferAgentEvaluationResponse> evaluate(@RequestBody OfferAgentEvaluationRequest request) {
+        if (request.getUserId() == null) {
+            return ResponseEntity.badRequest().build();
+        }
+        return ResponseEntity.ok(evaluationService.evaluate(request));
+    }
+
     @PostMapping("/workflows/ai-agent-sprint")
     public ResponseEntity<OfferAgentWorkflowResponse> runAiAgentSprint(@RequestBody OfferAgentWorkflowRequest request) {
         if (request.getUserId() == null) {
@@ -113,6 +126,21 @@ public class OfferAgentController {
                 request.getConversationId(),
                 request.getTargetPosition()
         ));
+    }
+
+    @PostMapping(value = "/workflows/ai-agent-sprint/stream", produces = MediaType.APPLICATION_NDJSON_VALUE)
+    public Flux<OfferAgentWorkflowStreamEvent> streamAiAgentSprint(@RequestBody OfferAgentWorkflowRequest request) {
+        if (request.getUserId() == null) {
+            return Flux.just(new OfferAgentWorkflowStreamEvent(
+                    "error", null, request.getTargetPosition(), request.getConversationId(),
+                    null, null, null, "userId is required", true
+            ));
+        }
+        return workflowService.streamAiAgentSprint(
+                request.getUserId(),
+                request.getConversationId(),
+                request.getTargetPosition()
+        );
     }
 
     @PostMapping("/workflows/resume-optimization")
@@ -127,6 +155,21 @@ public class OfferAgentController {
         ));
     }
 
+    @PostMapping(value = "/workflows/resume-optimization/stream", produces = MediaType.APPLICATION_NDJSON_VALUE)
+    public Flux<OfferAgentWorkflowStreamEvent> streamResumeOptimization(@RequestBody OfferAgentWorkflowRequest request) {
+        if (request.getUserId() == null) {
+            return Flux.just(new OfferAgentWorkflowStreamEvent(
+                    "error", null, request.getTargetPosition(), request.getConversationId(),
+                    null, null, null, "userId is required", true
+            ));
+        }
+        return workflowService.streamResumeOptimization(
+                request.getUserId(),
+                request.getConversationId(),
+                request.getTargetPosition()
+        );
+    }
+
     @PostMapping("/workflows/mock-interview")
     public ResponseEntity<OfferAgentWorkflowResponse> runMockInterview(@RequestBody OfferAgentWorkflowRequest request) {
         if (request.getUserId() == null) {
@@ -137,5 +180,20 @@ public class OfferAgentController {
                 request.getConversationId(),
                 request.getTargetPosition()
         ));
+    }
+
+    @PostMapping(value = "/workflows/mock-interview/stream", produces = MediaType.APPLICATION_NDJSON_VALUE)
+    public Flux<OfferAgentWorkflowStreamEvent> streamMockInterview(@RequestBody OfferAgentWorkflowRequest request) {
+        if (request.getUserId() == null) {
+            return Flux.just(new OfferAgentWorkflowStreamEvent(
+                    "error", null, request.getTargetPosition(), request.getConversationId(),
+                    null, null, null, "userId is required", true
+            ));
+        }
+        return workflowService.streamMockInterview(
+                request.getUserId(),
+                request.getConversationId(),
+                request.getTargetPosition()
+        );
     }
 }

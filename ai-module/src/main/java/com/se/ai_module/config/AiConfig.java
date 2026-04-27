@@ -44,4 +44,10 @@ public class AiConfig {
                 .defaultAdvisors(MessageChatMemoryAdvisor.builder(chatMemory).build())
                 .build();
     }
+
+    @Bean("offerAgentJudgeChatClient")
+    public ChatClient offerAgentJudgeChatClient(OpenAiChatModel model) {
+        return ChatClient.builder(model)
+                .build();
+    }
 }
